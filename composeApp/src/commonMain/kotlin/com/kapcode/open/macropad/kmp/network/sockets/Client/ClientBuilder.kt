@@ -1,6 +1,7 @@
-package Client
+package com.kapcode.open.macropad.kmp.network.sockets.Client
 
 import Model.DataModel
+import com.kapcode.open.macropad.kmp.network.sockets.Client.Client
 
 /**
  * Builder for creating Client instances with custom configuration
@@ -42,6 +43,7 @@ class ClientBuilder {
     fun onReconnecting(handler: (attempt: Int, maxAttempts: Int) -> Unit) = apply { this.onReconnecting = handler }
     fun onReconnectSuccess(handler: () -> Unit) = apply { this.onReconnectSuccess = handler }
     fun onReconnectFailed(handler: () -> Unit) = apply { this.onReconnectFailed = handler }
+    
     fun onMessageReceived(handler: (DataModel) -> Unit) = apply { this.onMessageReceived = handler }
     fun onError(handler: (String, Exception) -> Unit) = apply { this.onError = handler }
     

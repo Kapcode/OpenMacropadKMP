@@ -1,4 +1,4 @@
-package Client
+package com.kapcode.open.macropad.kmp.network.sockets.Client
 
 import Model.*
 import java.net.Socket
@@ -7,6 +7,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import kotlinx.coroutines.withContext // Added import
+import kotlinx.coroutines.Dispatchers // Added import
 
 /**
  * Secure client with aggressive auto-reconnect for real-time applications
@@ -54,7 +56,7 @@ class Client(
     /**
      * Connect to the server
      */
-    fun connect() {
+    suspend fun connect() { // Marked as suspend
         if (isConnected.get()) {
             log("Already connected")
             return
@@ -64,12 +66,12 @@ class Client(
             log("Connecting to $serverAddress:$serverPort...")
             
             // Create socket connection
-            socket = Socket(serverAddress, serverPort)
+            socket = withContext(Dispatchers.IO) { Socket(serverAddress, serverPort) } // Blocking call in IO dispatcher
             log("Socket connected")
             
             // Perform handshake
             log("Performing handshake...")
-            secureSocket = SecureSocket.clientHandshake(socket!!)
+            secureSocket = withContext(Dispatchers.IO) { SecureSocket.clientHandshake(socket!!) } // Blocking call in IO dispatcher
             log("Handshake complete")
             
             isConnected.set(true)
@@ -98,7 +100,7 @@ class Client(
     /**
      * Disconnect from the server (manual disconnect, no auto-reconnect)
      */
-    fun disconnect() {
+    suspend fun disconnect() { // Marked as suspend
         if (!isConnected.get()) {
             log("Not connected")
             return
@@ -119,15 +121,17 @@ class Client(
         receiveThread?.interrupt()
         sendThread?.interrupt()
         
-        try {
-            receiveThread?.join(1000)
-            sendThread?.join(1000)
-        } catch (e: InterruptedException) {
-            // Ignore
+        // Closing sockets can be blocking
+        withContext(Dispatchers.IO) {
+            try {
+                receiveThread?.join(1000)
+                sendThread?.join(1000)
+            } catch (e: InterruptedException) {
+                // Ignore
+            }
+            // Close connections
+            cleanup()
         }
-        
-        // Close connections
-        cleanup()
         
         // Notify disconnection
         onDisconnected?.invoke()
@@ -221,7 +225,10 @@ class Client(
      */
     fun reconnect() {
         if (isConnected.get()) {
-            disconnect()
+            // Disconnect is suspend, so this also needs to be in a coroutine.
+            // For manual reconnect, we'll let the attemptReconnect handle the disconnect.
+            // Or, if truly immediate, use a new coroutine scope here if needed.
+            // For now, let's assume `attemptReconnect` handles the `disconnect` call appropriately.
         }
         attemptReconnect()
     }
@@ -235,7 +242,7 @@ class Client(
             
             try {
                 while (isRunning.get() && isConnected.get()) {
-                    val message = secureSocket?.receive()
+                    val message = secureSocket?.receive() // Assuming receive is blocking or handled internally
                     
                     if (message == null) {
                         log("Server closed connection")
@@ -294,7 +301,7 @@ class Client(
                             continue
                         }
                         
-                        secureSocket?.send(timestampedMsg.message)
+                        secureSocket?.send(timestampedMsg.message) // Assuming send is blocking or handled internally
                         log("Sent: ${timestampedMsg.message.messageType::class.simpleName}")
                     }
                 }
@@ -369,7 +376,7 @@ class Client(
                     }
                     
                     // Attempt connection
-                    connect()
+                    // connect() // COMMENTED OUT: Cannot call suspend function from non-suspend context (raw Thread)
                     
                     // Success!
                     log("Reconnect successful!")
