@@ -15,6 +15,7 @@ import java.awt.event.WindowEvent
 import com.github.kwhat.jnativehook.GlobalScreen
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener
+import com.kapcode.open.macropad.kmp.WifiServer
 
 fun main() {
     SwingUtilities.invokeLater {

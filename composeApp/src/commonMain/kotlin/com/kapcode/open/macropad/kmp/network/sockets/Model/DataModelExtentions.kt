@@ -1,4 +1,3 @@
-
 package Model
 
 /**
@@ -53,6 +52,18 @@ fun heartbeatMessage(): DataModel {
         .priority(DataModel.Priority.LOW)
         .build()
 }
+
+// Added errorMessage function
+fun errorMessage(message: String, context: String = "general", throwable: Throwable? = null): DataModel {
+    val metadata = mutableMapOf("context" to context)
+    throwable?.let { metadata["stackTrace"] = it.stackTraceToString() }
+    return DataModelBuilder()
+        .response(false, message)
+        .metadata(metadata)
+        .priority(DataModel.Priority.CRITICAL)
+        .build()
+}
+
 
 // Extension function to easily send with priority
 fun SecureSocket.sendWithPriority(

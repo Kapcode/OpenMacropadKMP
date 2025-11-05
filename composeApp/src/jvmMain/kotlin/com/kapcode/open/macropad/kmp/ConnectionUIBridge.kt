@@ -1,7 +1,10 @@
+package com.kapcode.open.macropad.kmp
 
 import Model.DataModel
 import Model.handle
-import Server.Server
+import Model.dataMessage // Added import for dataMessage
+import Model.errorMessage // Added import for errorMessage
+import com.kapcode.open.macropad.kmp.network.sockets.Server.Server
 import kotlin.concurrent.thread
 
 //purpose is to bridge the gap between the UI and the connection library I have not created yet.
@@ -94,15 +97,15 @@ class WifiServer(
                 // Extract data from DataModel and notify listener
                 handleReceivedMessage(clientId, dataModel)
             },
-            onError = { context, exception ->
-                listener?.onError("Server error in $context: ${exception.message}")
+            onError = { context, dataModel -> // Now expects a DataModel as the second argument
+                listener?.onError("Server error in $context: ${dataModel.messageType}") // Use dataModel for error info
             }
         )
         
         try {
             server?.start()
         } catch (e: Exception) {
-            listener?.onError("Failed to start server: ${e.message}")
+            listener?.onError("Failed to start server: ${e.message ?: "Unknown error"}") // Safely access message
         }
     }
     
@@ -159,6 +162,6 @@ class WifiServer(
         // Create a DataModel message with the data
         // Assuming you have a way to create data messages
         // You may need to import the appropriate factory methods
-        return Model.dataMessage("data", data)
+        return dataMessage("data", data)
     }
 }

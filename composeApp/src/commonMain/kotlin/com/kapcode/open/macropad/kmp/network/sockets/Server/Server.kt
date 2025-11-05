@@ -1,4 +1,4 @@
-package Server
+package com.kapcode.open.macropad.kmp.network.sockets.Server
 
 import Model.*
 import java.net.ServerSocket
@@ -18,7 +18,7 @@ class Server(
     private val onClientConnected: ((String, SecureSocket) -> Unit)? = null,
     private val onClientDisconnected: ((String) -> Unit)? = null,
     private val onMessageReceived: ((String, DataModel) -> Unit)? = null,
-    private val onError: ((String, Exception) -> Unit)? = null
+    private val onError: ((String, DataModel) -> Unit)? = null // Corrected onError to use DataModel
 ) {
 
     private var serverSocket: ServerSocket? = null
@@ -55,7 +55,8 @@ class Server(
 
         } catch (e: Exception) {
             log("Failed to start server: ${e.message}")
-            onError?.invoke("start", e)
+            onError?.invoke("start", errorMessage("Failed to start server: ${e.message}")) // Use errorMessage
+            e.printStackTrace() // Log stack trace
             throw e
         }
     }
@@ -81,6 +82,7 @@ class Server(
             serverSocket?.close()
         } catch (e: Exception) {
             log("Error closing server socket: ${e.message}")
+            e.printStackTrace() // Log stack trace
         }
 
         // Shutdown thread pool
@@ -114,13 +116,15 @@ class Server(
             } catch (e: SocketException) {
                 if (isRunning.get()) {
                     log("Socket error: ${e.message}")
-                    onError?.invoke("accept", e)
+                    onError?.invoke("accept", errorMessage("Socket error: ${e.message}")) // Use errorMessage
+                    e.printStackTrace() // Log stack trace
                 }
                 // Socket closed, server is stopping
                 break
             } catch (e: Exception) {
                 log("Error accepting connection: ${e.message}")
-                onError?.invoke("accept", e)
+                onError?.invoke("accept", errorMessage("Error accepting connection: ${e.message}")) // Use errorMessage
+                e.printStackTrace() // Log stack trace
             }
         }
     }
@@ -164,7 +168,8 @@ class Server(
 
         } catch (e: Exception) {
             log("$clientId: Error - ${e.message}")
-            onError?.invoke(clientId, e)
+            onError?.invoke(clientId, errorMessage("Error handling client: ${e.message}")) // Use errorMessage
+            e.printStackTrace() // Log stack trace
         } finally {
             // Cleanup
             clients.remove(clientId)
@@ -185,6 +190,7 @@ class Server(
                 true
             } catch (e: Exception) {
                 log("Failed to send to $clientId: ${e.message}")
+                e.printStackTrace() // Log stack trace
                 false
             }
         } else {
@@ -203,6 +209,7 @@ class Server(
                     client.send(message)
                 } catch (e: Exception) {
                     log("Failed to broadcast to $clientId: ${e.message}")
+                    e.printStackTrace() // Log stack trace
                 }
             }
         }
@@ -309,6 +316,7 @@ class Server(
                 secureSocket.close()
             } catch (e: Exception) {
                 log("Error disconnecting $clientId: ${e.message}")
+                e.printStackTrace() // Log stack trace
             }
         }
     }

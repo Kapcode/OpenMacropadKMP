@@ -3,6 +3,7 @@ package Server
 
 import Model.DataModel
 import Model.SecureSocket
+import com.kapcode.open.macropad.kmp.network.sockets.Server.Server
 
 /**
  * Builder for creating Server instances with custom configuration
@@ -42,7 +43,7 @@ class ServerBuilder {
             onClientConnected = onClientConnected,
             onClientDisconnected = onClientDisconnected,
             onMessageReceived = onMessageReceived,
-            onError = onError
+            onError = onError as ((String, DataModel) -> Unit)?
         )
     }
 }
