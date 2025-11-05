@@ -62,6 +62,10 @@ kotlin {
             // Alternatively, for the Java HTTP client:
             // implementation("io.ktor:ktor-client-java:2.3.8")
             implementation("com.github.kwhat:jnativehook:2.2.2") // Check Maven Central for the latest stable version
+            implementation("com.fifesoft:rsyntaxtextarea:3.6.0")
+            implementation("com.formdev:flatlaf:3.4.1")
+            implementation("com.kitfox.svg:svg-salamander:1.0")
+            implementation("org.json:json:20250517")
         }
     }
 }
