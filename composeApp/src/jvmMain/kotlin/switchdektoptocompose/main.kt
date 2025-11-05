@@ -9,6 +9,6 @@ fun main() = application {
         onCloseRequest = ::exitApplication,
         title = "OpenMacropadKMP",
     ) {
-        App()
+        App(scanServers = {}) // Provide an empty lambda for the desktop target
     }
 }

@@ -20,8 +20,7 @@ import openmacropadkmp.composeapp.generated.resources.Res
 import openmacropadkmp.composeapp.generated.resources.compose_multiplatform
 
 @Composable
-@Preview
-fun App() {
+fun App(scanServers: () -> Unit) {
     MaterialTheme {
         var showContent by remember { mutableStateOf(false) }
         Column(
@@ -31,8 +30,11 @@ fun App() {
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Button(onClick = { showContent = !showContent }) {
-                Text("Click me!")
+            Button(onClick = { 
+                showContent = !showContent
+                scanServers()
+            }) {
+                Text("Scan for Available Servers")
             }
             AnimatedVisibility(showContent) {
                 val greeting = remember { Greeting().greet() }
@@ -46,4 +48,10 @@ fun App() {
             }
         }
     }
+}
+
+@Preview
+@Composable
+fun AppPreview() {
+    App(scanServers = {}) // Provide an empty lambda for preview
 }
