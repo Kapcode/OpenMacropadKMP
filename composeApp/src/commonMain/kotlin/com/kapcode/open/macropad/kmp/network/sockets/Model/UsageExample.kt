@@ -7,7 +7,6 @@ import java.net.Socket
  * Example usage of the encrypted DataModel system
  * These are example functions showing how to use the library
  */
-
 object UsageExample {
 
     /**
@@ -30,8 +29,8 @@ object UsageExample {
 
     private fun handleClient(socket: Socket) {
         // Perform handshake and create secure socket
-        val secureSocket = SecureSocket.serverHandshake(socket)
-        println("Secure connection established!")
+        val (secureSocket, clientName) = SecureSocket.serverHandshake(socket, "ExampleServer")
+        println("Secure connection established with client: $clientName")
 
         try {
             while (secureSocket.isConnected()) {
@@ -69,8 +68,8 @@ object UsageExample {
      */
     fun clientExample() {
         val socket = Socket("localhost", 9999)
-        val secureSocket = SecureSocket.clientHandshake(socket)
-        println("Connected to server!")
+        val (secureSocket, serverName) = SecureSocket.clientHandshake(socket, "ExampleClient")
+        println("Connected to server: $serverName")
 
         try {
             // Send a text message

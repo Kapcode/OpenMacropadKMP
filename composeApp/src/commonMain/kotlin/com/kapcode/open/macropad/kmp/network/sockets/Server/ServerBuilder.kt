@@ -1,9 +1,7 @@
-
-package Server
+package com.kapcode.open.macropad.kmp.network.sockets.Server
 
 import Model.DataModel
 import Model.SecureSocket
-import com.kapcode.open.macropad.kmp.network.sockets.Server.Server
 
 /**
  * Builder for creating Server instances with custom configuration
@@ -11,16 +9,17 @@ import com.kapcode.open.macropad.kmp.network.sockets.Server.Server
 class ServerBuilder {
     private var port: Int = 9999
     private var maxClients: Int = 50
-    private var onClientConnected: ((String, SecureSocket) -> Unit)? = null
+    private var serverName: String = "OpenMacropad Server"
+    private var onClientConnected: ((clientId: String, clientName: String, secureSocket: SecureSocket) -> Unit)? = null
     private var onClientDisconnected: ((String) -> Unit)? = null
     private var onMessageReceived: ((String, DataModel) -> Unit)? = null
-    private var onError: ((String, Exception) -> Unit)? = null
+    private var onError: ((String, DataModel) -> Unit)? = null
 
     fun port(port: Int) = apply { this.port = port }
-
     fun maxClients(max: Int) = apply { this.maxClients = max }
+    fun serverName(name: String) = apply { this.serverName = name }
 
-    fun onClientConnected(handler: (String, SecureSocket) -> Unit) = apply {
+    fun onClientConnected(handler: (clientId: String, clientName: String, secureSocket: SecureSocket) -> Unit) = apply {
         this.onClientConnected = handler
     }
 
@@ -32,7 +31,7 @@ class ServerBuilder {
         this.onMessageReceived = handler
     }
 
-    fun onError(handler: (String, Exception) -> Unit) = apply {
+    fun onError(handler: (String, DataModel) -> Unit) = apply {
         this.onError = handler
     }
 
@@ -40,10 +39,11 @@ class ServerBuilder {
         return Server(
             port = port,
             maxClients = maxClients,
+            serverName = serverName,
             onClientConnected = onClientConnected,
             onClientDisconnected = onClientDisconnected,
             onMessageReceived = onMessageReceived,
-            onError = onError as ((String, DataModel) -> Unit)?
+            onError = onError
         )
     }
 }

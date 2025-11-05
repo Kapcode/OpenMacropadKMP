@@ -1,6 +1,5 @@
 package Model
 
-import java.math.BigInteger
 import java.security.*
 import java.security.spec.X509EncodedKeySpec
 import javax.crypto.KeyAgreement
@@ -18,14 +17,8 @@ class EncryptionManager {
     private val keyAgreement: KeyAgreement = KeyAgreement.getInstance("DH")
 
     companion object {
-        private const val KEY_SIZE = 2048
+        private const val KEY_SIZE = 1024 // Using a standard, compatible key size
         private const val AES_KEY_SIZE = 256
-
-        // Standard Diffie-Hellman parameters (RFC 5114, 2048-bit MODP Group)
-        // Using these pre-defined parameters ensures both client and server use the same DH parameters.
-        private val DH_P = BigInteger("FFFFFFFFFFFFFFFFC90FDAA22168C234C4C6628B80DC1CD129024E088A67CC74020BBEA63B139B22514A08798E3404DDEF9519B3CD3A431B302B0A6DF25F14374FE1356D6D51C245E485B576625E7EC6F44C42E9A637ED6B0BFF5CB6F406B7EDEE386BFB5A899FA5AE9F24117C4B1FE649286651ECE45B3DC2007CB8A163BF0598DA48361C55D39A69163FA8FD24CF5F83655D23DCA3AD961C62F356208552BB9ED529077096966D670C354E4ABC9804F1746C08CA18217C32905E462E36CE3BE39E772C180E86039B2783A2EC07A28FB5C55DF06F4C52C9F81F260E9195F119E457582B6B58F48DBF32733A030000000000000000000000000000000000000000000000000000000000000000", 16)
-        private val DH_G = BigInteger("2")
-        private val DH_PARAMETER_SPEC = DHParameterSpec(DH_P, DH_G)
 
         /**
          * Create a simple encryption manager with a pre-shared key
@@ -46,16 +39,23 @@ class EncryptionManager {
     }
 
     /**
-     * Initialize Diffie-Hellman key exchange
-     * Call this on both client and server before exchanging keys
+     * Initialize Diffie-Hellman key exchange.
+     * If params are provided (client), use them.
+     * If not (server), generate new ones.
      */
-    fun initializeKeyExchange(): ByteArray {
+    fun initializeKeyExchange(spec: DHParameterSpec? = null): Pair<ByteArray, DHParameterSpec?> {
         val keyPairGenerator = KeyPairGenerator.getInstance("DH")
-        keyPairGenerator.initialize(DH_PARAMETER_SPEC, SecureRandom()) // Initialize with fixed parameters and a secure random source
+        val finalSpec = spec ?: run {
+            keyPairGenerator.initialize(KEY_SIZE, SecureRandom())
+            val params = keyPairGenerator.generateKeyPair().public as javax.crypto.interfaces.DHPublicKey
+            params.params
+        }
+
+        keyPairGenerator.initialize(finalSpec, SecureRandom())
         keyPair = keyPairGenerator.generateKeyPair()
         keyAgreement.init(keyPair!!.private)
 
-        return keyPair!!.public.encoded
+        return keyPair!!.public.encoded to if (spec == null) finalSpec else null
     }
 
     /**
