@@ -1,40 +1,102 @@
-This is a Kotlin Multiplatform project targeting Android, Desktop (JVM).
+# OpenMacropadKMP
 
-* [/composeApp](./composeApp/src) is for code that will be shared across your Compose Multiplatform applications.
-  It contains several subfolders:
-  - [commonMain](./composeApp/src/commonMain/kotlin) is for code that’s common for all targets.
-  - Other folders are for Kotlin code that will be compiled for only the platform indicated in the folder name.
-    For example, if you want to use Apple’s CoreCrypto for the iOS part of your Kotlin app,
-    the [iosMain](./composeApp/src/iosMain/kotlin) folder would be the right place for such calls.
-    Similarly, if you want to edit the Desktop (JVM) specific part, the [jvmMain](./composeApp/src/jvmMain/kotlin)
-    folder is the appropriate location.
+This is a Kotlin Multiplatform project, focusing on creating an open-source Macropad solution.
 
-### Build and Run Android Application
+## Project Structure
 
-To build and run the development version of the Android app, use the run configuration from the run widget
-in your IDE’s toolbar or build it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:assembleDebug
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:assembleDebug
-  ```
+-   `composeApp`: Contains the shared code for Android and Desktop platforms using Compose Multiplatform, as well as platform-specific implementations.
 
-### Build and Run Desktop (JVM) Application
+## Network Library
 
-To build and run the development version of the desktop app, use the run configuration from the run widget
-in your IDE’s toolbar or run it directly from the terminal:
-- on macOS/Linux
-  ```shell
-  ./gradlew :composeApp:run
-  ```
-- on Windows
-  ```shell
-  .\gradlew.bat :composeApp:run
-  ```
+This project uses Ktor for WebSocket communication, leveraging Kotlinx Serialization for `DataModel` objects and a custom `EncryptionManager` for secure, end-to-end encrypted messaging.
 
----
+### Usage Example
 
-Learn more about [Kotlin Multiplatform](https://www.jetbrains.com/help/kotlin-multiplatform-dev/get-started.html)…
+Below are basic examples demonstrating how to set up and use the Ktor client and server with Diffie-Hellman key exchange and AES/GCM encryption.
+
+#### Ktor Server Setup
+
+```kotlin
+import com.kapcode.open.macropad.kmp.network.ktor.KtorServer
+import com.kapcode.open.macropad.kmp.network.sockets.Model.DataModel
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val server = KtorServer(
+        port = 9999,
+        onClientConnected = { clientId ->
+            println("Server: Client $clientId connected!")
+        },
+        onClientDisconnected = { clientId ->
+            println("Server: Client $clientId disconnected.")
+        },
+        onMessageReceived = { clientId, message ->
+            println("Server: Received from $clientId: ${message.messageType::class.simpleName}")
+            // Example: Broadcast text messages to all other clients
+            if (message.messageType is DataModel.MessageType.Text) {
+                server.broadcast(message, excludeClientId = clientId)
+            }
+        },
+        onError = { clientId, error ->
+            println("Server: Error for $clientId: ${error.message}")
+            error.printStackTrace()
+        }
+    )
+
+    server.start()
+    println("Server is running. Press Enter to stop.")
+    readln() // Keep the server running until Enter is pressed
+    server.stop()
+}
+```
+
+#### Ktor Client Setup
+
+```kotlin
+import com.kapcode.open.macropad.kmp.network.ktor.KtorClient
+import com.kapcode.open.macropad.kmp.network.sockets.Model.DataModel
+import com.kapcode.open.macropad.kmp.network.sockets.Model.MessageType
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
+    val client = KtorClient(
+        host = "localhost", // Or your server's IP address
+        port = 9999,
+        onConnected = {
+            println("Client: Connected to server and encryption established!")
+        },
+        onDisconnected = {
+            println("Client: Disconnected from server.")
+        },
+        onMessageReceived = { message ->
+            when (val msg = message.messageType) {
+                is MessageType.Text -> println("Client: Received text: ${msg.content}")
+                is MessageType.Response -> println("Client: Received response: ${msg.message} (Success: ${msg.success})")
+                is MessageType.Heartbeat -> println("Client: Received heartbeat.")
+                else -> println("Client: Received message of type ${msg::class.simpleName}")
+            }
+        },
+        onError = { error ->
+            println("Client: Error: ${error.message}")
+            error.printStackTrace()
+        }
+    )
+
+    client.connect()
+    delay(5000) // Give time for connection and key exchange
+
+    if (client.isConnected()) {
+        client.sendText("Hello from Ktor client!")
+        delay(1000)
+        client.sendCommand("ping")
+        delay(1000)
+        client.sendMouseMove(100, 200)
+        delay(1000)
+    }
+
+    println("Client: Press Enter to disconnect.")
+    readln()
+    client.disconnect()
+}
+```
