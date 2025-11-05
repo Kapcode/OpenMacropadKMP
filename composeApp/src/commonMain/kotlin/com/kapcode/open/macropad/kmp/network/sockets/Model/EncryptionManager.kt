@@ -1,17 +1,15 @@
-package com.kapcode.open.macropad.kmp.network.ktor
+package Model
 
-import com.kapcode.open.macropad.kmp.network.sockets.Model.DataModel
+
 import java.security.*
+import java.security.spec.X509EncodedKeySpec
 import javax.crypto.KeyAgreement
 import javax.crypto.SecretKey
-import javax.crypto.Cipher
-import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import java.util.*
 
 /**
  * Manages encryption keys and secure key exchange between client and server
- * Uses Diffie-Hellman for key exchange and AES/GCM for data encryption.
+ * Uses Diffie-Hellman for key exchange
  */
 class EncryptionManager {
     private var sharedKey: SecretKey? = null
@@ -21,11 +19,6 @@ class EncryptionManager {
     companion object {
         private const val KEY_SIZE = 2048
         private const val AES_KEY_SIZE = 256
-
-        private const val ALGORITHM = "AES"
-        private const val TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val GCM_TAG_LENGTH = 128
-        private const val GCM_IV_LENGTH = 12
 
         /**
          * Create a simple encryption manager with a pre-shared key
@@ -41,7 +34,6 @@ class EncryptionManager {
          * Create a simple encryption manager with a pre-shared key string
          */
         fun withPreSharedKey(keyString: String): EncryptionManager {
-            // DataModel.stringToKey is still useful here to convert string to SecretKey
             return withPreSharedKey(DataModel.stringToKey(keyString))
         }
     }
@@ -65,7 +57,7 @@ class EncryptionManager {
      */
     fun completeKeyExchange(otherPublicKeyBytes: ByteArray) {
         val keyFactory = KeyFactory.getInstance("DH")
-        val x509KeySpec = java.security.spec.X509EncodedKeySpec(otherPublicKeyBytes)
+        val x509KeySpec = X509EncodedKeySpec(otherPublicKeyBytes)
         val otherPublicKey = keyFactory.generatePublic(x509KeySpec)
 
         keyAgreement.doPhase(otherPublicKey, true)
@@ -81,41 +73,19 @@ class EncryptionManager {
     }
 
     /**
-     * Encrypt data using AES-GCM
-     * Returns: IV (12 bytes) + Ciphertext (with authentication tag)
+     * Encrypt a DataModel
      */
-    fun encrypt(data: ByteArray): ByteArray {
+    fun encrypt(dataModel: DataModel): ByteArray {
         requireNotNull(sharedKey) { "Shared key not initialized. Call initializeKeyExchange() first." }
-
-        // Generate random IV
-        val iv = ByteArray(GCM_IV_LENGTH)
-        SecureRandom().nextBytes(iv)
-
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, sharedKey, gcmSpec)
-
-        val ciphertext = cipher.doFinal(data)
-
-        // Prepend IV to ciphertext
-        return iv + ciphertext
+        return dataModel.toEncryptedBytes(sharedKey!!)
     }
 
     /**
-     * Decrypt data using AES-GCM
+     * Decrypt bytes to a DataModel
      */
-    fun decrypt(encryptedData: ByteArray): ByteArray {
+    fun decrypt(encryptedData: ByteArray): DataModel {
         requireNotNull(sharedKey) { "Shared key not initialized. Call initializeKeyExchange() first." }
-
-        // Extract IV from the beginning of encrypted data
-        val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
-        val ciphertext = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
-
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-        cipher.init(Cipher.DECRYPT_MODE, sharedKey, gcmSpec)
-
-        return cipher.doFinal(ciphertext)
+        return DataModel.fromEncryptedBytes(encryptedData, sharedKey!!)
     }
 
     /**
