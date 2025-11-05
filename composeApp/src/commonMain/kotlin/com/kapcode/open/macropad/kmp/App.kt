@@ -1,11 +1,8 @@
 package com.kapcode.open.macropad.kmp
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
@@ -13,16 +10,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.ui.tooling.preview.Preview
-
-import openmacropadkmp.composeapp.generated.resources.Res
-import openmacropadkmp.composeapp.generated.resources.compose_multiplatform
+import com.kapcode.open.macropad.kmp.ui.components.ConnectionItem
 
 @Composable
-fun App(scanServers: () -> Unit) {
+fun App(scanServers: () -> Unit, foundServers: List<String>) {
     MaterialTheme {
-        var showContent by remember { mutableStateOf(false) }
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
@@ -31,20 +24,17 @@ fun App(scanServers: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Button(onClick = { 
-                showContent = !showContent
                 scanServers()
             }) {
                 Text("Scan for Available Servers")
             }
-            AnimatedVisibility(showContent) {
-                val greeting = remember { Greeting().greet() }
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Image(painterResource(Res.drawable.compose_multiplatform), null)
-                    Text("Compose: $greeting")
-                }
+
+            // Display found servers
+            foundServers.forEach { serverAddress ->
+                ConnectionItem(
+                    name = "Discovered Server", // You might want to get a real name later
+                    ipAddressPort = serverAddress
+                )
             }
         }
     }
@@ -53,5 +43,5 @@ fun App(scanServers: () -> Unit) {
 @Preview
 @Composable
 fun AppPreview() {
-    App(scanServers = {}) // Provide an empty lambda for preview
+    App(scanServers = {}, foundServers = listOf("192.168.1.10:9999", "192.168.1.15:9999")) // Provide an empty lambda and sample data for preview
 }
