@@ -29,6 +29,9 @@ kotlin {
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
             // Alternatively, for the default Android HTTP client:
             // implementation("io.ktor:ktor-client-android:2.3.8")
+
+            // AdMob dependency
+            implementation("com.google.android.gms:play-services-ads:24.7.0")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
