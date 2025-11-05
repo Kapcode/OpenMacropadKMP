@@ -8,95 +8,24 @@ This is a Kotlin Multiplatform project, focusing on creating an open-source Macr
 
 ## Network Library
 
-This project uses Ktor for WebSocket communication, leveraging Kotlinx Serialization for `DataModel` objects and a custom `EncryptionManager` for secure, end-to-end encrypted messaging.
+This project uses a custom TCP socket implementation for client-server communication. It establishes a secure, end-to-end encrypted channel for exchanging `DataModel` objects.
 
-### Usage Example
+The handshake protocol features a Diffie-Hellman key exchange where the server generates and sends its DH parameters to the client. This ensures that both parties use compatible parameters for generating the shared secret key. During the handshake, the server and client also exchange device names for identification in the UI.
 
-Below are basic examples demonstrating how to set up and use the Ktor client and server with Diffie-Hellman key exchange and AES/GCM encryption.
+## Desktop UI (Legacy Swing)
 
-#### Ktor Server Setup
+The current desktop application is built using Java Swing.
 
-```kotlin
-import com.kapcode.open.macropad.kmp.network.ktor.KtorServer
-import com.kapcode.open.macropad.kmp.network.sockets.Model.DataModel
-import kotlinx.coroutines.runBlocking
+**Developer Note:** The next major step for the desktop application is to migrate the UI from Swing to Compose for Desktop. The information below pertains to the legacy Swing implementation.
 
-fun main() = runBlocking {
-    val server = KtorServer(
-        port = 9999,
-        onClientConnected = { clientId ->
-            println("Server: Client $clientId connected!")
-        },
-        onClientDisconnected = { clientId ->
-            println("Server: Client $clientId disconnected.")
-        },
-        onMessageReceived = { clientId, message ->
-            println("Server: Received from $clientId: ${message.messageType::class.simpleName}")
-            // Example: Broadcast text messages to all other clients
-            if (message.messageType is DataModel.MessageType.Text) {
-                server.broadcast(message, excludeClientId = clientId)
-            }
-        },
-        onError = { clientId, error ->
-            println("Server: Error for $clientId: ${error.message}")
-            error.printStackTrace()
-        }
-    )
+### UI Layout and Theming Fixes
 
-    server.start()
-    println("Server is running. Press Enter to stop.")
-    readln() // Keep the server running until Enter is pressed
-    server.stop()
-}
-```
+During development of the Swing UI, two main issues were addressed: missing UI elements and the lack of a modern theme.
 
-#### Ktor Client Setup
+-   **Issue #1: Missing UI Elements (`TabbedUI` / `MacroManagerUI`)**
+    -   **Problem:** The `TabbedUI` and `MacroManagerUI` components were being created but not added to the main `JFrame`. The frame only contained a `JSplitPane` with other status panels.
+    -   **Solution:** A new root `JSplitPane` was created to hold both the `TabbedUI` and the existing `mainSplitPane`. This `rootSplitPane` was then added to the `JFrame`, ensuring all components are part of the layout hierarchy.
 
-```kotlin
-import com.kapcode.open.macropad.kmp.network.ktor.KtorClient
-import com.kapcode.open.macropad.kmp.network.sockets.Model.DataModel
-import com.kapcode.open.macropad.kmp.network.sockets.Model.MessageType
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-
-fun main() = runBlocking {
-    val client = KtorClient(
-        host = "localhost", // Or your server's IP address
-        port = 9999,
-        onConnected = {
-            println("Client: Connected to server and encryption established!")
-        },
-        onDisconnected = {
-            println("Client: Disconnected from server.")
-        },
-        onMessageReceived = { message ->
-            when (val msg = message.messageType) {
-                is MessageType.Text -> println("Client: Received text: ${msg.content}")
-                is MessageType.Response -> println("Client: Received response: ${msg.message} (Success: ${msg.success})")
-                is MessageType.Heartbeat -> println("Client: Received heartbeat.")
-                else -> println("Client: Received message of type ${msg::class.simpleName}")
-            }
-        },
-        onError = { error ->
-            println("Client: Error: ${error.message}")
-            error.printStackTrace()
-        }
-    )
-
-    client.connect()
-    delay(5000) // Give time for connection and key exchange
-
-    if (client.isConnected()) {
-        client.sendText("Hello from Ktor client!")
-        delay(1000)
-        client.sendCommand("ping")
-        delay(1000)
-        client.sendMouseMove(100, 200)
-        delay(1000)
-    }
-
-    println("Client: Press Enter to disconnect.")
-    readln()
-    client.disconnect()
-}
-```
+-   **Issue #2: Dark Mode Not Applied**
+    -   **Problem:** Swing defaults to a basic, OS-dependent Look and Feel (LaF).
+    -   **Solution:** The [FlatLaf](https://www.formdev.com/flatlaf/) library was added to the project dependencies. The `FlatDarkLaf` theme is now set programmatically at the start of the `main()` function, before any UI components are created, providing a modern dark theme for the application.

@@ -1,5 +1,6 @@
-package UI
+package com.kapcode.open.macropad.kmp.UI
 
+import UI.Theme
 import java.awt.BorderLayout
 import java.awt.Font
 import javax.swing.BoxLayout
@@ -7,6 +8,7 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.SwingConstants
+import javax.swing.SwingUtilities
 
 class ConnectedDevicesUI : JPanel() {
 
@@ -27,25 +29,26 @@ class ConnectedDevicesUI : JPanel() {
         devicesPanel.layout = BoxLayout(devicesPanel, BoxLayout.Y_AXIS)
         devicesPanel.background = theme.SecondaryBackgroundColor
         add(JScrollPane(devicesPanel), BorderLayout.CENTER)
-
-        // Add a test item for development
-        addDevice("Test-Device-01")
     }
 
-    fun addDevice(deviceId: String) {
-        val deviceItem = ConnectedDeviceItem(deviceId)
-        devicesPanel.add(deviceItem)
-        devicesPanel.revalidate()
-        devicesPanel.repaint()
+    fun addDevice(clientId: String, clientName: String) {
+        SwingUtilities.invokeLater {
+            val deviceItem = ConnectedDeviceItem(clientId, clientName)
+            devicesPanel.add(deviceItem)
+            devicesPanel.revalidate()
+            devicesPanel.repaint()
+        }
     }
 
-    fun removeDevice(deviceId: String) {
-        for (component in devicesPanel.components) {
-            if (component is ConnectedDeviceItem && component.deviceId == deviceId) {
-                devicesPanel.remove(component)
-                devicesPanel.revalidate()
-                devicesPanel.repaint()
-                break
+    fun removeDevice(clientId: String) {
+        SwingUtilities.invokeLater {
+            for (component in devicesPanel.components) {
+                if (component is ConnectedDeviceItem && component.clientId == clientId) {
+                    devicesPanel.remove(component)
+                    devicesPanel.revalidate()
+                    devicesPanel.repaint()
+                    break
+                }
             }
         }
     }
