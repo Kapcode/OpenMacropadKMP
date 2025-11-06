@@ -16,6 +16,7 @@ import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
+import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 fun main() = application {
@@ -43,49 +44,61 @@ fun main() = application {
 fun DesktopApp(viewModel: DesktopViewModel) {
     val connectedDevices by viewModel.connectedDevices.collectAsState()
     val isServerRunning by viewModel.isServerRunning.collectAsState()
+    val serverIpAddress by viewModel.serverIpAddress.collectAsState()
+    val serverPort by viewModel.serverPort.collectAsState()
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            // Corrected the parameter name from 'initial' to 'initialPositionPercentage'
-            val splitterState = rememberSplitPaneState(initialPositionPercentage = 0.5f)
+            val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.3f)
+            val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
 
-            HorizontalSplitPane(splitPaneState = splitterState) {
-                // First pane (left side)
-                first(minSize = 300.dp) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFF3C3F41)) // Lighter grey
-                    ) {
+            VerticalSplitPane(splitPaneState = verticalSplitter) {
+                // --- Top Pane ---
+                first(minSize = 100.dp) {
+                    Row(modifier = Modifier.fillMaxSize().background(Color(0xFF3C3F41))) {
+                        // Server Status (90% width)
                         Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(100.dp)
-                                .background(Color(0xFF45494A))
-                                .padding(8.dp)
+                            modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp),
+                            contentAlignment = Alignment.CenterStart
                         ) {
-                            Text("Server Status: ${if (isServerRunning) "Running" else "Stopped"}", color = Color.White)
+                            Column {
+                                Text(
+                                    "Status: ${if (isServerRunning) "Running" else "Stopped"}",
+                                    color = if (isServerRunning) Color.Green else Color.Red
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "Address: $serverIpAddress:$serverPort",
+                                    color = Color.White
+                                )
+                            }
                         }
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .weight(1f)
-                                .padding(8.dp)
-                        ) {
-                            ConnectedDevicesScreen(devices = connectedDevices)
+                        // Inspector (10% width)
+                        Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
+                            InspectorScreen()
                         }
                     }
                 }
-
-                // Second pane (right side)
-                second(minSize = 300.dp) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color(0xFF2B2B2B)) // Dark grey
-                            .padding(8.dp)
-                    ) {
-                        Text("Macro Manager Area", color = Color.White)
+                // --- Bottom Pane ---
+                second(minSize = 200.dp) {
+                    HorizontalSplitPane(splitPaneState = horizontalSplitter) {
+                        // Left side of bottom pane
+                        first(minSize = 250.dp) {
+                            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                ConnectedDevicesScreen(devices = connectedDevices)
+                            }
+                        }
+                        // Right side of bottom pane
+                        second(minSize = 300.dp) {
+                             Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color(0xFF2B2B2B)) // Dark grey
+                                    .padding(8.dp)
+                            ) {
+                                Text("Macro Manager Area", color = Color.White)
+                            }
+                        }
                     }
                 }
             }
