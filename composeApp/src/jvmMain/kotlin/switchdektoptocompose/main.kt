@@ -15,15 +15,16 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.open.macropad.kmp.MacroManagerViewModel
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    // Instantiate both ViewModels
     val desktopViewModel = remember { DesktopViewModel() }
     val macroEditorViewModel = remember { MacroEditorViewModel() }
+    val macroManagerViewModel = remember { MacroManagerViewModel() }
 
     DisposableEffect(Unit) {
         desktopViewModel.startServer()
@@ -37,13 +38,17 @@ fun main() = application {
         state = windowState,
         title = "Open Macropad (Compose)"
     ) {
-        DesktopApp(desktopViewModel, macroEditorViewModel)
+        DesktopApp(desktopViewModel, macroEditorViewModel, macroManagerViewModel)
     }
 }
 
 @Composable
 @Preview
-fun DesktopApp(desktopViewModel: DesktopViewModel, macroEditorViewModel: MacroEditorViewModel) {
+fun DesktopApp(
+    desktopViewModel: DesktopViewModel,
+    macroEditorViewModel: MacroEditorViewModel,
+    macroManagerViewModel: MacroManagerViewModel
+) {
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
@@ -51,51 +56,50 @@ fun DesktopApp(desktopViewModel: DesktopViewModel, macroEditorViewModel: MacroEd
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
-            val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.3f)
-            val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
+            val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
+            val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
 
-            VerticalSplitPane(splitPaneState = verticalSplitter) {
-                // --- Top Pane ---
+            VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
+                // --- Top Pane (Server Status & Inspector) ---
                 first(minSize = 100.dp) {
                     Row(modifier = Modifier.fillMaxSize().background(Color(0xFF3C3F41))) {
-                        // Server Status (90% width)
                         Box(
                             modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Column {
-                                Text(
-                                    "Status: ${if (isServerRunning) "Running" else "Stopped"}",
-                                    color = if (isServerRunning) Color.Green else Color.Red
-                                )
+                                Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Address: $serverIpAddress:$serverPort",
-                                    color = Color.White
-                                )
+                                Text("Address: $serverIpAddress:$serverPort", color = Color.White)
                             }
                         }
-                        // Inspector (10% width)
                         Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
                             InspectorScreen()
                         }
                     }
                 }
-                // --- Bottom Pane ---
+                // --- Bottom Pane (Main Content) ---
                 second(minSize = 200.dp) {
-                    HorizontalSplitPane(splitPaneState = horizontalSplitter) {
+                    HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
                         // Left side of bottom pane
                         first(minSize = 250.dp) {
-                            Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                                ConnectedDevicesScreen(devices = connectedDevices)
-                            }
+                           Column {
+                               Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
+                                   ConnectedDevicesScreen(devices = connectedDevices)
+                               }
+                               Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.DarkGray).padding(8.dp)) {
+                                   Text("Console Area", color = Color.White)
+                               }
+                           }
                         }
                         // Right side of bottom pane
-                        second(minSize = 300.dp) {
-                             // --- INTEGRATION ---
-                             // Replace the placeholder Box with the MacroEditorScreen
-                             MacroEditorScreen(viewModel = macroEditorViewModel)
-                             // --- END INTEGRATION ---
+                        second(minSize = 500.dp) {
+                            // --- INTEGRATION ---
+                            MacroEditingArea(
+                                macroManagerViewModel = macroManagerViewModel,
+                                macroEditorViewModel = macroEditorViewModel
+                            )
+                            // --- END INTEGRATION ---
                         }
                     }
                 }

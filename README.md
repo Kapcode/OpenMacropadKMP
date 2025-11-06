@@ -36,6 +36,24 @@ A common issue in Kotlin Multiplatform projects is having the IDE or Gradle fail
 
 This change forces Gradle and the IDE to discard the old cached structure and re-index the project from scratch, often resolving stubborn import issues. This was the solution to a persistent "Unresolved reference" error for `ConnectionItem.kt` during the development of the Compose desktop UI.
 
+### Desktop UI Migration from Swing to Compose
+
+**Current Status:** The project is undergoing a migration from a legacy Swing UI to a new UI built with Compose for Desktop.
+
+**Migration Strategy:**
+
+1.  **Decouple Logic:** Business logic (like `WifiServer`, `DesktopViewModel`, `MacroEditorViewModel`) is separated from the UI layer.
+2.  **New Compose Entry Point:** A new desktop entry point (`switchdektoptocompose/main.kt`) is being developed using Compose Multiplatform.
+3.  **ViewModel-Driven UI:** Compose UI components interact with the `DesktopViewModel` and `MacroEditorViewModel` to manage state and UI logic.
+4.  **Hybrid Approach (Transition):** The `SwingPanel` composable is used to embed existing Swing components (`RSyntaxTextArea`) within the new Compose UI, allowing for a gradual transition without losing functionality.
+5.  **Layout:** Nested `HorizontalSplitPane` and `VerticalSplitPane` components are used to replicate the complex layout of the original Swing application in a Compose-idiomatic way.
+
+**Challenges Encountered:**
+
+-   **Package Name Resolution:** Navigating and resolving imports between `commonMain` and platform-specific `jvmMain` source sets, particularly when dealing with the correct package name (`com.kapcode.open.macropad.kmps`). This was addressed by consistently using the correct package name and understanding how to force cache invalidation (e.g., by renaming packages temporarily).
+-   **`SwingPanel` API Compatibility:** The exact parameter names for cleanup callbacks in `SwingPanel` can vary between Compose Multiplatform versions. We encountered issues with `onDispose`, `onRelease`, and `disposer`, ultimately removing the cleanup logic temporarily to get the application compiling.
+-   **Dependency Management:** Ensuring that specific Compose Multiplatform features like `splitpane` are correctly declared in `build.gradle.kts` and managed via `libs.versions.toml`.
+
 ## Network Library
 
 This project uses a custom TCP socket implementation for client-server communication. It establishes a secure, end-to-end encrypted channel for exchanging `DataModel` objects.
