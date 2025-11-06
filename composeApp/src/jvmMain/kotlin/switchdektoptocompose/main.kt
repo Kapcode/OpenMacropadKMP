@@ -21,12 +21,14 @@ import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    val viewModel = remember { DesktopViewModel() }
+    // Instantiate both ViewModels
+    val desktopViewModel = remember { DesktopViewModel() }
+    val macroEditorViewModel = remember { MacroEditorViewModel() }
 
     DisposableEffect(Unit) {
-        viewModel.startServer()
+        desktopViewModel.startServer()
         onDispose {
-            viewModel.shutdown()
+            desktopViewModel.shutdown()
         }
     }
 
@@ -35,17 +37,17 @@ fun main() = application {
         state = windowState,
         title = "Open Macropad (Compose)"
     ) {
-        DesktopApp(viewModel)
+        DesktopApp(desktopViewModel, macroEditorViewModel)
     }
 }
 
 @Composable
 @Preview
-fun DesktopApp(viewModel: DesktopViewModel) {
-    val connectedDevices by viewModel.connectedDevices.collectAsState()
-    val isServerRunning by viewModel.isServerRunning.collectAsState()
-    val serverIpAddress by viewModel.serverIpAddress.collectAsState()
-    val serverPort by viewModel.serverPort.collectAsState()
+fun DesktopApp(desktopViewModel: DesktopViewModel, macroEditorViewModel: MacroEditorViewModel) {
+    val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
+    val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
+    val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
+    val serverPort by desktopViewModel.serverPort.collectAsState()
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -90,14 +92,10 @@ fun DesktopApp(viewModel: DesktopViewModel) {
                         }
                         // Right side of bottom pane
                         second(minSize = 300.dp) {
-                             Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color(0xFF2B2B2B)) // Dark grey
-                                    .padding(8.dp)
-                            ) {
-                                Text("Macro Manager Area", color = Color.White)
-                            }
+                             // --- INTEGRATION ---
+                             // Replace the placeholder Box with the MacroEditorScreen
+                             MacroEditorScreen(viewModel = macroEditorViewModel)
+                             // --- END INTEGRATION ---
                         }
                     }
                 }
