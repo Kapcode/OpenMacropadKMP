@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp.network.sockets.Server
+package com.kapcode.open.macropad.kmps.network.sockets.Server
 
 import Model.*
 import java.net.ServerSocket

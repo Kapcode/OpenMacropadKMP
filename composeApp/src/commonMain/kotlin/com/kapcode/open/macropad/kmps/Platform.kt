@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 interface Platform {
     val name: String

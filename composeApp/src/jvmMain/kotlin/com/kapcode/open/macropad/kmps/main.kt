@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 import ActiveMacroManager
 import MacroPlayer
@@ -9,7 +9,7 @@ import UI.MacroManagerUI
 import UI.TabbedUI
 import com.github.kwhat.jnativehook.GlobalScreen
 import com.formdev.flatlaf.FlatDarkLaf
-import com.kapcode.open.macropad.kmp.UI.ConnectedDevicesUI
+import com.kapcode.open.macropad.kmps.UI.ConnectedDevicesUI
 import java.awt.BorderLayout
 import java.awt.Dimension
 import javax.swing.*

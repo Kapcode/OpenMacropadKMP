@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp.ui.components
+package com.kapcode.open.macropad.kmps.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement

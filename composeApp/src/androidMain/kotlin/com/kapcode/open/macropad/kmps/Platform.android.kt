@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 import android.os.Build
 

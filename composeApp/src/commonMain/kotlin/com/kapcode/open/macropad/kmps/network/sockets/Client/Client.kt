@@ -1,12 +1,8 @@
-package com.kapcode.open.macropad.kmp.network.sockets.Client
+package com.kapcode.open.macropad.kmps.network.sockets.Client
 
 import Model.*
 import java.net.Socket
-import java.net.SocketException
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

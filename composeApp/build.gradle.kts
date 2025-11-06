@@ -40,6 +40,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation(libs.compose.splitpane) // <-- USE ALIAS
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
 
@@ -71,7 +72,7 @@ kotlin {
 }
 
 android {
-    namespace = "com.kapcode.open.macropad.kmp"
+    namespace = "com.kapcode.open.macropad.kmps"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {

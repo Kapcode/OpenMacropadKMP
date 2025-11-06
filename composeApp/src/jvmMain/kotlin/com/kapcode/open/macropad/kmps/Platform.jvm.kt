@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 class JVMPlatform: Platform {
     override val name: String = "Java ${System.getProperty("java.version")}"

@@ -1,12 +1,10 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 import Model.DataModel
 import Model.dataMessage
-import Model.errorMessage
 import Model.handle
-import com.kapcode.open.macropad.kmp.network.sockets.Server.Server
+import com.kapcode.open.macropad.kmps.network.sockets.Server.Server
 import java.net.InetAddress
-import kotlin.concurrent.thread
 
 interface ConnectionUIBridge {
     fun startListening()

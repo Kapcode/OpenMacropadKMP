@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp.UI
+package com.kapcode.open.macropad.kmps.UI
 
 import UI.SvgIconRenderer
 import UI.Theme

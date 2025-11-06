@@ -1,7 +1,7 @@
 package UI
 
 
-import com.kapcode.open.macropad.kmp.WifiServer
+import com.kapcode.open.macropad.kmps.WifiServer
 import java.awt.BorderLayout
 import javax.swing.*
 

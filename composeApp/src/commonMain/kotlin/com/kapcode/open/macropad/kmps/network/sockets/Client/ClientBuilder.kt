@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp.network.sockets.Client
+package com.kapcode.open.macropad.kmps.network.sockets.Client
 
 import Model.DataModel
 

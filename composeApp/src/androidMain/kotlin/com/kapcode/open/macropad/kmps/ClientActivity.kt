@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package com.kapcode.open.macropad.kmps
 
 import android.os.Build
 import android.os.Bundle
@@ -14,8 +14,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.kapcode.open.macropad.kmp.network.sockets.Client.Client
-import com.kapcode.open.macropad.kmp.network.sockets.Client.ClientBuilder
+import com.kapcode.open.macropad.kmps.network.sockets.Client.Client
+import com.kapcode.open.macropad.kmps.network.sockets.Client.ClientBuilder
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
