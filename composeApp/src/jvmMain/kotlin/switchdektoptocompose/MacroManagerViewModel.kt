@@ -13,7 +13,8 @@ data class MacroFileState(
     val name: String,
     val content: String,
     val isActive: Boolean = false,
-    val isSelectedForDeletion: Boolean = false
+    val isSelectedForDeletion: Boolean = false,
+    val allowedClients: String = ""
 )
 
 class MacroManagerViewModel(
@@ -74,21 +75,50 @@ class MacroManagerViewModel(
             emptyList()
         } else {
             macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }
-                ?.map { file ->
-                    val isActive = _macroFiles.value.find { it.id == file.absolutePath }?.isActive ?: false
-                    MacroFileState(id = file.absolutePath, file = file, name = file.nameWithoutExtension, content = "", isActive = isActive)
+                ?.mapNotNull { file ->
+                    try {
+                        val content = file.readText()
+                        val trigger = JSONObject(content).optJSONObject("trigger")
+                        val allowedClients = trigger?.optString("allowedClients", "") ?: ""
+                        val isActive = _macroFiles.value.find { it.id == file.absolutePath }?.isActive ?: false
+                        MacroFileState(
+                            id = file.absolutePath,
+                            file = file,
+                            name = file.nameWithoutExtension,
+                            content = content,
+                            isActive = isActive,
+                            allowedClients = allowedClients
+                        )
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        null
+                    }
                 }?.sortedBy { it.name } ?: emptyList()
         }
         
+        val sampleTrigger = JSONObject(sampleMacroContent).optJSONObject("trigger")
+        val sampleAllowedClients = sampleTrigger?.optString("allowedClients", "") ?: ""
         val sampleMacro = MacroFileState(
             id = "__SAMPLE_MACRO__",
             file = null,
             name = "Sample Macro",
             content = sampleMacroContent,
-            isActive = _macroFiles.value.find { it.id == "__SAMPLE_MACRO__" }?.isActive ?: false
+            isActive = _macroFiles.value.find { it.id == "__SAMPLE_MACRO__" }?.isActive ?: false,
+            allowedClients = sampleAllowedClients
         )
         
         _macroFiles.value = listOf(sampleMacro) + fileMacros
+    }
+
+    fun getActiveMacrosForClient(clientName: String): List<MacroFileState> {
+        return _macroFiles.value.filter { macro ->
+            macro.isActive && (
+                macro.allowedClients.isBlank() ||
+                macro.allowedClients.split(',')
+                    .map { it.trim() }
+                    .any { it.equals(clientName, ignoreCase = true) }
+            )
+        }
     }
 
     fun onPlayMacro(macro: MacroFileState) {
@@ -109,15 +139,9 @@ class MacroManagerViewModel(
                 for (i in 0 until eventsArray.length()) {
                     eventsArray.getJSONObject(i)?.let { eventObj ->
                         when (eventObj.getString("type").lowercase()) {
-                            "key" -> {
-                                events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
-                            }
-                            "delay" -> {
-                                events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
-                            }
-                            "set_auto_wait" -> {
-                                events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
-                            }
+                            "key" -> events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                            "delay" -> events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
+                            "set_auto_wait" -> events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
                         }
                     }
                 }
