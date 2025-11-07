@@ -89,7 +89,8 @@ fun DesktopApp(
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
-    val serverPort by desktopViewModel.serverPort.collectAsState()
+    val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
+    val serverPort = if (encryptionEnabled) 8443 else 8080
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
@@ -105,7 +106,11 @@ fun DesktopApp(
 
     // --- Dialogs ---
     if (showSettingsDialog) {
-        SettingsDialog(viewModel = settingsViewModel, onDismissRequest = { showSettingsDialog = false })
+        SettingsDialog(
+            desktopViewModel = desktopViewModel,
+            settingsViewModel = settingsViewModel,
+            onDismissRequest = { showSettingsDialog = false }
+        )
     }
     filePendingDeletion?.let { file ->
         ConfirmDeleteDialog(file = file, onConfirm = { macroManagerViewModel.confirmDeletion() }, onDismiss = { macroManagerViewModel.cancelDeletion() })

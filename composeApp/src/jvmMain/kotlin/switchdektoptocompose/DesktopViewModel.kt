@@ -17,8 +17,10 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel : ConnectionListener {
 
-    private val port = 8443
-    private val wifiServer = WifiServer(port = port)
+    private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
+    val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
+
+    private val wifiServer = WifiServer()
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
     val connectedDevices: StateFlow<List<ClientInfo>> = _connectedDevices.asStateFlow()
@@ -28,12 +30,17 @@ class DesktopViewModel : ConnectionListener {
 
     private val _serverIpAddress = MutableStateFlow("Determining IP...")
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
-    
-    val serverPort: StateFlow<Int> = MutableStateFlow(port).asStateFlow()
 
     init {
         wifiServer.setConnectionListener(this)
         findLocalIpAddress()
+    }
+    
+    fun setEncryption(enabled: Boolean) {
+        // Prevent changing encryption while the server is running
+        if (!_isServerRunning.value) {
+            _encryptionEnabled.value = enabled
+        }
     }
 
     private fun findLocalIpAddress() {
@@ -49,7 +56,8 @@ class DesktopViewModel : ConnectionListener {
     fun startServer() {
         if (wifiServer.isListening()) return
         try {
-            wifiServer.startListening()
+            // Pass the current encryption setting to the server
+            wifiServer.startListening(encryptionEnabled = _encryptionEnabled.value)
             _isServerRunning.value = wifiServer.isListening()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -84,8 +92,6 @@ class DesktopViewModel : ConnectionListener {
     override fun onDataReceived(clientId: String, data: ByteArray) {
         println("Data received from $clientId")
     }
-
-
 
     override fun onError(error: String) {
         System.err.println("SERVER ERROR: $error")

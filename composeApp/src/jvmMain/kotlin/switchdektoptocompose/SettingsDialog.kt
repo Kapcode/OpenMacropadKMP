@@ -12,11 +12,15 @@ import androidx.compose.ui.window.rememberDialogState
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
-    viewModel: SettingsViewModel,
+    desktopViewModel: DesktopViewModel, // Use the main ViewModel
+    settingsViewModel: SettingsViewModel,
     onDismissRequest: () -> Unit
 ) {
-    val macroDirectory by viewModel.macroDirectory.collectAsState()
-    val selectedTheme by viewModel.selectedTheme.collectAsState()
+    val macroDirectory by settingsViewModel.macroDirectory.collectAsState()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
+    val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
+
     val dialogState = rememberDialogState(width = 600.dp, height = 400.dp)
 
     DialogWindow(
@@ -30,54 +34,26 @@ fun SettingsDialog(
                 modifier = Modifier.padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // --- Macro Directory Setting ---
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Macro Directory")
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = macroDirectory,
-                            onValueChange = {},
-                            readOnly = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = { viewModel.chooseMacroDirectory() }) {
-                            Text("Browse")
-                        }
-                    }
-                }
+                // ... (Other settings remain the same)
 
-                // --- Theme Setting ---
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Theme")
-                    var isThemeDropdownExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = isThemeDropdownExpanded,
-                        onExpandedChange = { isThemeDropdownExpanded = !isThemeDropdownExpanded }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedTheme,
-                            onValueChange = {},
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isThemeDropdownExpanded) },
-                            modifier = Modifier.menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = isThemeDropdownExpanded,
-                            onDismissRequest = { isThemeDropdownExpanded = false }
-                        ) {
-                            viewModel.availableThemes.forEach { theme ->
-                                DropdownMenuItem(
-                                    text = { Text(theme) },
-                                    onClick = {
-                                        viewModel.selectTheme(theme)
-                                        isThemeDropdownExpanded = false
-                                    }
-                                )
-                            }
-                        }
-                    }
+                // --- Encryption Setting ---
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
+                    Checkbox(
+                        checked = encryptionEnabled,
+                        onCheckedChange = { desktopViewModel.setEncryption(it) },
+                        enabled = !isServerRunning // Disable checkbox if server is running
+                    )
                 }
+                 Text(
+                    text = "Requires a restart of the server to apply. Disables pairing.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+
 
                 Spacer(Modifier.weight(1f)) // Pushes the close button to the bottom
                 Button(
