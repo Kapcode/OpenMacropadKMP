@@ -10,7 +10,8 @@ import org.jetbrains.compose.splitpane.rememberSplitPaneState
 @Composable
 fun MacroEditingArea(
     macroManagerViewModel: MacroManagerViewModel,
-    macroEditorViewModel: MacroEditorViewModel
+    macroEditorViewModel: MacroEditorViewModel,
+    macroTimelineViewModel: MacroTimelineViewModel // Added Timeline ViewModel
 ) {
     val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.7f)
     val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
@@ -31,8 +32,7 @@ fun MacroEditingArea(
         }
         // --- Bottom Pane (Timeline) ---
         second(minSize = 150.dp) {
-            // Replace the placeholder Box with our new Composable
-            MacroTimelineScreen()
+            MacroTimelineScreen(viewModel = macroTimelineViewModel) // Pass Timeline ViewModel
         }
     }
 }

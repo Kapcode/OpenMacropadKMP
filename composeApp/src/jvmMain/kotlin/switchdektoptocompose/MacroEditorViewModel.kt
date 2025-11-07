@@ -26,7 +26,30 @@ class MacroEditorViewModel {
     val selectedTabIndex = _selectedTabIndex.asStateFlow()
 
     init {
-        addNewTab()
+        // Start with a default tab containing a sample macro.
+        addSampleTab()
+    }
+    
+    private fun addSampleTab() {
+        val sampleContent = """
+        {
+            "events": [
+                { "type": "key", "action": "PRESS", "keyName": "Ctrl" },
+                { "type": "key", "action": "PRESS", "keyName": "C" },
+                { "type": "key", "action": "RELEASE", "keyName": "C" },
+                { "type": "key", "action": "RELEASE", "keyName": "Ctrl" },
+                { "type": "delay", "durationMs": 100 },
+                { "type": "mouse", "action": "MOVE", "x": 500, "y": 300 },
+                { "type": "mouse", "action": "CLICK" }
+            ]
+        }
+        """.trimIndent()
+
+        val newTab = EditorTabState(
+            title = "Sample Macro",
+            content = sampleContent
+        )
+        _tabs.value = listOf(newTab)
     }
 
     fun addNewTab() {
@@ -68,7 +91,6 @@ class MacroEditorViewModel {
     fun saveSelectedTab() {
         val currentTab = tabs.value.getOrNull(selectedTabIndex.value)
         if (currentTab != null) {
-            // In a real implementation, you would write `currentTab.content` to `currentTab.file`
             println("--- SAVE ACTION ---")
             println("File: ${currentTab.file?.absolutePath ?: "New File"}")
             println("Content: ${currentTab.content}")
@@ -79,12 +101,9 @@ class MacroEditorViewModel {
     fun saveSelectedTabAs() {
         val currentTab = tabs.value.getOrNull(selectedTabIndex.value)
         if (currentTab != null) {
-            // In a real implementation, you would open a file chooser dialog
             println("--- SAVE AS ACTION ---")
             println("Content: ${currentTab.content}")
             println("----------------------")
         }
     }
-    
-    // Future: fun renameSelectedTab(newTitle: String) { ... }
 }

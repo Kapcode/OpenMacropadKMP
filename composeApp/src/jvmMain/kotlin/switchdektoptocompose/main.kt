@@ -23,6 +23,8 @@ fun main() = application {
     val macroEditorViewModel = remember { MacroEditorViewModel() }
     val macroManagerViewModel = remember { MacroManagerViewModel() }
     val settingsViewModel = remember { SettingsViewModel() }
+    // Pass the editor VM to the timeline VM
+    val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
     DisposableEffect(Unit) {
         desktopViewModel.startServer()
@@ -41,6 +43,7 @@ fun main() = application {
             macroEditorViewModel = macroEditorViewModel,
             macroManagerViewModel = macroManagerViewModel,
             settingsViewModel = settingsViewModel,
+            macroTimelineViewModel = macroTimelineViewModel,
             onExit = ::exitApplication
         )
     }
@@ -53,6 +56,7 @@ fun DesktopApp(
     macroEditorViewModel: MacroEditorViewModel,
     macroManagerViewModel: MacroManagerViewModel,
     settingsViewModel: SettingsViewModel,
+    macroTimelineViewModel: MacroTimelineViewModel,
     onExit: () -> Unit = {}
 ) {
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
@@ -63,14 +67,12 @@ fun DesktopApp(
 
     var showSettingsDialog by remember { mutableStateOf(false) }
 
-    // Determine which color scheme to use based on the setting
     val colorScheme = when (selectedTheme) {
         "Dark Blue" -> DarkBlueColorScheme
         "Light Blue" -> LightBlueColorScheme
-        else -> DarkBlueColorScheme // Default to dark
+        else -> DarkBlueColorScheme
     }
 
-    // This will now launch a separate, heavyweight dialog window.
     if (showSettingsDialog) {
         SettingsDialog(
             viewModel = settingsViewModel,
@@ -84,7 +86,7 @@ fun DesktopApp(
             val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
             VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
-                // --- Top Pane (Menu, Server Status & Inspector) ---
+                // --- Top Pane ---
                 first(minSize = 100.dp) {
                     Row(
                         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
@@ -123,7 +125,7 @@ fun DesktopApp(
                         }
                     }
                 }
-                // --- Bottom Pane (Main Content) ---
+                // --- Bottom Pane ---
                 second(minSize = 200.dp) {
                     HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
                         first(minSize = 250.dp) {
@@ -139,7 +141,8 @@ fun DesktopApp(
                         second(minSize = 500.dp) {
                             MacroEditingArea(
                                 macroManagerViewModel = macroManagerViewModel,
-                                macroEditorViewModel = macroEditorViewModel
+                                macroEditorViewModel = macroEditorViewModel,
+                                macroTimelineViewModel = macroTimelineViewModel
                             )
                         }
                     }
