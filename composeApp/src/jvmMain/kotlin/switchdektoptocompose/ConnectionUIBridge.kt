@@ -12,8 +12,8 @@ import java.net.InetAddress
 import java.security.KeyStore
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
+import io.ktor.server.engine.ClientAuth // Import ClientAuth
 
-// ... (Interfaces and Wifi abstract class remain the same)
 interface ConnectionUIBridge {
     fun startListening()
     fun stopListening()
@@ -33,7 +33,7 @@ interface ConnectionListener {
 
 abstract class Wifi : ConnectionUIBridge {
     protected var listener: ConnectionListener? = null
-    protected val connectedClients = ConcurrentHashMap<String, String>() // Store ID and Name
+    protected val connectedClients = ConcurrentHashMap<String, String>()
 
     override fun setConnectionListener(listener: ConnectionListener) {
         this.listener = listener
@@ -59,6 +59,7 @@ abstract class Wifi : ConnectionUIBridge {
         }
     }
 }
+
 class WifiServer(
     private val port: Int = 8443,
 ) : Wifi() {
@@ -97,11 +98,33 @@ class WifiServer(
             ) {
                 port = this@WifiServer.port
                 host = "0.0.0.0"
+                // THE CHANGE: Require clients to present a certificate
+                clientAuth = ClientAuth.REQUIRE
             }
             module {
-                install(WebSockets) { /* ... */ }
+                install(WebSockets) {
+                    pingPeriod = Duration.ofSeconds(15)
+                    timeout = Duration.ofSeconds(15)
+                    maxFrameSize = Long.MAX_VALUE
+                    masking = false
+                }
                 routing {
-                    webSocket("/ws") { /* ... */ }
+                    webSocket("/ws") {
+                        val clientId = call.request.queryParameters["clientId"] ?: "UnknownDevice"
+                        sessions[clientId] = this
+                        handleNewConnection(clientId, clientId)
+                        try {
+                            for (frame in incoming) {
+                                if (frame is Frame.Binary) {
+                                    val data = frame.readBytes()
+                                    listener?.onDataReceived(clientId, data)
+                                 }
+                            }
+                        } finally {
+                            sessions.remove(clientId)
+                            handleDisconnection(clientId)
+                        }
+                    }
                 }
             }
         }
@@ -109,7 +132,6 @@ class WifiServer(
         server = embeddedServer(Netty, environment)
         serverScope.launch {
             try {
-                // Start broadcasting server presence
                 val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
                 discovery = ServerDiscovery(serverName, port)
                 discovery?.start()
@@ -133,8 +155,7 @@ class WifiServer(
     override fun isListening(): Boolean {
         return server != null
     }
-    
-    // ... rest of the class is the same ...
+
     override fun sendData(data: ByteArray) {
         serverScope.launch {
             sessions.values.forEach { session ->
@@ -148,6 +169,7 @@ class WifiServer(
             sessions[clientId]?.send(Frame.Binary(fin = true, data))
         }
     }
+    
     override fun disconnectClient(clientId: String) {
         serverScope.launch {
             sessions[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected by server"))
