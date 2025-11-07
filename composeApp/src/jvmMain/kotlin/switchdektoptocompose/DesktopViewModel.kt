@@ -19,8 +19,8 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel : ConnectionListener {
 
-    private val wifiServer = WifiServer()
-    private val port = 9999 // Define port here
+    private val port = 8443 // THE FIX: Use the correct Ktor WSS port
+    private val wifiServer = WifiServer(port = port)
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
     val connectedDevices: StateFlow<List<ClientInfo>> = _connectedDevices.asStateFlow()
@@ -86,6 +86,8 @@ class DesktopViewModel : ConnectionListener {
     override fun onDataReceived(clientId: String, data: ByteArray) {
         println("Data received from $clientId")
     }
+
+
 
     override fun onError(error: String) {
         System.err.println("SERVER ERROR: $error")

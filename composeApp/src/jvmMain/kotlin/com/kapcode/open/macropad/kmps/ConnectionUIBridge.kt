@@ -7,11 +7,13 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
-import java.io.File
+import java.io.InputStream
+import java.net.InetAddress
 import java.security.KeyStore
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 
+// ... (Interfaces and Wifi abstract class remain the same)
 interface ConnectionUIBridge {
     fun startListening()
     fun stopListening()
@@ -57,12 +59,12 @@ abstract class Wifi : ConnectionUIBridge {
         }
     }
 }
-
 class WifiServer(
     private val port: Int = 8443,
 ) : Wifi() {
 
     private var server: NettyApplicationEngine? = null
+    private var discovery: ServerDiscovery? = null
     private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val sessions = ConcurrentHashMap<String, WebSocketServerSession>()
 
@@ -72,9 +74,10 @@ class WifiServer(
             return
         }
 
-        val keystoreFile = File("keystore.jks") // Ensure this is in the right path
-        if (!keystoreFile.exists()) {
-            listener?.onError("Keystore not found. Cannot start secure server.")
+        val keystoreStream: InputStream? = Thread.currentThread().contextClassLoader.getResourceAsStream("keystore.jks")
+
+        if (keystoreStream == null) {
+            listener?.onError("Keystore not found in resources. Please ensure 'keystore.jks' is in 'src/jvmMain/resources'.")
             return
         }
 
@@ -82,9 +85,12 @@ class WifiServer(
         val keystorePassword = "password"
         val privateKeyPassword = "password"
 
+        val keyStore = KeyStore.getInstance("JKS")
+        keystoreStream.use { keyStore.load(it, keystorePassword.toCharArray()) }
+
         val environment = applicationEngineEnvironment {
             sslConnector(
-                keyStore = KeyStore.getInstance(keystoreFile, keystorePassword.toCharArray()),
+                keyStore = keyStore,
                 keyAlias = keyAlias,
                 keyStorePassword = { keystorePassword.toCharArray() },
                 privateKeyPassword = { privateKeyPassword.toCharArray() }
@@ -92,31 +98,10 @@ class WifiServer(
                 port = this@WifiServer.port
                 host = "0.0.0.0"
             }
-
             module {
-                install(WebSockets) {
-                    pingPeriod = Duration.ofSeconds(15)
-                    timeout = Duration.ofSeconds(15)
-                    maxFrameSize = Long.MAX_VALUE
-                    masking = false
-                }
+                install(WebSockets) { /* ... */ }
                 routing {
-                    webSocket("/ws") {
-                        val clientId = call.request.queryParameters["clientId"] ?: "UnknownDevice"
-                        sessions[clientId] = this
-                        handleNewConnection(clientId, clientId)
-                        try {
-                            for (frame in incoming) {
-                                if (frame is Frame.Binary) {
-                                    val data = frame.readBytes()
-                                    listener?.onDataReceived(clientId, data)
-                                }
-                            }
-                        } finally {
-                            sessions.remove(clientId)
-                            handleDisconnection(clientId)
-                        }
-                    }
+                    webSocket("/ws") { /* ... */ }
                 }
             }
         }
@@ -124,20 +109,32 @@ class WifiServer(
         server = embeddedServer(Netty, environment)
         serverScope.launch {
             try {
+                // Start broadcasting server presence
+                val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
+                discovery = ServerDiscovery(serverName, port)
+                discovery?.start()
+
                 server?.start(wait = true)
             } catch (e: Exception) {
-                listener?.onError("Server failed to start: ${e.message}")
+                listener?.onError("Failed to start server: ${e.message}")
+                discovery?.stop()
             }
         }
     }
 
     override fun stopListening() {
+        discovery?.stop()
         server?.stop(1000, 5000)
         server = null
         sessions.clear()
         connectedClients.clear()
     }
 
+    override fun isListening(): Boolean {
+        return server != null
+    }
+    
+    // ... rest of the class is the same ...
     override fun sendData(data: ByteArray) {
         serverScope.launch {
             sessions.values.forEach { session ->
@@ -151,11 +148,6 @@ class WifiServer(
             sessions[clientId]?.send(Frame.Binary(fin = true, data))
         }
     }
-
-    override fun isListening(): Boolean {
-        return server != null
-    }
-
     override fun disconnectClient(clientId: String) {
         serverScope.launch {
             sessions[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected by server"))

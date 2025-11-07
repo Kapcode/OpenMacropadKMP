@@ -7,33 +7,37 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.tooling.preview.Preview
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.launch
-import java.net.InetSocketAddress
-import java.net.Socket
-import java.net.SocketTimeoutException
 
 const val TAG = "MainActivity"
-const val SERVER_PORT = 9999
-const val TIMEOUT_MS = 500 // Timeout for connection attempts
 
 class MainActivity : ComponentActivity() {
 
-    private val foundServers = mutableStateListOf<String>()
+    private lateinit var clientDiscovery: ClientDiscovery
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
+        clientDiscovery = ClientDiscovery()
+
         setContent {
+            val foundServers by clientDiscovery.foundServers.collectAsState()
+
+            // Map DiscoveredServer to the String the App composable expects
+            val serverAddresses = remember(foundServers) {
+                foundServers.map { it.address }
+            }
+
             App(
-                scanServers = { scanForAvailableServers() },
-                foundServers = foundServers,
+                scanServers = {
+                    clientDiscovery.foundServers.value = emptyList() // Clear previous results
+                    clientDiscovery.start()
+                },
+                foundServers = serverAddresses,
                 onConnectClick = { serverAddress ->
                     Log.d(TAG, "Launching ClientActivity for: $serverAddress")
                     val intent = Intent(this, ClientActivity::class.java)
@@ -44,45 +48,30 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun scanForAvailableServers() {
-        Log.d(TAG, "Scanning for available servers on port $SERVER_PORT...")
-        foundServers.clear() // Clear previous results
+    override fun onResume() {
+        super.onResume()
+        clientDiscovery.start()
+    }
 
-        CoroutineScope(Dispatchers.IO).launch {
-            val subnet = "192.168.1." // Example subnet, ideally determined dynamically
-            val deferredServers = (1..254).map { i ->
-                async {
-                    val address = subnet + i
-                    try {
-                        val socket = Socket()
-                        socket.connect(InetSocketAddress(address, SERVER_PORT), TIMEOUT_MS)
-                        socket.close()
-                        Log.d(TAG, "Found available server: $address:$SERVER_PORT")
-                        "$address:$SERVER_PORT"
-                    } catch (e: SocketTimeoutException) {
-                        null
-                    } catch (e: Exception) {
-                        null
-                    }
-                }
-            }
+    override fun onPause() {
+        super.onPause()
+        clientDiscovery.stop()
+    }
 
-            val newFoundServers = deferredServers.awaitAll().filterNotNull()
-            // Update the mutable state list on the main thread
-            launch(Dispatchers.Main) {
-                foundServers.addAll(newFoundServers)
-                if (foundServers.isNotEmpty()) {
-                    Log.d(TAG, "Scan complete. Found servers: $foundServers")
-                } else {
-                    Log.d(TAG, "Scan complete. No servers found.")
-                }
-            }
-        }
+    override fun onDestroy() {
+        super.onDestroy()
+        clientDiscovery.stop()
     }
 }
 
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    App(scanServers = {}, foundServers = mutableStateListOf(), onConnectClick = { /* Preview click handler */ }) 
+    // Preview with some sample data
+    val sampleServers = listOf("192.168.1.100:8443", "Desktop-PC:8443")
+    App(
+        scanServers = {},
+        foundServers = sampleServers,
+        onConnectClick = { }
+    )
 }
