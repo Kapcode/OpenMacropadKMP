@@ -2,6 +2,17 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion // Import JavaVersion for compileOptions
 
+// Force the specific coroutine version that Ktor 2.3.8 is compatible with.
+// This resolves the NoSuchMethodError at runtime.
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+    }
+}
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidApplication)
@@ -27,6 +38,9 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
             implementation("com.google.android.gms:play-services-ads:24.7.0")
+            // Add Bouncy Castle for certificate generation
+            implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+            implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -42,7 +56,6 @@ kotlin {
             implementation("io.ktor:ktor-client-core:2.3.8")
             implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
             implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8")
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -59,6 +72,8 @@ kotlin {
             implementation("com.formdev:flatlaf:3.4.1")
             implementation("com.kitfox.svg:svg-salamander:1.0")
             implementation("org.json:json:20250517")
+            // ADDED: Simple logger implementation to fix the SLF4J warning
+            implementation("org.slf4j:slf4j-simple:2.0.13")
         }
     }
 }
@@ -77,6 +92,8 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Add this exclusion to resolve the Bouncy Castle duplicate file issue
+            excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
         }
     }
     buildTypes {

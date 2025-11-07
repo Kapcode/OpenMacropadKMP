@@ -1,10 +1,16 @@
 package com.kapcode.open.macropad.kmps
 
-import Model.DataModel
-import Model.dataMessage
-import Model.handle
-import com.kapcode.open.macropad.kmps.network.sockets.Server.Server
-import java.net.InetAddress
+import io.ktor.server.application.*
+import io.ktor.server.engine.*
+import io.ktor.server.netty.*
+import io.ktor.server.routing.*
+import io.ktor.server.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.*
+import java.io.File
+import java.security.KeyStore
+import java.time.Duration
+import java.util.concurrent.ConcurrentHashMap
 
 interface ConnectionUIBridge {
     fun startListening()
@@ -25,7 +31,7 @@ interface ConnectionListener {
 
 abstract class Wifi : ConnectionUIBridge {
     protected var listener: ConnectionListener? = null
-    protected val connectedClients = mutableMapOf<String, String>() // Store ID and Name
+    protected val connectedClients = ConcurrentHashMap<String, String>() // Store ID and Name
 
     override fun setConnectionListener(listener: ConnectionListener) {
         this.listener = listener
@@ -53,96 +59,108 @@ abstract class Wifi : ConnectionUIBridge {
 }
 
 class WifiServer(
-    private val port: Int = 9999,
-    private val maxClients: Int = 50
+    private val port: Int = 8443,
 ) : Wifi() {
 
-    private var server: Server? = null
+    private var server: NettyApplicationEngine? = null
+    private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val sessions = ConcurrentHashMap<String, WebSocketServerSession>()
 
     override fun startListening() {
-        if (server?.isRunning() == true) {
+        if (server != null) {
             listener?.onError("Server is already running")
             return
         }
 
-        val serverName = try {
-            InetAddress.getLocalHost().hostName
-        } catch (e: Exception) {
-            "Desktop Server"
+        val keystoreFile = File("keystore.jks") // Ensure this is in the right path
+        if (!keystoreFile.exists()) {
+            listener?.onError("Keystore not found. Cannot start secure server.")
+            return
         }
 
-        server = Server(
-            port = port,
-            maxClients = maxClients,
-            serverName = serverName,
-            onClientConnected = { clientId, clientName, secureSocket ->
-                handleNewConnection(clientId, clientName)
-            },
-            onClientDisconnected = { clientId ->
-                handleDisconnection(clientId)
-            },
-            onMessageReceived = { clientId, dataModel ->
-                handleReceivedMessage(clientId, dataModel)
-            },
-            onError = { context, dataModel ->
-                listener?.onError("Server error in $context: ${dataModel.messageType}")
-            }
-        )
+        val keyAlias = "selfsigned"
+        val keystorePassword = "password"
+        val privateKeyPassword = "password"
 
-        try {
-            server?.start()
-        } catch (e: Exception) {
-            listener?.onError("Failed to start server: ${e.message ?: "Unknown error"}")
+        val environment = applicationEngineEnvironment {
+            sslConnector(
+                keyStore = KeyStore.getInstance(keystoreFile, keystorePassword.toCharArray()),
+                keyAlias = keyAlias,
+                keyStorePassword = { keystorePassword.toCharArray() },
+                privateKeyPassword = { privateKeyPassword.toCharArray() }
+            ) {
+                port = this@WifiServer.port
+                host = "0.0.0.0"
+            }
+
+            module {
+                install(WebSockets) {
+                    pingPeriod = Duration.ofSeconds(15)
+                    timeout = Duration.ofSeconds(15)
+                    maxFrameSize = Long.MAX_VALUE
+                    masking = false
+                }
+                routing {
+                    webSocket("/ws") {
+                        val clientId = call.request.queryParameters["clientId"] ?: "UnknownDevice"
+                        sessions[clientId] = this
+                        handleNewConnection(clientId, clientId)
+                        try {
+                            for (frame in incoming) {
+                                if (frame is Frame.Binary) {
+                                    val data = frame.readBytes()
+                                    listener?.onDataReceived(clientId, data)
+                                }
+                            }
+                        } finally {
+                            sessions.remove(clientId)
+                            handleDisconnection(clientId)
+                        }
+                    }
+                }
+            }
+        }
+
+        server = embeddedServer(Netty, environment)
+        serverScope.launch {
+            try {
+                server?.start(wait = true)
+            } catch (e: Exception) {
+                listener?.onError("Server failed to start: ${e.message}")
+            }
         }
     }
-    
-    // ... (rest of WifiServer is unchanged)
 
     override fun stopListening() {
-        server?.stop()
+        server?.stop(1000, 5000)
+        server = null
+        sessions.clear()
         connectedClients.clear()
     }
 
     override fun sendData(data: ByteArray) {
-        val dataModel = createDataMessage(data)
-        server?.broadcast(dataModel)
+        serverScope.launch {
+            sessions.values.forEach { session ->
+                session.send(Frame.Binary(fin = true, data))
+            }
+        }
     }
 
     fun sendDataToClient(clientId: String, data: ByteArray) {
-        val dataModel = createDataMessage(data)
-        server?.sendToClient(clientId, dataModel)
+        serverScope.launch {
+            sessions[clientId]?.send(Frame.Binary(fin = true, data))
+        }
     }
 
     override fun isListening(): Boolean {
-        return server?.isRunning() ?: false
+        return server != null
     }
 
     override fun disconnectClient(clientId: String) {
-        server?.disconnectClient(clientId)
-        super.disconnectClient(clientId)
-    }
-
-    private fun handleReceivedMessage(clientId: String, dataModel: DataModel) {
-        dataModel.handle(
-            onText = { text ->
-                listener?.onDataReceived(clientId, text.toByteArray())
-            },
-            onCommand = { command, params ->
-                val commandString = "COMMAND:$command:$params"
-                listener?.onDataReceived(clientId, commandString.toByteArray())
-            },
-            onData = { _, value ->
-                listener?.onDataReceived(clientId, value)
-            },
-            onHeartbeat = { _ -> },
-            onResponse = { success, message, data ->
-                val responseString = "RESPONSE:$success:$message:$data"
-                listener?.onDataReceived(clientId, responseString.toByteArray())
-            }
-        )
-    }
-
-    private fun createDataMessage(data: ByteArray): DataModel {
-        return dataMessage("data", data)
+        serverScope.launch {
+            sessions[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected by server"))
+            sessions.remove(clientId)
+            super.disconnectClient(clientId)
+        }
     }
 }
