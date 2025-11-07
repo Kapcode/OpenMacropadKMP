@@ -38,11 +38,9 @@ fun main() = application {
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     
     val triggerListener = remember {
-        TriggerListener { fileToPlay ->
-            val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.file?.absolutePath == fileToPlay.absolutePath }
-            if (macroToPlay != null) {
-                macroManagerViewModel.onPlayMacro(macroToPlay)
-            }
+        // Update the callback to pass the full MacroFileState object
+        TriggerListener { macroToPlay ->
+            macroManagerViewModel.onPlayMacro(macroToPlay)
         }
     }
 
