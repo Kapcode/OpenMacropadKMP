@@ -15,7 +15,6 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import com.kapcode.open.macropad.kmp.MacroManagerViewModel
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
@@ -57,7 +56,8 @@ fun DesktopApp(
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
-            val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
+            // Set the main horizontal splitter to a 10/90 split
+            val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
             VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
                 // --- Top Pane (Server Status & Inspector) ---
@@ -81,7 +81,7 @@ fun DesktopApp(
                 // --- Bottom Pane (Main Content) ---
                 second(minSize = 200.dp) {
                     HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
-                        // Left side of bottom pane
+                        // Left side of bottom pane (10% width)
                         first(minSize = 250.dp) {
                            Column {
                                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
@@ -92,14 +92,12 @@ fun DesktopApp(
                                }
                            }
                         }
-                        // Right side of bottom pane
+                        // Right side of bottom pane (90% width)
                         second(minSize = 500.dp) {
-                            // --- INTEGRATION ---
                             MacroEditingArea(
                                 macroManagerViewModel = macroManagerViewModel,
                                 macroEditorViewModel = macroEditorViewModel
                             )
-                            // --- END INTEGRATION ---
                         }
                     }
                 }

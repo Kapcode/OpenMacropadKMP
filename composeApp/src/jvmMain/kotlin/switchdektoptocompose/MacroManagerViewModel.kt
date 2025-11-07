@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmp
+package switchdektoptocompose
 
 import kotlinx.coroutines.flow.*
 import java.io.File

@@ -7,9 +7,6 @@ import java.io.File
 
 /**
  * Represents the state of a single editor tab.
- * @param title The title displayed on the tab.
- * @param content The text content of the editor for this tab.
- * @param file The backing file for this tab, if it exists.
  */
 data class EditorTabState(
     val title: String,
@@ -29,7 +26,6 @@ class MacroEditorViewModel {
     val selectedTabIndex = _selectedTabIndex.asStateFlow()
 
     init {
-        // Start with one default, unsaved tab.
         addNewTab()
     }
 
@@ -39,7 +35,6 @@ class MacroEditorViewModel {
             content = "{\n    \"events\": []\n}"
         )
         _tabs.update { it + newTab }
-        // Automatically select the newly added tab.
         _selectedTabIndex.value = tabs.value.lastIndex
     }
 
@@ -51,10 +46,7 @@ class MacroEditorViewModel {
 
     fun closeTab(index: Int) {
         if (index !in tabs.value.indices) return
-
         _tabs.update { it.toMutableList().apply { removeAt(index) } }
-
-        // Adjust selected index if necessary
         if (_selectedTabIndex.value >= index && _selectedTabIndex.value > 0) {
             _selectedTabIndex.value--
         } else if (tabs.value.isEmpty()) {
@@ -72,8 +64,27 @@ class MacroEditorViewModel {
             }
         }
     }
+
+    fun saveSelectedTab() {
+        val currentTab = tabs.value.getOrNull(selectedTabIndex.value)
+        if (currentTab != null) {
+            // In a real implementation, you would write `currentTab.content` to `currentTab.file`
+            println("--- SAVE ACTION ---")
+            println("File: ${currentTab.file?.absolutePath ?: "New File"}")
+            println("Content: ${currentTab.content}")
+            println("--------------------")
+        }
+    }
     
-    // Future functions to be added:
-    // fun saveSelectedTab() { ... }
-    // fun renameSelectedTab(newTitle: String) { ... }
+    fun saveSelectedTabAs() {
+        val currentTab = tabs.value.getOrNull(selectedTabIndex.value)
+        if (currentTab != null) {
+            // In a real implementation, you would open a file chooser dialog
+            println("--- SAVE AS ACTION ---")
+            println("Content: ${currentTab.content}")
+            println("----------------------")
+        }
+    }
+    
+    // Future: fun renameSelectedTab(newTitle: String) { ... }
 }
