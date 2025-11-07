@@ -4,20 +4,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.io.File
 
 data class MacroFileState(
-    val file: File,
-    val name: String = file.nameWithoutExtension,
-    val content: String = "",
+    val id: String,
+    val file: File?,
+    val name: String,
+    val content: String,
     val isActive: Boolean = false,
     val isSelectedForDeletion: Boolean = false
 )
 
 class MacroManagerViewModel(
     private val settingsViewModel: SettingsViewModel,
-    private val onEditMacroRequested: (File) -> Unit
+    var onEditMacroRequested: (MacroFileState) -> Unit
 ) {
+
+    private val sampleMacroContent = """
+    {
+        "trigger": { "keyName": "ESCAPE", "action": "RELEASE", "type": "key" },
+        "events": [
+            { "keyName": "WINDOWS", "action": "PRESS", "type": "key" },
+            { "keyName": "WINDOWS", "action": "RELEASE", "type": "key" }
+        ]
+    }
+    """.trimIndent()
 
     private val _macroFiles = MutableStateFlow<List<MacroFileState>>(emptyList())
     val macroFiles: StateFlow<List<MacroFileState>> = _macroFiles.asStateFlow()
@@ -28,10 +40,10 @@ class MacroManagerViewModel(
     private val _filePendingDeletion = MutableStateFlow<File?>(null)
     val filePendingDeletion: StateFlow<File?> = _filePendingDeletion.asStateFlow()
 
-    // State for multiple file deletion
     private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
     val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
-
+    
+    private val macroPlayer = MacroPlayer()
     private val viewModelScope = CoroutineScope(Dispatchers.IO)
 
     init {
@@ -41,32 +53,87 @@ class MacroManagerViewModel(
             }
         }
     }
+    
+    private fun loadMacrosFromDisk(directoryPath: String) {
+        val macroDir = File(directoryPath)
+        val fileMacros = if (!macroDir.exists() || !macroDir.isDirectory) {
+            emptyList()
+        } else {
+            macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }
+                ?.map { file ->
+                    val isActive = _macroFiles.value.find { it.id == file.absolutePath }?.isActive ?: false
+                    MacroFileState(id = file.absolutePath, file = file, name = file.nameWithoutExtension, content = "", isActive = isActive)
+                }?.sortedBy { it.name } ?: emptyList()
+        }
+        
+        val sampleMacro = MacroFileState(
+            id = "__SAMPLE_MACRO__",
+            file = null,
+            name = "Sample Macro",
+            content = sampleMacroContent,
+            isActive = _macroFiles.value.find { it.id == "__SAMPLE_MACRO__" }?.isActive ?: false
+        )
+        
+        _macroFiles.value = listOf(sampleMacro) + fileMacros
+    }
+
+    fun onPlayMacro(macro: MacroFileState) {
+        viewModelScope.launch {
+            try {
+                val content = macro.file?.readText() ?: macro.content
+                val events = parseEventsFromJson(content)
+                macroPlayer.play(events)
+            } catch (e: Exception) { e.printStackTrace() }
+        }
+    }
+
+    // --- CORRECTED FUNCTION ---
+    private fun parseEventsFromJson(jsonContent: String): List<MacroEventState> {
+        val events = mutableListOf<MacroEventState>()
+        try {
+            val json = JSONObject(jsonContent)
+            json.optJSONArray("events")?.let { eventsArray ->
+                for (i in 0 until eventsArray.length()) {
+                    eventsArray.getJSONObject(i)?.let { eventObj ->
+                        when (eventObj.getString("type").lowercase()) {
+                            "key" -> {
+                                events.add(MacroEventState.KeyEvent(
+                                    keyName = eventObj.getString("keyName"),
+                                    action = KeyAction.valueOf(eventObj.getString("action").uppercase())
+                                ))
+                            }
+                            "delay" -> {
+                                events.add(MacroEventState.DelayEvent(
+                                    durationMs = eventObj.getLong("durationMs")
+                                ))
+                            }
+                            "set_auto_wait" -> {
+                                events.add(MacroEventState.SetAutoWaitEvent(
+                                    delayMs = eventObj.getInt("value")
+                                ))
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return events
+    }
 
     fun refresh() {
         loadMacrosFromDisk(settingsViewModel.macroDirectory.value)
     }
-
-    private fun loadMacrosFromDisk(directoryPath: String) {
-        val macroDir = File(directoryPath)
-        if (!macroDir.exists() || !macroDir.isDirectory) {
-            _macroFiles.value = emptyList()
-            return
-        }
-        val files = macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }
-            ?.map { file -> MacroFileState(file = file) }
-            ?: emptyList()
-        _macroFiles.value = files.sortedBy { it.name }
-    }
     
-    // --- Single Deletion Logic ---
-    fun onDeleteMacro(file: File) {
-        _filePendingDeletion.value = file
+    fun onDeleteMacro(macro: MacroFileState) {
+        if (macro.file == null) return
+        _filePendingDeletion.value = macro.file
     }
 
     fun confirmDeletion() {
         _filePendingDeletion.value?.let { file ->
             // file.delete()
-            println("DELETING: ${file.name}")
             refresh()
         }
         _filePendingDeletion.value = null
@@ -76,17 +143,15 @@ class MacroManagerViewModel(
         _filePendingDeletion.value = null
     }
 
-    // --- Multiple Deletion Logic ---
     fun deleteSelectedMacros() {
-        val filesToDelete = _macroFiles.value.filter { it.isSelectedForDeletion }.map { it.file }
+        val filesToDelete = _macroFiles.value.filter { it.isSelectedForDeletion && it.file != null }.map { it.file!! }
         if (filesToDelete.isEmpty()) return
         _filesPendingDeletion.value = filesToDelete
     }
 
     fun confirmMultipleDeletion() {
-        _filesPendingDeletion.value?.forEach { file ->
-            // file.delete()
-            println("DELETING (batch): ${file.name}")
+        _filesPendingDeletion.value?.forEach {
+            // it.delete()
         }
         _filesPendingDeletion.value = null
         refresh()
@@ -97,9 +162,8 @@ class MacroManagerViewModel(
         _filesPendingDeletion.value = null
     }
 
-    // --- Other actions ---
-    fun onEditMacro(file: File) {
-        onEditMacroRequested(file)
+    fun onEditMacro(macro: MacroFileState) {
+        onEditMacroRequested(macro)
     }
 
     fun toggleSelectionMode() {
@@ -109,24 +173,19 @@ class MacroManagerViewModel(
         }
     }
 
-    fun selectMacroForDeletion(file: File, select: Boolean) {
+    fun selectMacroForDeletion(macroId: String, select: Boolean) {
         _macroFiles.update { list ->
             list.map {
-                if (it.file.absolutePath == file.absolutePath) it.copy(isSelectedForDeletion = select) else it
+                if (it.id == macroId) it.copy(isSelectedForDeletion = select) else it
             }
         }
     }
 
-    fun onPlayMacro(file: File) {
-        println("PLAYING (simulated): ${file.name}")
-    }
-
-    fun onToggleMacroActive(file: File, isActive: Boolean) {
+    fun onToggleMacroActive(macroId: String, isActive: Boolean) {
         _macroFiles.update { list ->
             list.map {
-                if (it.file.absolutePath == file.absolutePath) it.copy(isActive = isActive) else it
+                if (it.id == macroId) it.copy(isActive = isActive) else it
             }
         }
-        println("TOGGLE ACTIVE (simulated): ${file.name} to $isActive")
     }
 }

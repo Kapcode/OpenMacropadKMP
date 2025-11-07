@@ -12,7 +12,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
@@ -37,17 +36,17 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
-            items(macroFiles, key = { it.file.absolutePath }) { macroState ->
+            items(macroFiles, key = { it.id }) { macroState ->
                 MacroItem(
                     state = macroState,
                     isSelectionMode = isSelectionMode,
-                    onToggleActive = { isActive -> viewModel.onToggleMacroActive(macroState.file, isActive) },
-                    onSelectForDeletion = { isSelected -> viewModel.selectMacroForDeletion(macroState.file, isSelected) },
-                    onPlay = { viewModel.onPlayMacro(macroState.file) },
-                    onEdit = { viewModel.onEditMacro(macroState.file) },
-                    onDelete = { viewModel.onDeleteMacro(macroState.file) }
+                    onToggleActive = { isActive -> viewModel.onToggleMacroActive(macroState.id, isActive) },
+                    onSelectForDeletion = { isSelected -> viewModel.selectMacroForDeletion(macroState.id, isSelected) },
+                    onPlay = { viewModel.onPlayMacro(macroState) },
+                    onEdit = { viewModel.onEditMacro(macroState) },
+                    onDelete = { viewModel.onDeleteMacro(macroState) }
                 )
-                Divider()
+                HorizontalDivider() // Corrected from Divider
             }
         }
     }
@@ -88,8 +87,7 @@ private fun MacroItem(
             Spacer(Modifier.width(8.dp))
             Text(state.name, maxLines = 1)
         }
-
-        // --- ADDED MISSING BUTTONS ---
+        
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -98,6 +96,7 @@ private fun MacroItem(
             Button(onClick = onEdit, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Edit") }
             Button(
                 onClick = onDelete,
+                enabled = state.file != null,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                 contentPadding = PaddingValues(horizontal = 8.dp)
             ) { Text("Del") }

@@ -23,7 +23,7 @@ fun MacroTimelineItem(
     Card(
         modifier = modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (isDragging) 8.dp else 2.dp // Elevate the drag shadow
+            defaultElevation = if (isDragging) 8.dp else 2.dp
         ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -31,11 +31,13 @@ fun MacroTimelineItem(
             is MacroEventState.KeyEvent -> KeyItem(event)
             is MacroEventState.MouseEvent -> MouseItem(event)
             is MacroEventState.DelayEvent -> DelayItem(event)
+            is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event) // Added the missing branch
         }
     }
 }
 
-// The individual item Composables remain the same
+// ... (KeyItem, MouseItem, and DelayItem are unchanged)
+
 @Composable
 private fun KeyItem(event: MacroEventState.KeyEvent) {
     Row(
@@ -81,5 +83,20 @@ private fun DelayItem(event: MacroEventState.DelayEvent) {
         Text("DELAY", fontWeight = FontWeight.Bold, color = Color(0xFF6AAB73), fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("${event.durationMs} ms", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+/**
+ * A new Composable to display the SetAutoWaitEvent.
+ */
+@Composable
+private fun SetAutoWaitItem(event: MacroEventState.SetAutoWaitEvent) {
+    Row(
+        modifier = Modifier.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("AUTO DELAY", fontWeight = FontWeight.Bold, color = Color(0xFFDDAA77), fontSize = 12.sp)
+        Spacer(Modifier.width(16.dp))
+        Text("Set automatic delay to ${event.delayMs} ms", style = MaterialTheme.typography.bodyMedium)
     }
 }

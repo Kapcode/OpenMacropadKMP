@@ -25,40 +25,31 @@ class MacroEditorViewModel(
     val selectedTabIndex = _selectedTabIndex.asStateFlow()
 
     init {
-        val sampleContent = """
-        {
-            "events": [
-                { "type": "key", "action": "PRESS", "keyName": "Ctrl" },
-                { "type": "key", "action": "PRESS", "keyName": "C" },
-                { "type": "key", "action": "RELEASE", "keyName": "C" },
-                { "type": "key", "action": "RELEASE", "keyName": "Ctrl" }
-            ]
-        }
-        """.trimIndent()
-        _tabs.value = listOf(EditorTabState(title = "Sample Macro", content = sampleContent))
+        addNewTab()
     }
 
-    fun openOrSwitchToTab(fileToOpen: File) {
-        println("3. [MacroEditorViewModel] openOrSwitchToTab called for: ${fileToOpen.name}")
-        val existingTabIndex = tabs.value.indexOfFirst { it.file?.absolutePath == fileToOpen.absolutePath }
+    fun openOrSwitchToTab(macro: MacroFileState) {
+        val fileToOpen = macro.file
+        val idToCheck = fileToOpen?.absolutePath ?: macro.id
+
+        val existingTabIndex = tabs.value.indexOfFirst {
+            val tabId = it.file?.absolutePath ?: (if (it.title == "Sample Macro") "__SAMPLE_MACRO__" else null)
+            tabId == idToCheck
+        }
 
         if (existingTabIndex != -1) {
-            println("   - Tab already exists. Switching to tab index $existingTabIndex")
             selectTab(existingTabIndex)
         } else {
-            println("   - Tab does not exist. Reading file and creating new tab.")
             try {
-                val content = fileToOpen.readText()
+                val content = fileToOpen?.readText() ?: macro.content
                 val newTab = EditorTabState(
-                    title = fileToOpen.nameWithoutExtension,
+                    title = macro.name,
                     content = content,
                     file = fileToOpen
                 )
                 _tabs.update { it + newTab }
                 _selectedTabIndex.value = tabs.value.lastIndex
-                println("   - New tab created and selected at index ${tabs.value.lastIndex}")
             } catch (e: Exception) {
-                println("   - ERROR reading file: ${e.message}")
                 e.printStackTrace()
             }
         }
@@ -66,7 +57,7 @@ class MacroEditorViewModel(
 
     fun addNewTab() {
         val newTab = EditorTabState(
-            title = "New Macro ${tabs.value.size + 1}",
+            title = "New Macro",
             content = "{\n    \"events\": []\n}"
         )
         _tabs.update { it + newTab }
@@ -80,21 +71,29 @@ class MacroEditorViewModel(
     }
 
     fun closeTab(index: Int) {
-        if (tabs.value.size <= 1) return
+        if (tabs.value.isEmpty()) return
         if (index !in tabs.value.indices) return
+
         _tabs.update { it.toMutableList().apply { removeAt(index) } }
-        if (_selectedTabIndex.value >= tabs.value.size) {
+
+        if (tabs.value.isEmpty()) {
+            addNewTab()
+        } else if (_selectedTabIndex.value >= tabs.value.size) {
             _selectedTabIndex.value = tabs.value.lastIndex
         }
     }
 
     fun updateSelectedTabContent(newContent: String) {
         val currentIndex = _selectedTabIndex.value
-        if (currentIndex in tabs.value.indices) {
-            _tabs.update { currentTabs ->
-                currentTabs.toMutableList().also {
-                    it[currentIndex] = it[currentIndex].copy(content = newContent)
-                }
+        if (currentIndex !in tabs.value.indices) return
+
+        if (tabs.value[currentIndex].content == newContent) {
+            return
+        }
+
+        _tabs.update { currentTabs ->
+            currentTabs.toMutableList().also {
+                it[currentIndex] = it[currentIndex].copy(content = newContent)
             }
         }
     }

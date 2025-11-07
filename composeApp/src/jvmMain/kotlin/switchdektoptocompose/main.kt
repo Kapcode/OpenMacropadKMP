@@ -25,19 +25,33 @@ fun main() = application {
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
     
-    val (macroManagerViewModel, macroEditorViewModel) = remember {
-        lateinit var mmvm: MacroManagerViewModel
-        val evm = MacroEditorViewModel(settingsViewModel) { mmvm.refresh() }
-        mmvm = MacroManagerViewModel(settingsViewModel) { file -> evm.openOrSwitchToTab(file) }
-        mmvm to evm
+    lateinit var macroManagerViewModel: MacroManagerViewModel
+    val macroEditorViewModel = remember {
+        MacroEditorViewModel(settingsViewModel) { macroManagerViewModel.refresh() }
+    }
+    macroManagerViewModel = remember {
+        MacroManagerViewModel(settingsViewModel) { macroState -> 
+            macroEditorViewModel.openOrSwitchToTab(macroState) 
+        }
     }
     
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+    
+    val triggerListener = remember {
+        TriggerListener { fileToPlay ->
+            val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.file?.absolutePath == fileToPlay.absolutePath }
+            if (macroToPlay != null) {
+                macroManagerViewModel.onPlayMacro(macroToPlay)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         desktopViewModel.startServer()
+        triggerListener.startListening()
         onDispose {
             desktopViewModel.shutdown()
+            triggerListener.shutdown()
         }
     }
 
@@ -46,6 +60,12 @@ fun main() = application {
         state = windowState,
         title = "Open Macropad (Compose)"
     ) {
+        val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+        
+        LaunchedEffect(macroFiles) {
+            triggerListener.updateActiveTriggers(macroFiles)
+        }
+        
         DesktopApp(
             desktopViewModel = desktopViewModel,
             macroEditorViewModel = macroEditorViewModel,

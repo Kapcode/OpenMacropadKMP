@@ -12,6 +12,7 @@ sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class KeyEvent(val keyName: String, val action: KeyAction) : MacroEventState()
     data class MouseEvent(val x: Int, val y: Int, val action: MouseAction) : MacroEventState()
     data class DelayEvent(val durationMs: Long) : MacroEventState()
+    data class SetAutoWaitEvent(val delayMs: Int) : MacroEventState()
 }
 
 enum class KeyAction { PRESS, RELEASE }
@@ -30,8 +31,9 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     init {
         viewModelScope.launch {
             macroEditorViewModel.tabs.collectLatest { tabs ->
-                val selectedIndex = macroEditorViewModel.selectedTabIndex.value
-                tabs.getOrNull(selectedIndex)?.let { loadEventsFromJson(it.content) }
+                tabs.getOrNull(macroEditorViewModel.selectedTabIndex.value)?.let {
+                    loadEventsFromJson(it.content)
+                }
             }
         }
     }
@@ -51,7 +53,6 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     }
 
     fun onReorderFinished(from: Int, to: Int) {
-        println("Moved item from $from to $to")
         updateEditorText()
     }
     
@@ -85,6 +86,10 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                     eventJson.put("type", "delay")
                     eventJson.put("durationMs", event.durationMs)
                 }
+                is MacroEventState.SetAutoWaitEvent -> {
+                    eventJson.put("type", "set_auto_wait")
+                    eventJson.put("value", event.delayMs)
+                }
             }
             eventsJsonArray.put(eventJson)
         }
@@ -98,10 +103,7 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
             val json = JSONObject(jsonContent)
             
             _triggerEvent.value = json.optJSONObject("trigger")?.let {
-                MacroEventState.KeyEvent(
-                    keyName = it.getString("keyName"),
-                    action = KeyAction.valueOf(it.getString("action").uppercase())
-                )
+                MacroEventState.KeyEvent(it.getString("keyName"), KeyAction.valueOf(it.getString("action").uppercase()))
             }
             
             val newEvents = mutableListOf<MacroEventState>()
@@ -112,11 +114,16 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                             "key" -> newEvents.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
                             "mouse" -> newEvents.add(MacroEventState.MouseEvent(eventObj.optInt("x", 0), eventObj.optInt("y", 0), MouseAction.valueOf(eventObj.getString("action").uppercase())))
                             "delay" -> newEvents.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
+                            "set_auto_wait" -> newEvents.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
                         }
                     }
                 }
             }
             _events.value = newEvents
+
+            // Enforce pretty-printing on load
+            updateEditorText()
+
         } catch (e: Exception) {
             _triggerEvent.value = null
             _events.value = emptyList()
