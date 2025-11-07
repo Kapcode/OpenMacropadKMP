@@ -14,17 +14,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import io.ktor.client.*
-import io.ktor.client.engine.okhttp.*
-import io.ktor.client.plugins.websocket.*
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.receiveAsFlow
-import java.security.KeyStore
-import javax.net.ssl.KeyManagerFactory
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import javax.net.ssl.X509TrustManager
 
 class ClientActivity : ComponentActivity() {
 
@@ -35,13 +30,16 @@ class ClientActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Initialize AppContext here if needed by other parts of your app
+        // AppContext.context = applicationContext
+
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
         val addressParts = serverAddressFull?.split(":")
         val ipAddress = addressParts?.getOrNull(0)
-        val port = addressParts?.getOrNull(1)?.toIntOrNull() ?: 8443 // Default to Ktor secure port
+        val port = addressParts?.getOrNull(1)?.toIntOrNull()
 
-        if (ipAddress == null) {
-            Log.e("ClientActivity", "No server address provided. Finishing activity.")
+        if (ipAddress == null || port == null) {
+            Log.e("ClientActivity", "Invalid server address provided. Finishing activity.")
             finish()
             return
         }
@@ -76,67 +74,40 @@ class ClientActivity : ComponentActivity() {
     }
 
     private fun connectToServer(ipAddress: String, port: Int, onUpdate: (status: String, serverName: String?) -> Unit) {
-        try {
-            // 1. Get the client's identity
-            val identityManager = IdentityManager(applicationContext)
-            val clientKeyStore = identityManager.getClientKeyStore()
+        
+        val ktorHttpClient = HttpClient(OkHttp) {
+            install(WebSockets)
+        }
+        
+        client = MacroKtorClient(ktorHttpClient, ipAddress, port)
 
-            // 2. Create a KeyManager to present our certificate to the server
-            val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-            kmf.init(clientKeyStore, "changeit".toCharArray())
-
-            // 3. Create a TrustManager to decide if we trust the server's certificate
-            //    !! IMPORTANT !! For now, we are creating a TrustManager that trusts ALL certificates.
-            //    This is necessary for the first connection before pairing.
-            //    In the next step, we will replace this with a real TrustManager that checks
-            //    against a list of known, trusted server certificates.
-            val tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            tmf.init(null as KeyStore?) // Trust all CAs
-            val trustManager = tmf.trustManagers[0] as X509TrustManager
-
-            // 4. Create an SSLContext for mutual TLS
-            val sslContext = SSLContext.getInstance("TLS")
-            sslContext.init(kmf.keyManagers, tmf.trustManagers, null)
-
-            // 5. Create a pre-configured OkHttpClient
-            val okHttpClient = okhttp3.OkHttpClient.Builder()
-                .sslSocketFactory(sslContext.socketFactory, trustManager)
-                .build()
-
-            // 6. Create the Ktor HttpClient
-            val ktorHttpClient = HttpClient(OkHttp) {
-                engine {
-                    preconfigured = okHttpClient
+        clientJob = activityScope.launch {
+            try {
+                // The connect function is now a suspend function
+                withContext(Dispatchers.IO) {
+                    client?.connect()
                 }
-                install(WebSockets)
-            }
 
-            // 7. Initialize our client wrapper
-            client = MacroKtorClient(ktorHttpClient, ipAddress, port)
-            client?.connect()
-
-            clientJob = activityScope.launch {
+                // If connect() doesn't throw an exception, we are connected.
                 onUpdate("Connected", ipAddress)
+
                 client?.incomingMessages?.receiveAsFlow()?.collect { frame ->
                     if (frame is Frame.Text) {
                         val receivedText = frame.readText()
                         Log.d("ClientActivity", "Received from server: $receivedText")
                     }
                 }
+            } catch (e: Exception) {
+                onUpdate("Connection Failed: ${e.message ?: "Unknown error"}", null)
+                Log.e("ClientActivity", "Failed to connect", e)
+                // Optionally finish the activity on failure
+                // delay(2000)
+                // finish()
+            } finally {
+                // This block will execute when the connection is lost
+                onUpdate("Disconnected", null)
             }
-
-        } catch (e: Exception) {
-            onUpdate("Connection Failed: ${e.message ?: "Unknown error"}", null)
-            Log.e("ClientActivity", "Failed to connect: ${e.message}", e)
         }
-    }
-
-    override fun onStop() {
-        super.onStop()
-        client?.close()
-        clientJob?.cancel()
-        Log.d("ClientActivity", "Client disconnected in onStop")
-        finish()
     }
 
     override fun onDestroy() {

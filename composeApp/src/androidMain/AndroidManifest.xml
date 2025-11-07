@@ -10,7 +10,11 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@android:style/Theme.Material.Light.NoActionBar"
+        android:usesCleartextTraffic="true">
+        <!-- android:usesCleartextTraffic="true" is added for development ease. -->
+        <!-- For production, it's better to use a network security config file -->
+        <!-- to only allow cleartext for specific domains if needed. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-2579373758747951~3368268164" />

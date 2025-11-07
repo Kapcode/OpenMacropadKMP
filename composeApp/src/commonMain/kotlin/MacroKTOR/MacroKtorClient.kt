@@ -8,9 +8,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * A wrapper for a Ktor WebSocket client that handles connection logic.
@@ -22,42 +20,45 @@ class MacroKtorClient(
 ) {
     private var session: ClientWebSocketSession? = null
     val incomingMessages = Channel<Frame>(Channel.UNLIMITED)
+    private val clientScope = CoroutineScope(Dispatchers.IO)
 
-    fun connect() {
-        CoroutineScope(Dispatchers.IO).launch {
+    /**
+     * Connects to the server and suspends until the connection is established.
+     * Launches a listener for incoming messages.
+     * @throws Exception if the connection fails.
+     */
+    suspend fun connect() {
+        // This function now suspends until the WebSocket session is created.
+        session = client.webSocketSession {
+            val isSecure = port == 8443
+            url(
+                scheme = if (isSecure) "wss" else "ws",
+                host = this@MacroKtorClient.host,
+                port = this@MacroKtorClient.port,
+                path = "/ws"
+            )
+        }
+
+        // Launch a separate coroutine to listen for messages.
+        clientScope.launch {
             try {
-                val isSecure = port == 8443 // Simple check for secure port
-
-                client.webSocket(
-                    method = HttpMethod.Get,
-                    host = host,
-                    port = port,
-                    path = "/ws"
-                ) {
-                    // Apply wss scheme if secure
-                    if (isSecure) {
-                        //url.protocol = URLProtocol.WSS
-                    }
-                    session = this
-                    for (frame in incoming) {
+                session?.let {
+                    for (frame in it.incoming) {
                         incomingMessages.send(frame)
                     }
                 }
             } catch (e: Exception) {
-                println("Error connecting: ${e.message}")
-                e.printStackTrace()
+                println("Message listener error: ${e.message}")
             }
         }
     }
 
     suspend fun send(message: String) {
-        withContext(Dispatchers.IO) {
-            session?.send(Frame.Text(message))
-        }
+        session?.send(Frame.Text(message))
     }
 
     fun close() {
-        CoroutineScope(Dispatchers.IO).launch {
+        clientScope.launch {
             session?.close(CloseReason(CloseReason.Codes.NORMAL, "Client closing connection"))
             client.close()
             println("Client closed.")
