@@ -9,14 +9,14 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
 
-// Now holds the entire macro state, not just the file
 data class ActiveTrigger(
     val keyCode: Int,
-    val macro: MacroFileState
+    val macro: MacroFileState,
+    val allowedClients: String
 )
 
 class TriggerListener(
-    private val onTrigger: (MacroFileState) -> Unit // Callback now passes the full state
+    private val onTrigger: (MacroFileState) -> Unit
 ) : NativeKeyListener {
 
     private val activeTriggers = ConcurrentHashMap<Int, ActiveTrigger>()
@@ -29,18 +29,17 @@ class TriggerListener(
 
     fun updateActiveTriggers(macros: List<MacroFileState>) {
         activeTriggers.clear()
-        // Filter only for active macros
         macros.filter { it.isActive }.forEach { macroState ->
             try {
-                // Get content from the file if it exists, otherwise from the state object
                 val content = macroState.file?.readText() ?: macroState.content
                 if (content.isBlank()) return@forEach
 
                 val triggerJson = JSONObject(content).optJSONObject("trigger")
                 if (triggerJson != null) {
                     val keyName = triggerJson.getString("keyName")
+                    val allowedClients = triggerJson.optString("allowedClients", "")
                     KeyParser.parseNativeHookKeys(keyName).firstOrNull()?.let { keyCode ->
-                        activeTriggers[keyCode] = ActiveTrigger(keyCode, macroState)
+                        activeTriggers[keyCode] = ActiveTrigger(keyCode, macroState, allowedClients)
                         println("Trigger registered: ${NativeKeyEvent.getKeyText(keyCode)} for ${macroState.name}")
                     }
                 }
@@ -48,6 +47,7 @@ class TriggerListener(
                 e.printStackTrace()
             }
         }
+        println("Active triggers updated. Total: ${activeTriggers.size}")
     }
 
     fun startListening() {
@@ -77,8 +77,14 @@ class TriggerListener(
 
     override fun nativeKeyReleased(e: NativeKeyEvent) {
         activeTriggers[e.keyCode]?.let { trigger ->
-            println("Trigger Detected: ${NativeKeyEvent.getKeyText(e.keyCode)} for ${trigger.macro.name}")
-            onTrigger(trigger.macro) // Pass the full macro state to the callback
+            println("Trigger key detected: ${NativeKeyEvent.getKeyText(e.keyCode)}")
+            if (trigger.macro.isActive) {
+                println("   - Firing trigger for active macro: ${trigger.macro.name}")
+                // TODO: Add client filtering logic using trigger.allowedClients
+                onTrigger(trigger.macro)
+            } else {
+                println("   - Ignoring trigger for inactive macro: ${trigger.macro.name}")
+            }
         }
     }
     

@@ -21,12 +21,26 @@ class MacroManagerViewModel(
     var onEditMacroRequested: (MacroFileState) -> Unit
 ) {
 
+    // --- CORRECTED SAMPLE MACRO CONTENT ---
     private val sampleMacroContent = """
     {
-        "trigger": { "keyName": "ESCAPE", "action": "RELEASE", "type": "key" },
+        "trigger": {
+            "keyName": "ESCAPE",
+            "allowedClients": "",
+            "action": "RELEASE",
+            "type": "key"
+        },
         "events": [
-            { "keyName": "WINDOWS", "action": "PRESS", "type": "key" },
-            { "keyName": "WINDOWS", "action": "RELEASE", "type": "key" }
+            {
+                "keyName": "WINDOWS",
+                "action": "PRESS",
+                "type": "key"
+            },
+            {
+                "keyName": "WINDOWS",
+                "action": "RELEASE",
+                "type": "key"
+            }
         ]
     }
     """.trimIndent()
@@ -87,7 +101,6 @@ class MacroManagerViewModel(
         }
     }
 
-    // --- CORRECTED FUNCTION ---
     private fun parseEventsFromJson(jsonContent: String): List<MacroEventState> {
         val events = mutableListOf<MacroEventState>()
         try {
@@ -97,20 +110,13 @@ class MacroManagerViewModel(
                     eventsArray.getJSONObject(i)?.let { eventObj ->
                         when (eventObj.getString("type").lowercase()) {
                             "key" -> {
-                                events.add(MacroEventState.KeyEvent(
-                                    keyName = eventObj.getString("keyName"),
-                                    action = KeyAction.valueOf(eventObj.getString("action").uppercase())
-                                ))
+                                events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
                             }
                             "delay" -> {
-                                events.add(MacroEventState.DelayEvent(
-                                    durationMs = eventObj.getLong("durationMs")
-                                ))
+                                events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
                             }
                             "set_auto_wait" -> {
-                                events.add(MacroEventState.SetAutoWaitEvent(
-                                    delayMs = eventObj.getInt("value")
-                                ))
+                                events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
                             }
                         }
                     }

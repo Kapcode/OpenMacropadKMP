@@ -16,9 +16,9 @@ import androidx.compose.ui.window.rememberDialogState
 fun NewEventDialog(
     viewModel: NewEventViewModel,
     onDismissRequest: () -> Unit,
-    onAddEvent: (List<MacroEventState>) -> Unit
+    onAddEvent: () -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 500.dp, height = 850.dp)
+    val dialogState = rememberDialogState(width = 550.dp, height = 850.dp)
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
@@ -26,6 +26,7 @@ fun NewEventDialog(
         title = "Add New Macro Event"
     ) {
         val isTrigger by viewModel.isTriggerEvent.collectAsState()
+        val allowedClients by viewModel.allowedClientsText.collectAsState()
         val selectedAction by viewModel.selectedAction.collectAsState()
         val useKeys by viewModel.useKeys.collectAsState()
         val keysText by viewModel.keysText.collectAsState()
@@ -52,9 +53,16 @@ fun NewEventDialog(
                     modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Checkbox(checked = isTrigger, onCheckedChange = { viewModel.isTriggerEvent.value = it })
                         Text("Is Trigger Event")
+                        OutlinedTextField(
+                            value = allowedClients,
+                            onValueChange = { viewModel.allowedClientsText.value = it },
+                            label = { Text("Allowed Clients") },
+                            modifier = Modifier.weight(1f),
+                            enabled = isTrigger
+                        )
                     }
                     Divider()
                     
@@ -69,11 +77,7 @@ fun NewEventDialog(
                         Text("Mouse Location")
                         Spacer(Modifier.weight(1f))
                         Text("Animate")
-                        Switch(
-                            checked = animateMouse,
-                            onCheckedChange = { viewModel.animateMouseMovement.value = it },
-                            enabled = useMouseLocation
-                        )
+                        Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
                         OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
                         OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
                     }
@@ -108,10 +112,7 @@ fun NewEventDialog(
                 }
 
                 Button(
-                    onClick = {
-                        val events = viewModel.createEvents()
-                        onAddEvent(events)
-                    },
+                    onClick = onAddEvent,
                     modifier = Modifier.align(Alignment.End)
                 ) {
                     Text("Add")

@@ -8,6 +8,11 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
 
+data class TriggerState(
+    val keyName: String,
+    val allowedClients: String,
+)
+
 sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class KeyEvent(val keyName: String, val action: KeyAction) : MacroEventState()
     data class MouseEvent(val x: Int, val y: Int, val action: MouseAction) : MacroEventState()
@@ -20,7 +25,7 @@ enum class MouseAction { MOVE, CLICK }
 
 class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewModel) {
 
-    private val _triggerEvent = MutableStateFlow<MacroEventState.KeyEvent?>(null)
+    private val _triggerEvent = MutableStateFlow<TriggerState?>(null)
     val triggerEvent = _triggerEvent.asStateFlow()
 
     private val _events = MutableStateFlow<List<MacroEventState>>(emptyList())
@@ -38,12 +43,13 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         }
     }
     
-    fun addEvents(newEvents: List<MacroEventState>, isTrigger: Boolean) {
-        if (isTrigger && newEvents.isNotEmpty() && newEvents.first() is MacroEventState.KeyEvent) {
-            _triggerEvent.value = newEvents.first() as MacroEventState.KeyEvent
-        } else {
-            _events.update { it + newEvents }
-        }
+    fun addOrUpdateTrigger(keyName: String, allowedClients: String) {
+        _triggerEvent.value = TriggerState(keyName, allowedClients)
+        updateEditorText()
+    }
+
+    fun addEvents(newEvents: List<MacroEventState>) {
+        _events.update { it + newEvents }
         updateEditorText()
     }
 
@@ -62,8 +68,9 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         _triggerEvent.value?.let { trigger ->
             val triggerJson = JSONObject()
             triggerJson.put("type", "key")
-            triggerJson.put("action", trigger.action.name)
+            triggerJson.put("action", "RELEASE")
             triggerJson.put("keyName", trigger.keyName)
+            triggerJson.put("allowedClients", trigger.allowedClients)
             rootJson.put("trigger", triggerJson)
         }
 
@@ -103,7 +110,10 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
             val json = JSONObject(jsonContent)
             
             _triggerEvent.value = json.optJSONObject("trigger")?.let {
-                MacroEventState.KeyEvent(it.getString("keyName"), KeyAction.valueOf(it.getString("action").uppercase()))
+                TriggerState(
+                    keyName = it.getString("keyName"),
+                    allowedClients = it.optString("allowedClients", "")
+                )
             }
             
             val newEvents = mutableListOf<MacroEventState>()
@@ -120,10 +130,6 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                 }
             }
             _events.value = newEvents
-
-            // Enforce pretty-printing on load
-            updateEditorText()
-
         } catch (e: Exception) {
             _triggerEvent.value = null
             _events.value = emptyList()

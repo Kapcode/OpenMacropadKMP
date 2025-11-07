@@ -12,6 +12,8 @@ class NewEventViewModel {
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
 
     val isTriggerEvent = MutableStateFlow(false)
+    val allowedClientsText = MutableStateFlow("")
+
     val selectedAction = MutableStateFlow(MacroAction.PRESS)
     val actionOptions = MacroAction.values().toList()
     val useKeys = MutableStateFlow(true)
@@ -49,6 +51,7 @@ class NewEventViewModel {
 
     fun reset() {
         isTriggerEvent.value = false
+        allowedClientsText.value = ""
         selectedAction.value = MacroAction.PRESS
         useKeys.value = true
         keysText.value = ""
@@ -71,9 +74,9 @@ class NewEventViewModel {
         val events = mutableListOf<MacroEventState>()
         
         if (isTriggerEvent.value) {
-            val keys = keysText.value.ifBlank { " " }
-            events.add(MacroEventState.KeyEvent(keyName = keys, action = KeyAction.RELEASE))
-            return events
+            // Trigger creation is now handled by the timeline VM directly
+            // This function will only produce regular events
+            return emptyList()
         }
         
         val autoDelay = if (useAutoDelay.value) autoDelayText.value.toLongOrNull() else null

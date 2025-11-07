@@ -38,7 +38,6 @@ fun main() = application {
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     
     val triggerListener = remember {
-        // Update the callback to pass the full MacroFileState object
         TriggerListener { macroToPlay ->
             macroManagerViewModel.onPlayMacro(macroToPlay)
         }
@@ -104,6 +103,7 @@ fun DesktopApp(
         else -> DarkBlueColorScheme
     }
 
+    // --- Dialogs ---
     if (showSettingsDialog) {
         SettingsDialog(viewModel = settingsViewModel, onDismissRequest = { showSettingsDialog = false })
     }
@@ -117,8 +117,16 @@ fun DesktopApp(
         NewEventDialog(
             viewModel = newEventViewModel,
             onDismissRequest = { showNewEventDialog = false },
-            onAddEvent = { events ->
-                macroTimelineViewModel.addEvents(events, newEventViewModel.isTriggerEvent.value)
+            onAddEvent = {
+                if (newEventViewModel.isTriggerEvent.value) {
+                    macroTimelineViewModel.addOrUpdateTrigger(
+                        keyName = newEventViewModel.keysText.value,
+                        allowedClients = newEventViewModel.allowedClientsText.value
+                    )
+                } else {
+                    val events = newEventViewModel.createEvents()
+                    macroTimelineViewModel.addEvents(events)
+                }
                 showNewEventDialog = false
             }
         )
@@ -130,8 +138,12 @@ fun DesktopApp(
             val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
             VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
+                // --- Top Pane ---
                 first(minSize = 100.dp) {
-                    Row(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         var menuExpanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.padding(start = 4.dp)) {
                             TextButton(onClick = { menuExpanded = true }) {
@@ -146,30 +158,40 @@ fun DesktopApp(
                                 DropdownMenuItem(text = { Text("Exit") }, onClick = onExit)
                             }
                         }
-                        Box(modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp), contentAlignment = Alignment.CenterStart) {
+                        // --- Server Status ---
+                        Box(
+                            modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
                             Column {
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("Address: $serverIpAddress:$serverPort", color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
+                        // --- Inspector ---
                         Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
                             InspectorScreen()
                         }
                     }
                 }
+                // --- Bottom Pane ---
                 second(minSize = 200.dp) {
                     HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
+                        // --- Left Side ---
                         first(minSize = 250.dp) {
                            Column {
+                               // --- Connected Devices ---
                                Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
                                    ConnectedDevicesScreen(devices = connectedDevices)
                                }
+                               // --- Console ---
                                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
                                    Text("Console Area", color = MaterialTheme.colorScheme.onSurfaceVariant)
                                }
                            }
                         }
+                        // --- Right Side (Contains Timeline) ---
                         second(minSize = 500.dp) {
                             MacroEditingArea(
                                 macroManagerViewModel = macroManagerViewModel,

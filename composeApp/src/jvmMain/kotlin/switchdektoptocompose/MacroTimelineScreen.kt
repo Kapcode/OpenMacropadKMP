@@ -37,10 +37,15 @@ fun MacroTimelineScreen(
         )
 
         // --- Trigger Event Display ---
-        triggerEvent?.let {
+        triggerEvent?.let { trigger ->
             Column(Modifier.background(MaterialTheme.colorScheme.secondaryContainer).padding(8.dp)) {
                 Text("TRIGGER", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
-                MacroTimelineItem(event = it, isDragging = false)
+                // Convert the TriggerState to a displayable KeyEvent
+                val displayEvent = MacroEventState.KeyEvent(
+                    keyName = trigger.keyName,
+                    action = KeyAction.RELEASE // Triggers are always RELEASE actions
+                )
+                MacroTimelineItem(event = displayEvent, isDragging = false)
             }
         }
 
