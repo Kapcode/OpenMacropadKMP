@@ -8,7 +8,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
-    alias(libs.plugins.kotlinSerialization) // <-- Use the alias from libs.versions.toml
+    alias(libs.plugins.kotlinSerialization)
 
 }
 
@@ -19,18 +19,13 @@ kotlin {
         }
     }
 
-    jvm() // This corresponds to your desktop target
+    jvm()
 
     sourceSets {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            // KTOR ENGINE for Android (OkHttp is a good choice)
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
-            // Alternatively, for the default Android HTTP client:
-            // implementation("io.ktor:ktor-client-android:2.3.8")
-
-            // AdMob dependency
             implementation("com.google.android.gms:play-services-ads:24.7.0")
         }
         commonMain.dependencies {
@@ -40,16 +35,12 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation(libs.compose.splitpane) // <-- USE ALIAS
+            implementation(libs.compose.splitpane)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-
-            // KTOR CLIENT - Core dependencies for shared networking logic
-            implementation("io.ktor:ktor-client-core:2.3.8") // Core Ktor client
-            implementation("io.ktor:ktor-client-content-negotiation:2.3.8") // For JSON conversion
-            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8") // For Kotlinx Serialization JSON
-
-            // KOTLINX COROUTINES - Essential for asynchronous operations with Ktor
+            implementation("io.ktor:ktor-client-core:2.3.8")
+            implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
+            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8")
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
         }
         commonTest.dependencies {
@@ -58,11 +49,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
-            // KTOR ENGINE for Desktop JVM (OkHttp is a good choice, or Java HTTP client)
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
-            // Alternatively, for the Java HTTP client:
-            // implementation("io.ktor:ktor-client-java:2.3.8")
-            implementation("com.github.kwhat:jnativehook:2.2.2") // Check Maven Central for the latest stable version
+            implementation("com.github.kwhat:jnativehook:2.2.2")
             implementation("com.fifesoft:rsyntaxtextarea:3.6.0")
             implementation("com.formdev:flatlaf:3.4.1")
             implementation("com.kitfox.svg:svg-salamander:1.0")
