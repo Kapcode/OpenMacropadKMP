@@ -26,7 +26,7 @@ class SettingsViewModel {
         val result = fileChooser.showOpenDialog(null)
         if (result == JFileChooser.APPROVE_OPTION) {
             val selectedDirectory = fileChooser.selectedFile.absolutePath
-            // Save the setting to the properties file via AppSettings
+            // Save the setting to the properties file via switchdektoptocompose.AppSettings
             AppSettings.macroDirectory = selectedDirectory
             // Update the UI by updating the StateFlow
             _macroDirectory.value = selectedDirectory

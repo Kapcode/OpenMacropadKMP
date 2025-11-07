@@ -1,7 +1,5 @@
 package switchdektoptocompose
 
-import com.kapcode.open.macropad.kmps.ConnectionListener
-import com.kapcode.open.macropad.kmps.WifiServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +17,7 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel : ConnectionListener {
 
-    private val port = 8443 // THE FIX: Use the correct Ktor WSS port
+    private val port = 8443
     private val wifiServer = WifiServer(port = port)
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())

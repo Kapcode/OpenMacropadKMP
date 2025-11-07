@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps
+package switchdektoptocompose
 
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
