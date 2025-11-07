@@ -13,16 +13,25 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
+import java.io.File
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
+    
     val desktopViewModel = remember { DesktopViewModel() }
-    val macroEditorViewModel = remember { MacroEditorViewModel() }
-    val macroManagerViewModel = remember { MacroManagerViewModel() }
     val settingsViewModel = remember { SettingsViewModel() }
+    val newEventViewModel = remember { NewEventViewModel() }
+    
+    val (macroManagerViewModel, macroEditorViewModel) = remember {
+        lateinit var mmvm: MacroManagerViewModel
+        val evm = MacroEditorViewModel(settingsViewModel) { mmvm.refresh() }
+        mmvm = MacroManagerViewModel(settingsViewModel) { file -> evm.openOrSwitchToTab(file) }
+        mmvm to evm
+    }
+    
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
     DisposableEffect(Unit) {
@@ -43,6 +52,7 @@ fun main() = application {
             macroManagerViewModel = macroManagerViewModel,
             settingsViewModel = settingsViewModel,
             macroTimelineViewModel = macroTimelineViewModel,
+            newEventViewModel = newEventViewModel,
             onExit = ::exitApplication
         )
     }
@@ -56,6 +66,7 @@ fun DesktopApp(
     macroManagerViewModel: MacroManagerViewModel,
     settingsViewModel: SettingsViewModel,
     macroTimelineViewModel: MacroTimelineViewModel,
+    newEventViewModel: NewEventViewModel,
     onExit: () -> Unit = {}
 ) {
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
@@ -63,8 +74,11 @@ fun DesktopApp(
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
     val serverPort by desktopViewModel.serverPort.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
+    val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showNewEventDialog by remember { mutableStateOf(false) }
 
     val colorScheme = when (selectedTheme) {
         "Dark Blue" -> DarkBlueColorScheme
@@ -72,10 +86,24 @@ fun DesktopApp(
         else -> DarkBlueColorScheme
     }
 
+    // --- Dialogs ---
     if (showSettingsDialog) {
-        SettingsDialog(
-            viewModel = settingsViewModel,
-            onDismissRequest = { showSettingsDialog = false }
+        SettingsDialog(viewModel = settingsViewModel, onDismissRequest = { showSettingsDialog = false })
+    }
+    filePendingDeletion?.let { file ->
+        ConfirmDeleteDialog(file = file, onConfirm = { macroManagerViewModel.confirmDeletion() }, onDismiss = { macroManagerViewModel.cancelDeletion() })
+    }
+    filesPendingDeletion?.let { files ->
+        ConfirmDeleteMultipleDialog(files = files, onConfirm = { macroManagerViewModel.confirmMultipleDeletion() }, onDismiss = { macroManagerViewModel.cancelMultipleDeletion() })
+    }
+    if (showNewEventDialog) {
+        NewEventDialog(
+            viewModel = newEventViewModel,
+            onDismissRequest = { showNewEventDialog = false },
+            onAddEvent = { events ->
+                macroTimelineViewModel.addEvents(events)
+                showNewEventDialog = false
+            }
         )
     }
 
@@ -85,21 +113,14 @@ fun DesktopApp(
             val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
             VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
-                // --- Top Pane ---
                 first(minSize = 100.dp) {
-                    Row(
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                    Row(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), verticalAlignment = Alignment.CenterVertically) {
                         var menuExpanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.padding(start = 4.dp)) {
                             TextButton(onClick = { menuExpanded = true }) {
                                 Text("Menu", color = MaterialTheme.colorScheme.onSurface)
                             }
-                            DropdownMenu(
-                                expanded = menuExpanded,
-                                onDismissRequest = { menuExpanded = false }
-                            ) {
+                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(text = { Text("Start Server") }, onClick = { desktopViewModel.startServer(); menuExpanded = false })
                                 DropdownMenuItem(text = { Text("Stop Server") }, onClick = { desktopViewModel.stopServer(); menuExpanded = false })
                                 Divider()
@@ -108,11 +129,7 @@ fun DesktopApp(
                                 DropdownMenuItem(text = { Text("Exit") }, onClick = onExit)
                             }
                         }
-
-                        Box(
-                            modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
+                        Box(modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp), contentAlignment = Alignment.CenterStart) {
                             Column {
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
@@ -124,7 +141,6 @@ fun DesktopApp(
                         }
                     }
                 }
-                // --- Bottom Pane ---
                 second(minSize = 200.dp) {
                     HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
                         first(minSize = 250.dp) {
@@ -141,7 +157,11 @@ fun DesktopApp(
                             MacroEditingArea(
                                 macroManagerViewModel = macroManagerViewModel,
                                 macroEditorViewModel = macroEditorViewModel,
-                                macroTimelineViewModel = macroTimelineViewModel
+                                macroTimelineViewModel = macroTimelineViewModel,
+                                onAddEventClicked = {
+                                    newEventViewModel.reset()
+                                    showNewEventDialog = true
+                                }
                             )
                         }
                     }

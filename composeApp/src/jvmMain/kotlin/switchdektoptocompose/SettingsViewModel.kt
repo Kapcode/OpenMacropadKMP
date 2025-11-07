@@ -3,38 +3,18 @@ package switchdektoptocompose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
-import java.util.prefs.Preferences
 import javax.swing.JFileChooser
 
 class SettingsViewModel {
-
-    // Use Java's Preferences API for simple persistent storage on desktop
-    private val prefs = Preferences.userNodeForPackage(SettingsViewModel::class.java)
-    
-    // --- Keys for Preferences ---
-    private val macroDirKey = "macro_directory"
-    private val themeKey = "ui_theme"
-
     // --- StateFlows for UI ---
-    // Make sure availableThemes is initialized BEFORE it is used by loadTheme()
-    val availableThemes = listOf("Dark Blue", "Light Blue")
-
-    private val _macroDirectory = MutableStateFlow(loadMacroDirectory())
+    private val _macroDirectory = MutableStateFlow(AppSettings.macroDirectory)
     val macroDirectory = _macroDirectory.asStateFlow()
 
-    private val _selectedTheme = MutableStateFlow(loadTheme())
-    val selectedTheme = _selectedTheme.asStateFlow()
-
-    // --- Macro Directory Logic ---
-    private fun loadMacroDirectory(): String {
-        val defaultDir = System.getProperty("user.home") + File.separator + "OpenMacropad"
-        return prefs.get(macroDirKey, defaultDir)
-    }
-
-    private fun saveMacroDirectory(path: String) {
-        prefs.put(macroDirKey, path)
-        _macroDirectory.value = path
-    }
+    // For now, we'll keep theme settings separate as they are specific to the Compose UI.
+    // In the future, this could also be moved to the properties file if desired.
+    private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
+    val selectedTheme = _selectedTheme.asStateFlow() // Corrected the typo from _selected_theme
+    val availableThemes = listOf("Dark Blue", "Light Blue")
 
     fun chooseMacroDirectory() {
         val fileChooser = JFileChooser().apply {
@@ -46,18 +26,15 @@ class SettingsViewModel {
         val result = fileChooser.showOpenDialog(null)
         if (result == JFileChooser.APPROVE_OPTION) {
             val selectedDirectory = fileChooser.selectedFile.absolutePath
-            saveMacroDirectory(selectedDirectory)
+            // Save the setting to the properties file via AppSettings
+            AppSettings.macroDirectory = selectedDirectory
+            // Update the UI by updating the StateFlow
+            _macroDirectory.value = selectedDirectory
         }
-    }
-
-    // --- Theme Logic ---
-    private fun loadTheme(): String {
-        return prefs.get(themeKey, availableThemes.first())
     }
 
     fun selectTheme(theme: String) {
         if (theme in availableThemes) {
-            prefs.put(themeKey, theme)
             _selectedTheme.value = theme
         }
     }

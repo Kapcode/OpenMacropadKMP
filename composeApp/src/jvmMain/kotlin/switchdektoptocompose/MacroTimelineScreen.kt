@@ -19,6 +19,7 @@ import com.mohamedrejeb.compose.dnd.reorder.rememberReorderState
 @Composable
 fun MacroTimelineScreen(
     viewModel: MacroTimelineViewModel,
+    onAddEventClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val events by viewModel.events.collectAsState()
@@ -29,8 +30,12 @@ fun MacroTimelineScreen(
         TopAppBar(
             title = { Text("Timeline") },
             actions = {
-                Button(onClick = { /* TODO */ }) { Text("Add Event") }
-                Button(onClick = { /* TODO */ }) { Text("Record Macro") }
+                Button(onClick = onAddEventClicked) {
+                    Text("Add Event")
+                }
+                Button(onClick = { /* TODO */ }) {
+                    Text("Record Macro")
+                }
             }
         )
 
@@ -57,11 +62,10 @@ fun MacroTimelineScreen(
                                 isDragging = true
                             )
                         }
-                    ) { // Corrected: The content lambda has no explicit parameters.
-                        // 'isDragging' is a property of the receiver scope (ReorderableItemScope).
+                    ) {
                         MacroTimelineItem(
                             event = event,
-                            isDragging = isDragging, // Use the implicit 'isDragging' property
+                            isDragging = isDragging,
                             modifier = Modifier.graphicsLayer { alpha = if (isDragging) 0f else 1f }
                         )
                     }

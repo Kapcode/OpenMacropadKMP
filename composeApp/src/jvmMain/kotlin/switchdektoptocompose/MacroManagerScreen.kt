@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
@@ -19,13 +20,10 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // --- Toolbar ---
         TopAppBar(
             title = { Text("Macro Manager") },
             actions = {
-                Button(onClick = { /* TODO: viewModel.addNewMacro() */ }) {
-                    Text("Add")
-                }
+                Button(onClick = { /* TODO */ }) { Text("Add") }
                 Button(onClick = { viewModel.toggleSelectionMode() }) {
                     Text(if (isSelectionMode) "Cancel" else "Select")
                 }
@@ -33,14 +31,11 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
                     Button(
                         onClick = { viewModel.deleteSelectedMacros() },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text("Delete Selected")
-                    }
+                    ) { Text("Delete Selected") }
                 }
             }
         )
 
-        // --- Macro List ---
         LazyColumn(modifier = Modifier.weight(1f)) {
             items(macroFiles, key = { it.file.absolutePath }) { macroState ->
                 MacroItem(
@@ -72,11 +67,14 @@ private fun MacroItem(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(8.dp),
+            .padding(horizontal = 8.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
             if (isSelectionMode) {
                 Checkbox(
                     checked = state.isSelectedForDeletion,
@@ -88,17 +86,21 @@ private fun MacroItem(
                 onCheckedChange = onToggleActive
             )
             Spacer(Modifier.width(8.dp))
-            Text(state.name, modifier = Modifier.weight(1f))
+            Text(state.name, maxLines = 1)
         }
 
-        Row {
-            Button(onClick = onPlay) { Text("Play") }
-            Spacer(Modifier.width(4.dp))
-            Button(onClick = onEdit) { Text("Edit") }
-            Spacer(Modifier.width(4.dp))
-            Button(onClick = onDelete, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)) {
-                Text("Del")
-            }
+        // --- ADDED MISSING BUTTONS ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Button(onClick = onPlay, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Play") }
+            Button(onClick = onEdit, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Edit") }
+            Button(
+                onClick = onDelete,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                contentPadding = PaddingValues(horizontal = 8.dp)
+            ) { Text("Del") }
         }
     }
 }

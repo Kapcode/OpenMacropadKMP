@@ -1,11 +1,11 @@
 package switchdektoptocompose
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.io.File
 
-/**
- * Represents a single macro file with its UI state.
- */
 data class MacroFileState(
     val file: File,
     val name: String = file.nameWithoutExtension,
@@ -14,11 +14,10 @@ data class MacroFileState(
     val isSelectedForDeletion: Boolean = false
 )
 
-/**
- * ViewModel for the Macro Manager UI.
- * This class handles the business logic for loading, displaying, and managing macros.
- */
-class MacroManagerViewModel {
+class MacroManagerViewModel(
+    private val settingsViewModel: SettingsViewModel,
+    private val onEditMacroRequested: (File) -> Unit
+) {
 
     private val _macroFiles = MutableStateFlow<List<MacroFileState>>(emptyList())
     val macroFiles: StateFlow<List<MacroFileState>> = _macroFiles.asStateFlow()
@@ -26,106 +25,106 @@ class MacroManagerViewModel {
     private val _isSelectionMode = MutableStateFlow(false)
     val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
 
+    private val _filePendingDeletion = MutableStateFlow<File?>(null)
+    val filePendingDeletion: StateFlow<File?> = _filePendingDeletion.asStateFlow()
+
+    // State for multiple file deletion
+    private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
+    val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
+
+    private val viewModelScope = CoroutineScope(Dispatchers.IO)
+
     init {
-        // In a real app, you would inject dependencies like the ActiveMacroManager.
-        // For now, we'll load macros directly.
-        loadMacrosFromDisk()
-        // Here you would also start the file watcher.
-    }
-
-    /**
-     * Toggles the UI between normal and selection mode.
-     */
-    fun toggleSelectionMode() {
-        _isSelectionMode.update { !it }
-        // When leaving selection mode, clear all selections.
-        if (!_isSelectionMode.value) {
-            _macroFiles.update { list ->
-                list.map { it.copy(isSelectedForDeletion = false) }
+        viewModelScope.launch {
+            settingsViewModel.macroDirectory.collect { directoryPath ->
+                loadMacrosFromDisk(directoryPath)
             }
         }
     }
 
-    /**
-     * Marks a specific macro to be included in a batch deletion.
-     */
-    fun selectMacroForDeletion(file: File, select: Boolean) {
-        _macroFiles.update { list ->
-            list.map {
-                if (it.file.absolutePath == file.absolutePath) {
-                    it.copy(isSelectedForDeletion = select)
-                } else {
-                    it
-                }
-            }
-        }
+    fun refresh() {
+        loadMacrosFromDisk(settingsViewModel.macroDirectory.value)
     }
 
-    /**
-     * Deletes all macros that have been marked for deletion.
-     */
+    private fun loadMacrosFromDisk(directoryPath: String) {
+        val macroDir = File(directoryPath)
+        if (!macroDir.exists() || !macroDir.isDirectory) {
+            _macroFiles.value = emptyList()
+            return
+        }
+        val files = macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }
+            ?.map { file -> MacroFileState(file = file) }
+            ?: emptyList()
+        _macroFiles.value = files.sortedBy { it.name }
+    }
+    
+    // --- Single Deletion Logic ---
+    fun onDeleteMacro(file: File) {
+        _filePendingDeletion.value = file
+    }
+
+    fun confirmDeletion() {
+        _filePendingDeletion.value?.let { file ->
+            // file.delete()
+            println("DELETING: ${file.name}")
+            refresh()
+        }
+        _filePendingDeletion.value = null
+    }
+
+    fun cancelDeletion() {
+        _filePendingDeletion.value = null
+    }
+
+    // --- Multiple Deletion Logic ---
     fun deleteSelectedMacros() {
-        val filesToDelete = _macroFiles.value.filter { it.isSelectedForDeletion }
+        val filesToDelete = _macroFiles.value.filter { it.isSelectedForDeletion }.map { it.file }
         if (filesToDelete.isEmpty()) return
+        _filesPendingDeletion.value = filesToDelete
+    }
 
-        // In a real implementation, you would trigger a confirmation dialog via an event.
-        // For now, we will delete them directly.
-        
-        filesToDelete.forEach { state ->
-            // 1. Remove from active macros (logic to be added)
-            // activeMacroManager.removeActiveMacro(state.file)
-
-            // 2. Close tab in editor (event to be sent to UI)
-            
-            // 3. Delete the file
-            // state.file.delete()
-            println("DELETING (simulated): ${state.file.name}")
+    fun confirmMultipleDeletion() {
+        _filesPendingDeletion.value?.forEach { file ->
+            // file.delete()
+            println("DELETING (batch): ${file.name}")
         }
-        
-        // Reload the list from disk and exit selection mode.
-        loadMacrosFromDisk()
+        _filesPendingDeletion.value = null
+        refresh()
         _isSelectionMode.value = false
     }
 
-    /**
-     * Simulates loading macros from the AppSettings directory.
-     * This will eventually contain real file I/O.
-     */
-    private fun loadMacrosFromDisk() {
-        // Placeholder: In the future, this will read from AppSettings.macroDirectory
-        _macroFiles.value = listOf(
-            MacroFileState(File("Default Macro 1.json"), content = "{\"events\":[]}"),
-            MacroFileState(File("My Awesome Macro.json"), content = "{\"events\":[]}", isActive = true),
-            MacroFileState(File("Another Macro.json"), content = "{\"events\":[]}")
-        )
+    fun cancelMultipleDeletion() {
+        _filesPendingDeletion.value = null
     }
 
-    // --- Functions to be called by the UI for individual actions ---
-    
-    fun onPlayMacro(file: File) {
-        // Logic to play the macro using MacroPlayer
-        println("PLAYING (simulated): ${file.name}")
-    }
-    
+    // --- Other actions ---
     fun onEditMacro(file: File) {
-        // Logic to open the macro in the editor (e.g., via a SharedFlow event)
-        println("EDITING (simulated): ${file.name}")
+        onEditMacroRequested(file)
     }
-    
-    fun onDeleteMacro(file: File) {
-        // Logic for single-file deletion (show confirmation, then delete)
-        println("DELETING (single, simulated): ${file.name}")
+
+    fun toggleSelectionMode() {
+        _isSelectionMode.update { !it }
+        if (!_isSelectionMode.value) {
+            _macroFiles.update { list -> list.map { it.copy(isSelectedForDeletion = false) } }
+        }
+    }
+
+    fun selectMacroForDeletion(file: File, select: Boolean) {
+        _macroFiles.update { list ->
+            list.map {
+                if (it.file.absolutePath == file.absolutePath) it.copy(isSelectedForDeletion = select) else it
+            }
+        }
+    }
+
+    fun onPlayMacro(file: File) {
+        println("PLAYING (simulated): ${file.name}")
     }
 
     fun onToggleMacroActive(file: File, isActive: Boolean) {
-        // Logic to add/remove macro from ActiveMacroManager
         _macroFiles.update { list ->
             list.map {
-                if (it.file.absolutePath == file.absolutePath) {
-                    it.copy(isActive = isActive)
-                } else {
-                    it
-                }
+                if (it.file.absolutePath == file.absolutePath) it.copy(isActive = isActive) else it
             }
         }
         println("TOGGLE ACTIVE (simulated): ${file.name} to $isActive")

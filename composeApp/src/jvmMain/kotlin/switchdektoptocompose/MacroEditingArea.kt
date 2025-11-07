@@ -11,7 +11,8 @@ import org.jetbrains.compose.splitpane.rememberSplitPaneState
 fun MacroEditingArea(
     macroManagerViewModel: MacroManagerViewModel,
     macroEditorViewModel: MacroEditorViewModel,
-    macroTimelineViewModel: MacroTimelineViewModel // Added Timeline ViewModel
+    macroTimelineViewModel: MacroTimelineViewModel,
+    onAddEventClicked: () -> Unit // Added callback
 ) {
     val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.7f)
     val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
@@ -20,11 +21,9 @@ fun MacroEditingArea(
         // --- Top Pane (Macro Manager & Editor) ---
         first(minSize = 200.dp) {
             HorizontalSplitPane(splitPaneState = horizontalSplitter) {
-                // Left side: Macro List
                 first(minSize = 200.dp) {
                     MacroManagerScreen(viewModel = macroManagerViewModel)
                 }
-                // Right side: Tabbed Editor
                 second(minSize = 300.dp) {
                     MacroEditorScreen(viewModel = macroEditorViewModel)
                 }
@@ -32,7 +31,10 @@ fun MacroEditingArea(
         }
         // --- Bottom Pane (Timeline) ---
         second(minSize = 150.dp) {
-            MacroTimelineScreen(viewModel = macroTimelineViewModel) // Pass Timeline ViewModel
+            MacroTimelineScreen(
+                viewModel = macroTimelineViewModel,
+                onAddEventClicked = onAddEventClicked // Pass callback down
+            )
         }
     }
 }
