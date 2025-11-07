@@ -2,14 +2,11 @@ package switchdektoptocompose
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
-import java.util.UUID
+import java.util.*
 
 sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class KeyEvent(val keyName: String, val action: KeyAction) : MacroEventState()
@@ -22,6 +19,9 @@ enum class MouseAction { MOVE, CLICK }
 
 class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewModel) {
 
+    private val _triggerEvent = MutableStateFlow<MacroEventState.KeyEvent?>(null)
+    val triggerEvent = _triggerEvent.asStateFlow()
+
     private val _events = MutableStateFlow<List<MacroEventState>>(emptyList())
     val events = _events.asStateFlow()
 
@@ -31,27 +31,14 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         viewModelScope.launch {
             macroEditorViewModel.tabs.collectLatest { tabs ->
                 val selectedIndex = macroEditorViewModel.selectedTabIndex.value
-                val currentTab = tabs.getOrNull(selectedIndex)
-                if (currentTab != null) {
-                    loadEventsFromJson(currentTab.content)
-                } else {
-                    _events.value = emptyList()
-                }
+                tabs.getOrNull(selectedIndex)?.let { loadEventsFromJson(it.content) }
             }
         }
     }
     
     fun addEvents(newEvents: List<MacroEventState>, isTrigger: Boolean) {
-        if (isTrigger && newEvents.isNotEmpty()) {
-            val currentEvents = _events.value.toMutableList()
-            // A simple heuristic to find if a trigger (ON-RELEASE key event) is already present
-            val triggerIndex = currentEvents.indexOfFirst { it is MacroEventState.KeyEvent && it.action == KeyAction.RELEASE }
-            if (triggerIndex == 0) { // Check if it's at the beginning
-                currentEvents[0] = newEvents.first()
-            } else {
-                currentEvents.add(0, newEvents.first())
-            }
-            _events.value = currentEvents
+        if (isTrigger && newEvents.isNotEmpty() && newEvents.first() is MacroEventState.KeyEvent) {
+            _triggerEvent.value = newEvents.first() as MacroEventState.KeyEvent
         } else {
             _events.update { it + newEvents }
         }
@@ -69,6 +56,16 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     }
     
     private fun updateEditorText() {
+        val rootJson = JSONObject()
+        
+        _triggerEvent.value?.let { trigger ->
+            val triggerJson = JSONObject()
+            triggerJson.put("type", "key")
+            triggerJson.put("action", trigger.action.name)
+            triggerJson.put("keyName", trigger.keyName)
+            rootJson.put("trigger", triggerJson)
+        }
+
         val eventsJsonArray = JSONArray()
         _events.value.forEach { event ->
             val eventJson = JSONObject()
@@ -91,41 +88,38 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
             }
             eventsJsonArray.put(eventJson)
         }
-        val finalJson = JSONObject().put("events", eventsJsonArray)
-        macroEditorViewModel.updateSelectedTabContent(finalJson.toString(4))
+        rootJson.put("events", eventsJsonArray)
+        
+        macroEditorViewModel.updateSelectedTabContent(rootJson.toString(4))
     }
 
     fun loadEventsFromJson(jsonContent: String) {
-        val newEvents = mutableListOf<MacroEventState>()
         try {
             val json = JSONObject(jsonContent)
-            val eventsArray = json.getJSONArray("events")
-            for (i in 0 until eventsArray.length()) {
-                val eventObj = eventsArray.getJSONObject(i)
-                when (eventObj.getString("type").lowercase()) {
-                    "key" -> {
-                        newEvents.add(MacroEventState.KeyEvent(
-                            keyName = eventObj.getString("keyName"),
-                            action = KeyAction.valueOf(eventObj.getString("action").uppercase())
-                        ))
-                    }
-                    "mouse" -> {
-                        newEvents.add(MacroEventState.MouseEvent(
-                            x = eventObj.optInt("x", 0),
-                            y = eventObj.optInt("y", 0),
-                            action = MouseAction.valueOf(eventObj.getString("action").uppercase())
-                        ))
-                    }
-                    "delay" -> {
-                        newEvents.add(MacroEventState.DelayEvent(
-                            durationMs = eventObj.getLong("durationMs")
-                        ))
+            
+            _triggerEvent.value = json.optJSONObject("trigger")?.let {
+                MacroEventState.KeyEvent(
+                    keyName = it.getString("keyName"),
+                    action = KeyAction.valueOf(it.getString("action").uppercase())
+                )
+            }
+            
+            val newEvents = mutableListOf<MacroEventState>()
+            json.optJSONArray("events")?.let { eventsArray ->
+                for (i in 0 until eventsArray.length()) {
+                    eventsArray.getJSONObject(i)?.let { eventObj ->
+                        when (eventObj.getString("type").lowercase()) {
+                            "key" -> newEvents.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                            "mouse" -> newEvents.add(MacroEventState.MouseEvent(eventObj.optInt("x", 0), eventObj.optInt("y", 0), MouseAction.valueOf(eventObj.getString("action").uppercase())))
+                            "delay" -> newEvents.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
+                        }
                     }
                 }
             }
+            _events.value = newEvents
         } catch (e: Exception) {
-            newEvents.clear()
+            _triggerEvent.value = null
+            _events.value = emptyList()
         }
-        _events.value = newEvents
     }
 }

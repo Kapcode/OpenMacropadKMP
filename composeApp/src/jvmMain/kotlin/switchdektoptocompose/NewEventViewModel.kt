@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE }
+enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE, TYPE }
 
 class NewEventViewModel {
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
@@ -81,14 +81,25 @@ class NewEventViewModel {
 
         if (useKeys.value && keysText.value.isNotBlank()) {
             addedAction = true
-            val keys = keysText.value.split(',').map { it.trim() }
             when (selectedAction.value) {
-                MacroAction.PRESS, MacroAction.`ON-PRESS` -> keys.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.PRESS)) }
-                MacroAction.RELEASE, MacroAction.`ON-RELEASE` -> keys.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.RELEASE)) }
+                MacroAction.PRESS, MacroAction.`ON-PRESS` -> {
+                    keysText.value.split(',').map { it.trim() }.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.PRESS)) }
+                }
+                MacroAction.RELEASE, MacroAction.`ON-RELEASE` -> {
+                    keysText.value.split(',').map { it.trim() }.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.RELEASE)) }
+                }
                 MacroAction.PRESS_THEN_RELEASE -> {
+                    val keys = keysText.value.split(',').map { it.trim() }
                     keys.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.PRESS)) }
                     if (delayBetweenActions.value) autoDelay?.let { events.add(MacroEventState.DelayEvent(it)) }
                     keys.reversed().forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.RELEASE)) }
+                }
+                MacroAction.TYPE -> {
+                    keysText.value.forEachIndexed { index, char ->
+                        if (index > 0 && delayBetweenActions.value) autoDelay?.let { events.add(MacroEventState.DelayEvent(it)) }
+                        events.add(MacroEventState.KeyEvent(char.toString(), KeyAction.PRESS))
+                        events.add(MacroEventState.KeyEvent(char.toString(), KeyAction.RELEASE))
+                    }
                 }
             }
         }
