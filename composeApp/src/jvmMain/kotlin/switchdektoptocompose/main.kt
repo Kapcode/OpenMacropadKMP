@@ -86,7 +86,6 @@ fun DesktopApp(
         else -> DarkBlueColorScheme
     }
 
-    // --- Dialogs ---
     if (showSettingsDialog) {
         SettingsDialog(viewModel = settingsViewModel, onDismissRequest = { showSettingsDialog = false })
     }
@@ -101,7 +100,7 @@ fun DesktopApp(
             viewModel = newEventViewModel,
             onDismissRequest = { showNewEventDialog = false },
             onAddEvent = { events ->
-                macroTimelineViewModel.addEvents(events)
+                macroTimelineViewModel.addEvents(events, newEventViewModel.isTriggerEvent.value)
                 showNewEventDialog = false
             }
         )

@@ -18,14 +18,13 @@ fun NewEventDialog(
     onDismissRequest: () -> Unit,
     onAddEvent: (List<MacroEventState>) -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 500.dp, height = 700.dp)
+    val dialogState = rememberDialogState(width = 500.dp, height = 850.dp)
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
         state = dialogState,
         title = "Add New Macro Event"
     ) {
-        // Collect all states
         val isTrigger by viewModel.isTriggerEvent.collectAsState()
         val selectedAction by viewModel.selectedAction.collectAsState()
         val useKeys by viewModel.useKeys.collectAsState()
@@ -37,9 +36,12 @@ fun NewEventDialog(
         val useMouseLocation by viewModel.useMouseLocation.collectAsState()
         val mouseX by viewModel.mouseX.collectAsState()
         val mouseY by viewModel.mouseY.collectAsState()
+        val animateMouse by viewModel.animateMouseMovement.collectAsState()
         val useDelay by viewModel.useDelay.collectAsState()
         val delayText by viewModel.delayText.collectAsState()
         val delayBetweenActions by viewModel.delayBetweenActions.collectAsState()
+        val useAutoDelay by viewModel.useAutoDelay.collectAsState()
+        val autoDelayText by viewModel.autoDelayText.collectAsState()
 
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -62,11 +64,17 @@ fun NewEventDialog(
                     CheckableTextFieldRow("Mouse Button(s):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
                     CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
                     
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
-                        Text("Mouse Location:", modifier = Modifier.weight(1f))
+                        Text("Mouse Location")
+                        Spacer(Modifier.weight(1f))
+                        Text("Animate")
+                        Switch(
+                            checked = animateMouse,
+                            onCheckedChange = { viewModel.animateMouseMovement.value = it },
+                            enabled = useMouseLocation
+                        )
                         OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
-                        Spacer(Modifier.width(8.dp))
                         OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
                     }
 
@@ -82,6 +90,20 @@ fun NewEventDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = delayBetweenActions, onCheckedChange = { viewModel.delayBetweenActions.value = it })
                         Text("Delay between each action in this event")
+                    }
+                    
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
+                            Text("Auto Delay Declaration")
+                        }
+                        OutlinedTextField(
+                            value = autoDelayText,
+                            onValueChange = { viewModel.autoDelayText.value = it },
+                            label = { Text("Auto Delay Value (ms)") },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = useAutoDelay
+                        )
                     }
                 }
 
