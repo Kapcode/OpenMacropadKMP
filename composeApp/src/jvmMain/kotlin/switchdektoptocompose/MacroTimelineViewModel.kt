@@ -9,7 +9,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.util.UUID
 
-// Sealed class hierarchy to represent the state of different macro events.
+// ... (Sealed class and enums remain the same) ...
 sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class KeyEvent(
         val keyName: String,
@@ -30,10 +30,6 @@ sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
 enum class KeyAction { PRESS, RELEASE }
 enum class MouseAction { MOVE, CLICK }
 
-
-/**
- * ViewModel for the Macro Timeline UI.
- */
 class MacroTimelineViewModel(
     private val macroEditorViewModel: MacroEditorViewModel
 ) {
@@ -41,11 +37,9 @@ class MacroTimelineViewModel(
     private val _events = MutableStateFlow<List<MacroEventState>>(emptyList())
     val events = _events.asStateFlow()
 
-    // A coroutine scope for this ViewModel
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
 
     init {
-        // Observe changes in the editor's tabs and selected index
         viewModelScope.launch {
             macroEditorViewModel.tabs.collectLatest { tabs ->
                 val selectedIndex = macroEditorViewModel.selectedTabIndex.value
@@ -60,9 +54,24 @@ class MacroTimelineViewModel(
     }
 
     /**
-     * Parses a JSON string and updates the timeline's event list.
+     * Moves an event from one position to another for live reordering.
      */
+    fun moveEvent(from: Int, to: Int) {
+        _events.value = _events.value.toMutableList().apply {
+            add(to, removeAt(from))
+        }
+    }
+
+    /**
+     * Finalizes the reordering. Can be used for persistence later.
+     */
+    fun onReorderFinished(from: Int, to: Int) {
+        println("Moved item from $from to $to")
+        // Here you can add logic to save the new order
+    }
+
     fun loadEventsFromJson(jsonContent: String) {
+        // ... (this function remains the same) ...
         val newEvents = mutableListOf<MacroEventState>()
         try {
             val json = JSONObject(jsonContent)
@@ -92,9 +101,8 @@ class MacroTimelineViewModel(
                 }
             }
         } catch (e: Exception) {
-            // If JSON is invalid, clear the list
             newEvents.clear()
-            e.printStackTrace() // Log the error
+            e.printStackTrace()
         }
         _events.value = newEvents
     }

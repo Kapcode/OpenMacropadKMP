@@ -1,6 +1,5 @@
 package switchdektoptocompose
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Card
@@ -16,10 +15,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun MacroTimelineItem(event: MacroEventState, modifier: Modifier = Modifier) {
+fun MacroTimelineItem(
+    event: MacroEventState,
+    isDragging: Boolean,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier.fillMaxWidth().padding(vertical = 4.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        modifier = modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = if (isDragging) 8.dp else 2.dp // Elevate the drag shadow
+        ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
         when (event) {
@@ -30,6 +35,7 @@ fun MacroTimelineItem(event: MacroEventState, modifier: Modifier = Modifier) {
     }
 }
 
+// The individual item Composables remain the same
 @Composable
 private fun KeyItem(event: MacroEventState.KeyEvent) {
     Row(

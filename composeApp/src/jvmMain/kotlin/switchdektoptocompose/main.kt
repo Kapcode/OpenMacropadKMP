@@ -23,7 +23,6 @@ fun main() = application {
     val macroEditorViewModel = remember { MacroEditorViewModel() }
     val macroManagerViewModel = remember { MacroManagerViewModel() }
     val settingsViewModel = remember { SettingsViewModel() }
-    // Pass the editor VM to the timeline VM
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
     DisposableEffect(Unit) {
