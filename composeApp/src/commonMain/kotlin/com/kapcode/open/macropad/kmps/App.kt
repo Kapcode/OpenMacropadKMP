@@ -1,10 +1,8 @@
 package com.kapcode.open.macropad.kmps
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -18,6 +16,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun App(
+    modifier: Modifier = Modifier,
     scanServers: () -> Unit,
     foundServers: List<String>,
     onConnectClick: (serverAddress: String, deviceName: String) -> Unit = { _, _ -> }
@@ -26,9 +25,7 @@ fun App(
 
     MaterialTheme {
         Column(
-            modifier = Modifier
-                .background(MaterialTheme.colorScheme.primaryContainer)
-                .safeContentPadding()
+            modifier = modifier
                 .fillMaxSize()
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -50,7 +47,7 @@ fun App(
                 ConnectionItem(
                     name = "Discovered Server", // You might want to get a real name later
                     ipAddressPort = serverAddress,
-                    onClick = { onConnectClick(serverAddress, deviceName) } 
+                    onClick = { onConnectClick(serverAddress, deviceName) }
                 )
             }
         }

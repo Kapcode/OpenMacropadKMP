@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
@@ -28,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.websocket.WebSockets
@@ -35,6 +37,7 @@ import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.receiveAsFlow
 
+@OptIn(ExperimentalMaterial3Api::class)
 class ClientActivity : ComponentActivity() {
 
     private var client: MacroKtorClient? = null
@@ -79,6 +82,14 @@ class ClientActivity : ComponentActivity() {
                     gesturesEnabled = drawerState.isOpen
                 ) {
                     Scaffold(
+                        topBar = {
+                            CommonAppBar(
+                                title = "Open Macropad",
+                                onSettingsClick = {
+                                    Toast.makeText(context, "Settings Clicked", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        },
                         bottomBar = {
                             BottomAppBar {
                                 Box(modifier = Modifier.fillMaxSize()) {
