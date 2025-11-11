@@ -26,17 +26,30 @@ fun main() = application {
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
 
+    lateinit var desktopViewModel: DesktopViewModel
     lateinit var macroManagerViewModel: MacroManagerViewModel
+
     val macroEditorViewModel = remember {
-        MacroEditorViewModel(settingsViewModel) { macroManagerViewModel.refresh() }
-    }
-    macroManagerViewModel = remember {
-        MacroManagerViewModel(settingsViewModel) { macroState ->
-            macroEditorViewModel.openOrSwitchToTab(macroState)
+        MacroEditorViewModel(settingsViewModel) {
+            macroManagerViewModel.refresh()
         }
     }
 
-    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, macroManagerViewModel) }
+    macroManagerViewModel = remember {
+        MacroManagerViewModel(
+            settingsViewModel = settingsViewModel,
+            onEditMacroRequested = { macroState ->
+                macroEditorViewModel.openOrSwitchToTab(macroState)
+            },
+            onMacrosUpdated = {
+                desktopViewModel.sendMacroListToAllClients()
+            }
+        )
+    }
+
+    desktopViewModel = remember {
+        DesktopViewModel(settingsViewModel, macroManagerViewModel)
+    }
 
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 

@@ -91,6 +91,12 @@ class DesktopViewModel(
         stopServer()
     }
 
+    fun sendMacroListToAllClients() {
+        val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+        val macroListString = "macros:${macroNames.joinToString(",")}"
+        wifiServer.sendData(macroListString.toByteArray())
+    }
+
     // --- ConnectionListener Implementation ---
 
     override fun onClientConnected(clientId: String, clientName: String) {

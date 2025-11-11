@@ -19,7 +19,8 @@ data class MacroFileState(
 
 class MacroManagerViewModel(
     private val settingsViewModel: SettingsViewModel,
-    var onEditMacroRequested: (MacroFileState) -> Unit
+    var onEditMacroRequested: (MacroFileState) -> Unit,
+    private val onMacrosUpdated: () -> Unit
 ) {
 
     // --- CORRECTED SAMPLE MACRO CONTENT ---
@@ -108,6 +109,7 @@ class MacroManagerViewModel(
         )
         
         _macroFiles.value = listOf(sampleMacro) + fileMacros
+        onMacrosUpdated()
     }
 
     fun getActiveMacrosForClient(clientName: String): List<MacroFileState> {

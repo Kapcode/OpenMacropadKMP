@@ -165,9 +165,16 @@ class WifiServer : Wifi() {
                 handleNewConnection(clientId, deviceName)
                 try {
                     for (frame in incoming) {
-                        if (frame is Frame.Binary) {
-                            val data = frame.readBytes()
-                            listener?.onDataReceived(clientId, data)
+                        when(frame) {
+                            is Frame.Binary -> {
+                                val data = frame.readBytes()
+                                listener?.onDataReceived(clientId, data)
+                            }
+                            is Frame.Text -> {
+                                val data = frame.readBytes()
+                                listener?.onDataReceived(clientId, data)
+                            }
+                            else -> {}
                         }
                     }
                 } finally {
