@@ -22,8 +22,9 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel(
     private val settingsViewModel: SettingsViewModel,
-    private val macroManagerViewModel: MacroManagerViewModel
 ) : ConnectionListener {
+
+    lateinit var macroManagerViewModel: MacroManagerViewModel
 
     private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
     val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
@@ -112,7 +113,7 @@ class DesktopViewModel(
     }
 
     override fun onDataReceived(clientId: String, data: ByteArray) {
-        val message = String(data)
+        val message = String(data).trim()
         println("Data received from $clientId: $message")
 
         if (message == "getMacros") {
@@ -121,8 +122,13 @@ class DesktopViewModel(
             wifiServer.sendDataToClient(clientId, macroListString.toByteArray())
         } else if (message.startsWith("play:")) {
             val macroName = message.substringAfter("play:")
-            macroManagerViewModel.macroFiles.value.find { it.name == macroName }?.let {
-                macroManagerViewModel.onPlayMacro(it)
+            println("Attempting to play macro: $macroName")
+            val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
+            if (macroToPlay != null) {
+                println("Found macro: ${macroToPlay.name}. Playing...")
+                macroManagerViewModel.onPlayMacro(macroToPlay)
+            } else {
+                println("Macro '$macroName' not found.")
             }
         }
     }

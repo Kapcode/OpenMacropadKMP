@@ -28,7 +28,7 @@ class TriggerListener(
         GlobalScreen.setEventDispatcher(SwingDispatchService())
 
         val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
-        logger.level = Level.OFF
+        logger.level = Level.INFO
         logger.useParentHandlers = false
     }
 

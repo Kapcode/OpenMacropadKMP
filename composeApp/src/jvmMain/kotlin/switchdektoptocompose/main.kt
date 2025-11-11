@@ -26,7 +26,7 @@ fun main() = application {
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
 
-    lateinit var desktopViewModel: DesktopViewModel
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
     val macroEditorViewModel = remember {
@@ -47,9 +47,7 @@ fun main() = application {
         )
     }
 
-    desktopViewModel = remember {
-        DesktopViewModel(settingsViewModel, macroManagerViewModel)
-    }
+    desktopViewModel.macroManagerViewModel = macroManagerViewModel
 
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
