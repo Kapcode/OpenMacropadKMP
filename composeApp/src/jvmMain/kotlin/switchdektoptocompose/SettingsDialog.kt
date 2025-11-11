@@ -17,6 +17,8 @@ fun SettingsDialog(
     onDismissRequest: () -> Unit
 ) {
     val macroDirectory by settingsViewModel.macroDirectory.collectAsState()
+    val serverPort by settingsViewModel.serverPort.collectAsState()
+    val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
@@ -35,6 +37,26 @@ fun SettingsDialog(
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // ... (Other settings remain the same)
+                 Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = serverPort.toString(),
+                        onValueChange = { settingsViewModel.onServerPortChange(it) },
+                        label = { Text("Server Port (WS)") },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isServerRunning
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    OutlinedTextField(
+                        value = secureServerPort.toString(),
+                        onValueChange = { settingsViewModel.onSecureServerPortChange(it) },
+                        label = { Text("Secure Server Port (WSS)") },
+                        modifier = Modifier.weight(1f),
+                        enabled = !isServerRunning
+                    )
+                }
 
                 // --- Encryption Setting ---
                 Row(

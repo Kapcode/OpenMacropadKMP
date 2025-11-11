@@ -1,9 +1,12 @@
 package switchdektoptocompose
 
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.net.InetAddress
 import java.net.NetworkInterface
 
@@ -15,12 +18,15 @@ data class ClientInfo(val id: String, val name: String)
 /**
  * The ViewModel for the desktop application.
  */
-class DesktopViewModel : ConnectionListener {
+class DesktopViewModel(
+    private val settingsViewModel: SettingsViewModel
+) : ConnectionListener {
 
     private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
     val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
 
     private val wifiServer = WifiServer()
+    private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
     val connectedDevices: StateFlow<List<ClientInfo>> = _connectedDevices.asStateFlow()
@@ -57,7 +63,12 @@ class DesktopViewModel : ConnectionListener {
         if (wifiServer.isListening()) return
         try {
             // Pass the current encryption setting to the server
-            wifiServer.startListening(encryptionEnabled = _encryptionEnabled.value)
+            val port = if (_encryptionEnabled.value) {
+                settingsViewModel.secureServerPort.value
+            } else {
+                settingsViewModel.serverPort.value
+            }
+            wifiServer.startListening(port, encryptionEnabled = _encryptionEnabled.value)
             _isServerRunning.value = wifiServer.isListening()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -67,8 +78,10 @@ class DesktopViewModel : ConnectionListener {
 
     fun stopServer() {
         if (!wifiServer.isListening()) return
-        wifiServer.stopListening()
-        _isServerRunning.value = false
+        viewModelScope.launch {
+            wifiServer.stopListening()
+            _isServerRunning.value = false
+        }
     }
 
     fun shutdown() {

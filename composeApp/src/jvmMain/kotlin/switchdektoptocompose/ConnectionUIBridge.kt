@@ -7,16 +7,18 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import java.io.File
 import java.io.InputStream
 import java.net.InetAddress
 import java.security.KeyStore
 import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.coroutines.cancellation.CancellationException
 
 // ... (interfaces and abstract class are unchanged)
 interface ConnectionUIBridge {
-    fun startListening(encryptionEnabled: Boolean)
-    fun stopListening()
+    fun startListening(port: Int, encryptionEnabled: Boolean)
+    suspend fun stopListening()
     fun sendData(data: ByteArray)
     fun isListening(): Boolean
     fun getConnectedClients(): List<String>
@@ -63,18 +65,19 @@ class WifiServer : Wifi() {
 
     private var server: NettyApplicationEngine? = null
     private var discovery: ServerDiscovery? = null
+    private var serverJob: Job? = null
     private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val sessions = ConcurrentHashMap<String, WebSocketServerSession>()
 
     private var currentPort: Int = 0
 
-    override fun startListening(encryptionEnabled: Boolean) {
-        if (server != null) {
+    override fun startListening(port: Int, encryptionEnabled: Boolean) {
+        if (serverJob?.isActive == true) {
             listener?.onError("Server is already running")
             return
         }
-        
-        currentPort = if (encryptionEnabled) 8443 else 8080
+
+        currentPort = port
 
         val environment = if (encryptionEnabled) {
             createSecureEnvironment(currentPort)
@@ -85,7 +88,7 @@ class WifiServer : Wifi() {
         if (environment == null) return // Error creating environment
 
         server = embeddedServer(Netty, environment)
-        serverScope.launch {
+        serverJob = serverScope.launch {
             try {
                 val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
                 discovery = ServerDiscovery(serverName, currentPort)
@@ -93,11 +96,18 @@ class WifiServer : Wifi() {
 
                 server?.start(wait = true)
             } catch (e: Exception) {
-                listener?.onError("Failed to start server: ${e.message}")
+                if (e is CancellationException) {
+                    // This is expected when the job is cancelled, so don't log as an error
+                    println("Server job cancelled.")
+                } else {
+                    listener?.onError("Failed to start server: ${e.message}")
+                }
+            } finally {
                 discovery?.stop()
             }
         }
     }
+
 
     private fun createPlainEnvironment(port: Int): ApplicationEngineEnvironment {
         return applicationEngineEnvironment {
@@ -110,26 +120,30 @@ class WifiServer : Wifi() {
     }
 
     private fun createSecureEnvironment(port: Int): ApplicationEngineEnvironment? {
-        val keystoreStream: InputStream? = Thread.currentThread().contextClassLoader.getResourceAsStream("keystore.jks")
-        if (keystoreStream == null) {
-            listener?.onError("Encryption enabled, but keystore not found in resources.")
+        val keystorePath = System.getProperty("keystore.path", "keystore.jks")
+        val keystorePassword = System.getProperty("keystore.password", "password")
+        val privateKeyPassword = System.getProperty("private.key.password", "password")
+        val keystoreFile = File(keystorePath)
+
+        if (!keystoreFile.exists()) {
+            listener?.onError("Encryption enabled, but keystore not found at: ${keystoreFile.absolutePath}")
             return null
         }
 
         val keyStore = KeyStore.getInstance("JKS").apply {
-            load(keystoreStream, "password".toCharArray())
+            load(keystoreFile.inputStream(), keystorePassword.toCharArray())
         }
 
         return applicationEngineEnvironment {
             sslConnector(
                 keyStore = keyStore,
                 keyAlias = "selfsigned",
-                keyStorePassword = { "password".toCharArray() },
-                privateKeyPassword = { "password".toCharArray() }
+                keyStorePassword = { keystorePassword.toCharArray() },
+                privateKeyPassword = { privateKeyPassword.toCharArray() }
             ) {
                 this.port = port
                 host = "0.0.0.0"
-               // clientAuth = io.ktor.server.engine.ClientAuth.NONE // No client auth for now
+                // clientAuth = io.ktor.server.engine.ClientAuth.NONE // No client auth for now
             }
             module { moduleWithWebsockets() }
         }
@@ -161,31 +175,37 @@ class WifiServer : Wifi() {
             }
         }
     }
-    
-    // ... rest of WifiServer is unchanged ...
-    override fun stopListening() {
-        discovery?.stop()
+
+    override suspend fun stopListening() {
+        serverJob?.cancelAndJoin()
         server?.stop(1000, 5000)
         server = null
         sessions.clear()
         connectedClients.clear()
     }
 
+
     override fun isListening(): Boolean {
-        return server != null
+        return serverJob?.isActive == true
     }
 
     override fun sendData(data: ByteArray) {
         serverScope.launch {
             sessions.values.forEach { session ->
-                session.send(Frame.Binary(fin = true, data))
+                if (session.isActive) {
+                    session.send(Frame.Binary(fin = true, data))
+                }
             }
         }
     }
 
     fun sendDataToClient(clientId: String, data: ByteArray) {
         serverScope.launch {
-            sessions[clientId]?.send(Frame.Binary(fin = true, data))
+            sessions[clientId]?.let {
+                if (it.isActive) {
+                    it.send(Frame.Binary(fin = true, data))
+                }
+            }
         }
     }
 

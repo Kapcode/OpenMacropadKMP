@@ -1,6 +1,7 @@
 package switchdektoptocompose
 
 import com.github.kwhat.jnativehook.GlobalScreen
+import com.github.kwhat.jnativehook.dispatcher.SwingDispatchService
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener
 import org.json.JSONObject
@@ -8,6 +9,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
+import javax.swing.SwingUtilities
 
 data class ActiveTrigger(
     val keyCode: Int,
@@ -22,6 +24,9 @@ class TriggerListener(
     private val activeTriggers = ConcurrentHashMap<Int, ActiveTrigger>()
 
     init {
+        // Set the event dispatcher to the Swing dispatch service
+        GlobalScreen.setEventDispatcher(SwingDispatchService())
+
         val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
         logger.level = Level.OFF
         logger.useParentHandlers = false
@@ -64,14 +69,17 @@ class TriggerListener(
     }
 
     fun shutdown() {
-        try {
-            if (GlobalScreen.isNativeHookRegistered()) {
-                GlobalScreen.removeNativeKeyListener(this)
-                GlobalScreen.unregisterNativeHook()
-                println("Trigger Listener: Shutdown complete.")
+        // Use invokeLater to ensure shutdown is non-blocking and on the correct thread.
+        if (GlobalScreen.isNativeHookRegistered()) {
+            SwingUtilities.invokeLater {
+                try {
+                    GlobalScreen.removeNativeKeyListener(this)
+                    GlobalScreen.unregisterNativeHook()
+                    println("Trigger Listener: Shutdown complete.")
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         }
     }
 

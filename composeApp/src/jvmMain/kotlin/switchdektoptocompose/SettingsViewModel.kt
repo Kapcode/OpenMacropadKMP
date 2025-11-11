@@ -10,6 +10,12 @@ class SettingsViewModel {
     private val _macroDirectory = MutableStateFlow(AppSettings.macroDirectory)
     val macroDirectory = _macroDirectory.asStateFlow()
 
+    private val _serverPort = MutableStateFlow(AppSettings.serverPort)
+    val serverPort = _serverPort.asStateFlow()
+
+    private val _secureServerPort = MutableStateFlow(AppSettings.secureServerPort)
+    val secureServerPort = _secureServerPort.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -30,6 +36,20 @@ class SettingsViewModel {
             AppSettings.macroDirectory = selectedDirectory
             // Update the UI by updating the StateFlow
             _macroDirectory.value = selectedDirectory
+        }
+    }
+
+    fun onServerPortChange(port: String) {
+        port.toIntOrNull()?.let {
+            _serverPort.value = it
+            AppSettings.serverPort = it
+        }
+    }
+
+    fun onSecureServerPortChange(port: String) {
+        port.toIntOrNull()?.let {
+            _secureServerPort.value = it
+            AppSettings.secureServerPort = it
         }
     }
 

@@ -13,30 +13,32 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import java.io.File
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
-    
-    val desktopViewModel = remember { DesktopViewModel() }
+
     val settingsViewModel = remember { SettingsViewModel() }
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel) }
     val newEventViewModel = remember { NewEventViewModel() }
-    
+
     lateinit var macroManagerViewModel: MacroManagerViewModel
     val macroEditorViewModel = remember {
         MacroEditorViewModel(settingsViewModel) { macroManagerViewModel.refresh() }
     }
     macroManagerViewModel = remember {
-        MacroManagerViewModel(settingsViewModel) { macroState -> 
-            macroEditorViewModel.openOrSwitchToTab(macroState) 
+        MacroManagerViewModel(settingsViewModel) { macroState ->
+            macroEditorViewModel.openOrSwitchToTab(macroState)
         }
     }
-    
+
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
-    
+
     val triggerListener = remember {
         TriggerListener { macroToPlay ->
             macroManagerViewModel.onPlayMacro(macroToPlay)
@@ -58,11 +60,11 @@ fun main() = application {
         title = "Open Macropad (Compose)"
     ) {
         val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
-        
+
         LaunchedEffect(macroFiles) {
             triggerListener.updateActiveTriggers(macroFiles)
         }
-        
+
         DesktopApp(
             desktopViewModel = desktopViewModel,
             macroEditorViewModel = macroEditorViewModel,
@@ -90,7 +92,9 @@ fun DesktopApp(
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
-    val serverPort = if (encryptionEnabled) 8443 else 8080
+    val serverPort by settingsViewModel.serverPort.collectAsState()
+    val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
+    val currentPort = if (encryptionEnabled) secureServerPort else serverPort
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
@@ -171,7 +175,7 @@ fun DesktopApp(
                             Column {
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Address: $serverIpAddress:$serverPort", color = MaterialTheme.colorScheme.onSurface)
+                                Text("Address: $serverIpAddress:$currentPort", color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                         // --- Inspector ---
