@@ -21,6 +21,17 @@ object AppSettings {
         if (configFile.exists()) {
             FileInputStream(configFile).use { properties.load(it) }
         }
+
+        // Set a Linux-specific default macro directory if none is set
+        val os = System.getProperty("os.name").lowercase()
+        if (os.contains("linux") && properties.getProperty(MACRO_DIR_KEY).isNullOrBlank()) {
+            val linuxDefaultDir = File(System.getProperty("user.home"), ".config/OpenMacropadKMP/macros")
+            if (!linuxDefaultDir.exists()) {
+                linuxDefaultDir.mkdirs()
+            }
+            properties.setProperty(MACRO_DIR_KEY, linuxDefaultDir.absolutePath)
+            save()
+        }
     }
 
     var macroDirectory: String

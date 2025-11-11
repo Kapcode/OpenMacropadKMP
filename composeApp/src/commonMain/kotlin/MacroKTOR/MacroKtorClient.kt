@@ -27,7 +27,7 @@ class MacroKtorClient(
      * Launches a listener for incoming messages.
      * @throws Exception if the connection fails.
      */
-    suspend fun connect() {
+    suspend fun connect(deviceName: String) {
         // This function now suspends until the WebSocket session is created.
         session = client.webSocketSession {
             val isSecure = port == 8443
@@ -35,7 +35,7 @@ class MacroKtorClient(
                 scheme = if (isSecure) "wss" else "ws",
                 host = this@MacroKtorClient.host,
                 port = this@MacroKtorClient.port,
-                path = "/ws"
+                path = "/ws?deviceName=$deviceName"
             )
         }
 

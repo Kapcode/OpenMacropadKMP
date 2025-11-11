@@ -3,31 +3,43 @@ package com.kapcode.open.macropad.kmps
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeContentPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
+import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun App(
     scanServers: () -> Unit,
     foundServers: List<String>,
-    onConnectClick: (String) -> Unit = {} // Added onConnectClick parameter
+    onConnectClick: (serverAddress: String, deviceName: String) -> Unit = { _, _ -> }
 ) {
+    var deviceName by remember { mutableStateOf("Android Device") }
+
     MaterialTheme {
         Column(
             modifier = Modifier
                 .background(MaterialTheme.colorScheme.primaryContainer)
                 .safeContentPadding()
-                .fillMaxSize(),
+                .fillMaxSize()
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Button(onClick = { 
+            TextField(
+                value = deviceName,
+                onValueChange = { deviceName = it },
+                label = { Text("Device Name") }
+            )
+
+            Button(onClick = {
                 scanServers()
             }) {
                 Text("Scan for Available Servers")
@@ -38,7 +50,7 @@ fun App(
                 ConnectionItem(
                     name = "Discovered Server", // You might want to get a real name later
                     ipAddressPort = serverAddress,
-                    onClick = onConnectClick // Pass the onConnectClick lambda
+                    onClick = { onConnectClick(serverAddress, deviceName) } 
                 )
             }
         }
@@ -51,6 +63,6 @@ fun AppPreview() {
     App(
         scanServers = {},
         foundServers = listOf("192.168.1.10:9999", "192.168.1.15:9999"),
-        onConnectClick = { /* Preview click handler */ }
-    ) 
+        onConnectClick = { _, _ -> /* Preview click handler */ }
+    )
 }

@@ -38,10 +38,12 @@ class MainActivity : ComponentActivity() {
                     clientDiscovery.start()
                 },
                 foundServers = serverAddresses,
-                onConnectClick = { serverAddress ->
-                    Log.d(TAG, "Launching ClientActivity for: $serverAddress")
-                    val intent = Intent(this, ClientActivity::class.java)
-                    intent.putExtra("SERVER_ADDRESS", serverAddress)
+                onConnectClick = { serverAddress, deviceName ->
+                    Log.d(TAG, "Launching ClientActivity for: $serverAddress with device name: $deviceName")
+                    val intent = Intent(this, ClientActivity::class.java).apply {
+                        putExtra("SERVER_ADDRESS", serverAddress)
+                        putExtra("DEVICE_NAME", deviceName)
+                    }
                     startActivity(intent)
                 }
             )
@@ -72,6 +74,6 @@ fun AppAndroidPreview() {
     App(
         scanServers = {},
         foundServers = sampleServers,
-        onConnectClick = { }
+        onConnectClick = { _, _ -> }
     )
 }

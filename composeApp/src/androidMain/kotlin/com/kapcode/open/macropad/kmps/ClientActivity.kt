@@ -26,14 +26,13 @@ class ClientActivity : ComponentActivity() {
     private var client: MacroKtorClient? = null
     private val activityScope = CoroutineScope(Dispatchers.Main.immediate)
     private var clientJob: Job? = null
+    private val macros = mutableStateListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Initialize AppContext here if needed by other parts of your app
-        // AppContext.context = applicationContext
-
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
+        val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Android Device"
         val addressParts = serverAddressFull?.split(":")
         val ipAddress = addressParts?.getOrNull(0)
         val port = addressParts?.getOrNull(1)?.toIntOrNull()
@@ -53,58 +52,70 @@ class ClientActivity : ComponentActivity() {
                     var serverName by remember { mutableStateOf<String?>(null) }
 
                     LaunchedEffect(Unit) {
-                        connectToServer(ipAddress, port) { status, name ->
+                        connectToServer(ipAddress, port, deviceName) { status, name ->
                             connectionStatus = status
                             serverName = name
                         }
                     }
 
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Connected to:")
-                        Text(serverName ?: serverAddressFull ?: "N/A", style = MaterialTheme.typography.headlineMedium)
-                        Text("Status: $connectionStatus")
+                    if (macros.isNotEmpty()) {
+                        MacroButtonsScreen(macros = macros, onMacroClick = ::sendMacro)
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Connected to:")
+                            Text(serverName ?: serverAddressFull ?: "N/A", style = MaterialTheme.typography.headlineMedium)
+                            Text("Status: $connectionStatus")
+                        }
                     }
                 }
             }
         }
     }
 
-    private fun connectToServer(ipAddress: String, port: Int, onUpdate: (status: String, serverName: String?) -> Unit) {
-        
+    private fun sendMacro(macroName: String) {
+        activityScope.launch {
+            client?.send("play:$macroName")
+        }
+    }
+
+    private fun connectToServer(ipAddress: String, port: Int, deviceName: String, onUpdate: (status: String, serverName: String?) -> Unit) {
+
         val ktorHttpClient = HttpClient(OkHttp) {
             install(WebSockets)
         }
-        
+
         client = MacroKtorClient(ktorHttpClient, ipAddress, port)
 
         clientJob = activityScope.launch {
             try {
-                // The connect function is now a suspend function
                 withContext(Dispatchers.IO) {
-                    client?.connect()
+                    client?.connect(deviceName)
                 }
 
-                // If connect() doesn't throw an exception, we are connected.
                 onUpdate("Connected", ipAddress)
+
+                // Request the list of macros from the server
+                client?.send("getMacros")
 
                 client?.incomingMessages?.receiveAsFlow()?.collect { frame ->
                     if (frame is Frame.Text) {
                         val receivedText = frame.readText()
                         Log.d("ClientActivity", "Received from server: $receivedText")
+                        if (receivedText.startsWith("macros:")) {
+                            val macroNames = receivedText.substringAfter("macros:").split(",")
+                            macros.clear()
+                            macros.addAll(macroNames)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 onUpdate("Connection Failed: ${e.message ?: "Unknown error"}", null)
                 Log.e("ClientActivity", "Failed to connect", e)
-                // Optionally finish the activity on failure
-                // delay(2000)
-                // finish()
             } finally {
-                // This block will execute when the connection is lost
                 onUpdate("Disconnected", null)
             }
         }

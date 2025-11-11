@@ -24,7 +24,6 @@ fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
 
     val settingsViewModel = remember { SettingsViewModel() }
-    val desktopViewModel = remember { DesktopViewModel(settingsViewModel) }
     val newEventViewModel = remember { NewEventViewModel() }
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
@@ -36,6 +35,8 @@ fun main() = application {
             macroEditorViewModel.openOrSwitchToTab(macroState)
         }
     }
+
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, macroManagerViewModel) }
 
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 

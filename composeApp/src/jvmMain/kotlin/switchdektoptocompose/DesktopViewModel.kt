@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import java.net.InetAddress
 import java.net.NetworkInterface
 
@@ -19,7 +21,8 @@ data class ClientInfo(val id: String, val name: String)
  * The ViewModel for the desktop application.
  */
 class DesktopViewModel(
-    private val settingsViewModel: SettingsViewModel
+    private val settingsViewModel: SettingsViewModel,
+    private val macroManagerViewModel: MacroManagerViewModel
 ) : ConnectionListener {
 
     private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
@@ -41,7 +44,7 @@ class DesktopViewModel(
         wifiServer.setConnectionListener(this)
         findLocalIpAddress()
     }
-    
+
     fun setEncryption(enabled: Boolean) {
         // Prevent changing encryption while the server is running
         if (!_isServerRunning.value) {
@@ -103,7 +106,19 @@ class DesktopViewModel(
     }
 
     override fun onDataReceived(clientId: String, data: ByteArray) {
-        println("Data received from $clientId")
+        val message = String(data)
+        println("Data received from $clientId: $message")
+
+        if (message == "getMacros") {
+            val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+            val macroListString = "macros:${macroNames.joinToString(",")}"
+            wifiServer.sendDataToClient(clientId, macroListString.toByteArray())
+        } else if (message.startsWith("play:")) {
+            val macroName = message.substringAfter("play:")
+            macroManagerViewModel.macroFiles.value.find { it.name == macroName }?.let {
+                macroManagerViewModel.onPlayMacro(it)
+            }
+        }
     }
 
     override fun onError(error: String) {

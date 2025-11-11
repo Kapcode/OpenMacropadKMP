@@ -12,6 +12,7 @@ import java.io.InputStream
 import java.net.InetAddress
 import java.security.KeyStore
 import java.time.Duration
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -158,9 +159,10 @@ class WifiServer : Wifi() {
         }
         routing {
             webSocket("/ws") {
-                val clientId = call.request.queryParameters["clientId"] ?: "UnknownDevice"
+                val deviceName = call.request.queryParameters["deviceName"] ?: "Unknown Device"
+                val clientId = UUID.randomUUID().toString()
                 sessions[clientId] = this
-                handleNewConnection(clientId, clientId)
+                handleNewConnection(clientId, deviceName)
                 try {
                     for (frame in incoming) {
                         if (frame is Frame.Binary) {
