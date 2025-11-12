@@ -1,15 +1,22 @@
 package switchdektoptocompose
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.SaveAs
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MacroEditorScreen(viewModel: MacroEditorViewModel) {
     val tabs by viewModel.tabs.collectAsState()
@@ -20,16 +27,21 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel) {
         TopAppBar(
             title = { Text("Editor") },
             actions = {
-                Button(onClick = { viewModel.addNewTab() }) {
-                    Text("Add")
-                }
-                // Enable Save/Save As only if a tab is open
                 val isTabOpen = tabs.isNotEmpty()
-                Button(onClick = { viewModel.saveSelectedTab() }, enabled = isTabOpen) {
-                    Text("Save")
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Save", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = { viewModel.saveSelectedTab() }, enabled = isTabOpen) {
+                        Icon(Icons.Default.Save, contentDescription = "Save")
+                    }
                 }
-                Button(onClick = { viewModel.saveSelectedTabAs() }, enabled = isTabOpen) {
-                    Text("Save As")
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Save As...", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = { viewModel.saveSelectedTabAs() }, enabled = isTabOpen) {
+                        Icon(Icons.Default.SaveAs, contentDescription = "Save As")
+                    }
+                }
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = { viewModel.addNewTab() }) {
+                        Icon(Icons.Default.Add, contentDescription = "New Macro")
+                    }
                 }
             }
         )
@@ -40,7 +52,21 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel) {
                 Tab(
                     selected = selectedTabIndex == index,
                     onClick = { viewModel.selectTab(index) },
-                    text = { Text(tab.title) },
+                    content = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
+                        ) {
+                            Text(tab.title)
+                            // Prevent closing the last tab
+                            if (tabs.size > 1) {
+                                IconButton(onClick = { viewModel.closeTab(index) }, modifier = Modifier.size(20.dp)) {
+                                    Icon(Icons.Default.Close, contentDescription = "Close Tab")
+                                }
+                            }
+                        }
+                    }
                 )
             }
         }

@@ -1,10 +1,14 @@
 package switchdektoptocompose
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,7 +19,7 @@ import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun SettingsDialog(
     desktopViewModel: DesktopViewModel,
@@ -122,11 +126,14 @@ fun SettingsDialog(
 
                     // --- Close Button ---
                     Box(modifier = Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = onDismissRequest,
-                            modifier = Modifier.align(Alignment.BottomEnd)
+                        TooltipArea(
+                            tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Close", modifier = Modifier.padding(4.dp)) } },
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            delayMillis = 0
                         ) {
-                            Text("Close")
+                            IconButton(onClick = onDismissRequest) {
+                                Icon(Icons.Default.Close, contentDescription = "Close")
+                            }
                         }
                     }
                 }

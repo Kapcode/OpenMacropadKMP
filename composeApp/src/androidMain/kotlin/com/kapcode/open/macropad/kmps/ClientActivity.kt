@@ -42,6 +42,7 @@ import okhttp3.OkHttpClient
 import java.security.cert.X509Certificate
 import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
+import kotlin.coroutines.cancellation.CancellationException
 
 @OptIn(ExperimentalMaterial3Api::class)
 class ClientActivity : ComponentActivity() {
@@ -67,91 +68,29 @@ class ClientActivity : ComponentActivity() {
             return
         }
 
-        Log.d("ClientActivity", "Attempting to connect to $ipAddress:$port (Secure: $isSecure)")
+        Log.d("ClientActivity", "Targeting $ipAddress:$port (Secure: $isSecure)")
 
         setContent {
             AppTheme {
-                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-                val scope = rememberCoroutineScope()
-                val context = LocalContext.current
+                var connectionStatus by remember { mutableStateOf("Connecting...") }
+                var serverName by remember { mutableStateOf<String?>(null) }
 
-                ModalNavigationDrawer(
-                    drawerState = drawerState,
-                    drawerContent = {
-                        ModalDrawerSheet {
-                            LazyColumn {
-                                items(macros) { macro ->
-                                    Text(text = macro, modifier = Modifier.padding(all = 16.dp))
-                                }
-                            }
-                        }
-                    },
-                    gesturesEnabled = drawerState.isOpen
-                ) {
-                    Scaffold(
-                        topBar = {
-                            CommonAppBar(
-                                title = "Open Macropad",
-                                onSettingsClick = {
-                                    Toast.makeText(context, "Settings Clicked", Toast.LENGTH_SHORT).show()
-                                }
-                            )
-                        },
-                        bottomBar = {
-                            BottomAppBar {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    TextButton(
-                                        onClick = {
-                                            scope.launch {
-                                                client?.send("getMacros")
-                                                drawerState.open()
-                                            }
-                                            val macroListString = macros.joinToString(", ")
-                                            Toast.makeText(context, "Macros: $macroListString", Toast.LENGTH_LONG).show()
-                                        },
-                                        modifier = Modifier.align(Alignment.CenterEnd)
-                                    ) {
-                                        Text("Macros")
-                                    }
-                                }
-                            }
-                        }
-                    ) { innerPadding ->
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(innerPadding),
-                            color = MaterialTheme.colorScheme.background
-                        ) {
-                            var connectionStatus by remember { mutableStateOf("Connecting...") }
-                            var serverName by remember { mutableStateOf<String?>(null) }
-
-                            LaunchedEffect(Unit) {
-                                connectToServer(ipAddress, port, deviceName, isSecure) { status, name ->
-                                    connectionStatus = status
-                                    serverName = name
-                                }
-                            }
-
-                            if (macros.isNotEmpty()) {
-                                MacroButtonsScreen(macros = macros, onMacroClick = ::sendMacro)
-                            } else {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    Text("Connected to:")
-                                    Text(
-                                        serverName ?: serverAddressFull ?: "N/A",
-                                        style = MaterialTheme.typography.headlineMedium
-                                    )
-                                    Text("Status: $connectionStatus")
-                                }
-                            }
-                        }
+                LaunchedEffect(Unit) {
+                    connectToServer(ipAddress, port, deviceName, isSecure) { status, name ->
+                        connectionStatus = status
+                        serverName = name
                     }
                 }
+
+                ClientScreen(
+                    connectionStatus = connectionStatus,
+                    serverName = serverName ?: serverAddressFull,
+                    macros = macros,
+                    onGetMacros = {
+                        activityScope.launch { client?.send("getMacros") }
+                    },
+                    onMacroClick = ::sendMacro
+                )
             }
         }
     }
@@ -169,52 +108,65 @@ class ClientActivity : ComponentActivity() {
         isSecure: Boolean,
         onUpdate: (status: String, serverName: String?) -> Unit
     ) {
-
-        val ktorHttpClient = HttpClient(OkHttp) {
-            install(WebSockets)
-
-            engine {
-                if (isSecure) {
-                    preconfigured = createUnsafeOkHttpClient()
-                }
-            }
-        }
-
-        client = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
-
         clientJob = activityScope.launch {
-            try {
-                withContext(Dispatchers.IO) {
-                    client?.connect(deviceName)
-                }
+            var backoffMillis = 1000L
+            val maxBackoffMillis = 16000L
 
-                onUpdate("Connected", ipAddress)
-
-                client?.send("getMacros")
-
-                client?.incomingMessages?.receiveAsFlow()?.collect { frame ->
-                    val receivedText = when (frame) {
-                        is Frame.Text -> frame.readText()
-                        is Frame.Binary -> frame.readBytes().toString(Charsets.UTF_8)
-                        else -> ""
+            while (isActive) {
+                var tempClient: MacroKtorClient? = null
+                try {
+                    val ktorHttpClient = HttpClient(OkHttp) {
+                        install(WebSockets)
+                        engine { if (isSecure) { preconfigured = createUnsafeOkHttpClient() } }
                     }
 
-                    Log.d("ClientActivity", "Received from server: $receivedText")
-                    if (receivedText.startsWith("macros:")) {
-                        val macroNames = receivedText.substringAfter("macros:").split(",")
-                        macros.clear()
-                        macros.addAll(macroNames)
+                    tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
+                    this@ClientActivity.client = tempClient
+
+                    onUpdate("Connecting...", ipAddress)
+                    withContext(Dispatchers.IO) {
+                        tempClient.connect(deviceName)
                     }
+
+                    onUpdate("Connected", ipAddress)
+                    backoffMillis = 1000L // Reset backoff on success
+                    tempClient.send("getMacros") // Request macros on successful connection
+
+                    tempClient.incomingMessages.receiveAsFlow().collect { frame ->
+                        val receivedText = when (frame) {
+                            is Frame.Text -> frame.readText()
+                            is Frame.Binary -> frame.readBytes().toString(Charsets.UTF_8)
+                            else -> ""
+                        }
+
+                        Log.d("ClientActivity", "Received from server: $receivedText")
+                        if (receivedText.startsWith("macros:")) {
+                            val macroNames = receivedText.substringAfter("macros:").split(",").filter { it.isNotBlank() }
+                            macros.clear()
+                            macros.addAll(macroNames)
+                        }
+                    }
+
+                } catch (e: Exception) {
+                    if (e is CancellationException) {
+                        onUpdate("Disconnected", null)
+                        throw e // Exit the loop if the job is cancelled
+                    }
+                    val errorMsg = e.message ?: "Unknown error"
+                    onUpdate("Connection Lost: Retrying...", null)
+                    Log.w("ClientActivity", "Connection failed ($errorMsg), retrying in ${backoffMillis / 1000}s")
+                } finally {
+                    tempClient?.close()
+                    this@ClientActivity.client = null
                 }
-            } catch (e: Exception) {
-                onUpdate("Connection Failed: ${e.message ?: "Unknown error"}", null)
-                Log.e("ClientActivity", "Failed to connect", e)
-            } finally {
-                onUpdate("Disconnected", null)
+
+                // If code reaches here, it means the connection dropped. Wait before retrying.
+                delay(backoffMillis)
+                backoffMillis = (backoffMillis * 2).coerceAtMost(maxBackoffMillis)
             }
         }
     }
-    
+
     private fun createUnsafeOkHttpClient(): OkHttpClient {
         try {
             val trustAllCerts = arrayOf<X509TrustManager>(
@@ -240,9 +192,89 @@ class ClientActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        client?.close()
         clientJob?.cancel()
         activityScope.cancel()
         Log.d("ClientActivity", "ClientActivity destroyed")
+    }
+}
+
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ClientScreen(
+    connectionStatus: String,
+    serverName: String?,
+    macros: List<String>,
+    onGetMacros: () -> Unit,
+    onMacroClick: (String) -> Unit
+) {
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            ModalDrawerSheet {
+                LazyColumn {
+                    items(macros) { macro ->
+                        Text(text = macro, modifier = Modifier.padding(all = 16.dp))
+                    }
+                }
+            }
+        },
+        gesturesEnabled = drawerState.isOpen
+    ) {
+        Scaffold(
+            topBar = {
+                CommonAppBar(
+                    title = "Open Macropad",
+                    onSettingsClick = {
+                        Toast.makeText(context, "Settings Clicked", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            },
+            bottomBar = {
+                BottomAppBar {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        TextButton(
+                            onClick = {
+                                scope.launch {
+                                    onGetMacros()
+                                    drawerState.open()
+                                }
+                            },
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        ) {
+                            Text("Macros")
+                        }
+                    }
+                }
+            }
+        ) { innerPadding ->
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                if (macros.isNotEmpty()) {
+                    MacroButtonsScreen(macros = macros, onMacroClick = onMacroClick)
+                } else {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Connected to:")
+                        Text(
+                            serverName ?: "N/A",
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                        Text("Status: $connectionStatus")
+                    }
+                }
+            }
+        }
     }
 }

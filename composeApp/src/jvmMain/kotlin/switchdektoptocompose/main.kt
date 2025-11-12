@@ -1,8 +1,12 @@
 package switchdektoptocompose
 
 import androidx.compose.desktop.ui.tooling.preview.Preview
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +26,7 @@ import org.jetbrains.compose.splitpane.rememberSplitPaneState
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
 
+@OptIn(ExperimentalMaterial3Api::class)
 fun main() = application {
     // Set the initial Look and Feel
     UIManager.setLookAndFeel(FlatDarkLaf())
@@ -92,6 +97,7 @@ fun main() = application {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 @Preview
 fun DesktopApp(
@@ -105,11 +111,9 @@ fun DesktopApp(
 ) {
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
 
-    // This effect will run once and whenever the selectedTheme changes.
     LaunchedEffect(selectedTheme) {
         val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name
         UIManager.setLookAndFeel(laf)
-        // This is necessary to update the UI of any open Swing dialogs
         for (window in java.awt.Window.getWindows()) {
             SwingUtilities.updateComponentTreeUI(window)
         }
@@ -129,7 +133,6 @@ fun DesktopApp(
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
 
-    // --- Dialogs ---
     if (showSettingsDialog) {
         SettingsDialog(
             desktopViewModel = desktopViewModel,
@@ -169,54 +172,59 @@ fun DesktopApp(
             val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
             VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
-                // --- Top Pane ---
                 first(minSize = 100.dp) {
                     Row(
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         var menuExpanded by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.padding(start = 4.dp)) {
-                            TextButton(onClick = { menuExpanded = true }) {
-                                Text("Menu") // Color is now handled by the theme
-                            }
-                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                DropdownMenuItem(text = { Text("Start Server") }, onClick = { desktopViewModel.startServer(); menuExpanded = false })
-                                DropdownMenuItem(text = { Text("Stop Server") }, onClick = { desktopViewModel.stopServer(); menuExpanded = false })
-                                Divider()
-                                DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false })
-                                Divider()
-                                DropdownMenuItem(text = { Text("Exit") }, onClick = onExit)
+                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Menu", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(Icons.Default.Menu, contentDescription = "Menu")
                             }
                         }
-                        // --- Server Status ---
+                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                            DropdownMenuItem(text = { Text("Start Server") }, onClick = { desktopViewModel.startServer(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.PlayArrow, null) })
+                            DropdownMenuItem(text = { Text("Stop Server") }, onClick = { desktopViewModel.stopServer(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Stop, null) })
+                            Divider()
+                            DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                            Divider()
+                            DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.Default.ExitToApp, null) })
+                        }
+                        
+                        Spacer(Modifier.width(16.dp))
+
                         Box(
-                            modifier = Modifier.weight(0.9f).fillMaxHeight().padding(8.dp),
+                            modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp),
                             contentAlignment = Alignment.CenterStart
                         ) {
                             Column {
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("Address: $serverIpAddress:$currentPort")
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Macros Enabled:")
-                                    Switch(
-                                        checked = isMacroExecutionEnabled,
-                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
-                                    )
-                                }
                             }
                         }
+                        
+                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Power, contentDescription = "Macros Enabled")
+                                Switch(
+                                    checked = isMacroExecutionEnabled,
+                                    onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
+                                )
+                            }
+                        }
+                        
+                        Spacer(Modifier.width(16.dp))
+
                         // --- Inspector ---
                         Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
                             InspectorScreen()
                         }
                     }
                 }
-                // --- Bottom Pane ---
                 second(minSize = 200.dp) {
                     HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
-                        // --- Left Side ---
                         first(minSize = 250.dp) {
                            Column {
                                // --- Connected Devices ---
@@ -229,7 +237,6 @@ fun DesktopApp(
                                }
                            }
                         }
-                        // --- Right Side (Contains Timeline) ---
                         second(minSize = 500.dp) {
                             MacroEditingArea(
                                 macroManagerViewModel = macroManagerViewModel,

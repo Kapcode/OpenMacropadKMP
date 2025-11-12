@@ -15,7 +15,9 @@ object KeyParser {
         "K" to KeyEvent.VK_K, "L" to KeyEvent.VK_L, "M" to KeyEvent.VK_M, "N" to KeyEvent.VK_N, "O" to KeyEvent.VK_O,
         "P" to KeyEvent.VK_P, "Q" to KeyEvent.VK_Q, "R" to KeyEvent.VK_R, "S" to KeyEvent.VK_S, "T" to KeyEvent.VK_T,
         "U" to KeyEvent.VK_U, "V" to KeyEvent.VK_V, "W" to KeyEvent.VK_W, "X" to KeyEvent.VK_X, "Y" to KeyEvent.VK_Y,
-        "Z" to KeyEvent.VK_Z, "WINDOWS" to KeyEvent.VK_WINDOWS, "WIN" to KeyEvent.VK_WINDOWS,
+        "Z" to KeyEvent.VK_Z,
+        // Use VK_META for Robot on Linux, which is aliased correctly on Windows.
+        "WINDOWS" to KeyEvent.VK_META, "WIN" to KeyEvent.VK_META, "META" to KeyEvent.VK_META,
         "F1" to KeyEvent.VK_F1, "F2" to KeyEvent.VK_F2, "F3" to KeyEvent.VK_F3, "F4" to KeyEvent.VK_F4,
         "F5" to KeyEvent.VK_F5, "F6" to KeyEvent.VK_F6, "F7" to KeyEvent.VK_F7, "F8" to KeyEvent.VK_F8,
         "F9" to KeyEvent.VK_F9, "F10" to KeyEvent.VK_F10, "F11" to KeyEvent.VK_F11, "F12" to KeyEvent.VK_F12,
@@ -32,7 +34,7 @@ object KeyParser {
         "K" to NativeKeyEvent.VC_K, "L" to NativeKeyEvent.VC_L, "M" to NativeKeyEvent.VC_M, "N" to NativeKeyEvent.VC_N, "O" to NativeKeyEvent.VC_O,
         "P" to NativeKeyEvent.VC_P, "Q" to NativeKeyEvent.VC_Q, "R" to NativeKeyEvent.VC_R, "S" to NativeKeyEvent.VC_S, "T" to NativeKeyEvent.VC_T,
         "U" to NativeKeyEvent.VC_U, "V" to NativeKeyEvent.VC_V, "W" to NativeKeyEvent.VC_W, "X" to NativeKeyEvent.VC_X, "Y" to NativeKeyEvent.VC_Y,
-        "Z" to NativeKeyEvent.VC_Z, "WINDOWS" to NativeKeyEvent.VC_META, "WIN" to NativeKeyEvent.VC_META,
+        "Z" to NativeKeyEvent.VC_Z, "WINDOWS" to NativeKeyEvent.VC_META, "WIN" to NativeKeyEvent.VC_META, "META" to NativeKeyEvent.VC_META,
         "F1" to NativeKeyEvent.VC_F1, "F2" to NativeKeyEvent.VC_F2, "F3" to NativeKeyEvent.VC_F3, "F4" to NativeKeyEvent.VC_F4,
         "F5" to NativeKeyEvent.VC_F5, "F6" to NativeKeyEvent.VC_F6, "F7" to NativeKeyEvent.VC_F7, "F8" to NativeKeyEvent.VC_F8,
         "F9" to NativeKeyEvent.VC_F9, "F10" to NativeKeyEvent.VC_F10, "F11" to NativeKeyEvent.VC_F11, "F12" to NativeKeyEvent.VC_F12,
@@ -42,12 +44,12 @@ object KeyParser {
     fun parseAwtKeys(keysString: String): List<Int> {
         return keysString.split('+', ',')
             .map { it.trim().uppercase() }
-            .mapNotNull { awtKeyMap[it.uppercase()] }
+            .mapNotNull { awtKeyMap[it] }
     }
     
     fun parseNativeHookKeys(keysString: String): List<Int> {
         return keysString.split('+', ',')
             .map { it.trim().uppercase() }
-            .mapNotNull { nativeHookKeyMap[it.uppercase()] }
+            .mapNotNull { nativeHookKeyMap[it] }
     }
 }

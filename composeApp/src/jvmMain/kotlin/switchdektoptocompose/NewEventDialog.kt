@@ -1,8 +1,12 @@
 package switchdektoptocompose
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -12,7 +16,7 @@ import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun NewEventDialog(
     viewModel: NewEventViewModel,
@@ -68,13 +72,13 @@ fun NewEventDialog(
                             )
                         }
                         Divider()
-
+                        
                         ActionDropdown(selectedAction, viewModel)
-
+                        
                         CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
                         CheckableTextFieldRow("Mouse Button(s):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
                         CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
-
+                        
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
                             Text("Mouse Location")
@@ -91,14 +95,14 @@ fun NewEventDialog(
                             Spacer(Modifier.width(8.dp))
                             Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
                         }
-
+                        
                         Divider()
 
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Checkbox(checked = delayBetweenActions, onCheckedChange = { viewModel.delayBetweenActions.value = it })
                             Text("Delay between each action in this event")
                         }
-
+                        
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
@@ -114,11 +118,16 @@ fun NewEventDialog(
                         }
                     }
 
-                    Button(
-                        onClick = onAddEvent,
-                        modifier = Modifier.align(Alignment.End)
-                    ) {
-                        Text("Add")
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        TooltipArea(
+                            tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Add Event", modifier = Modifier.padding(4.dp)) } },
+                            modifier = Modifier.align(Alignment.BottomEnd),
+                            delayMillis = 0
+                        ) {
+                            FloatingActionButton(onClick = onAddEvent) {
+                                Icon(Icons.Default.Done, contentDescription = "Add Event")
+                            }
+                        }
                     }
                 }
             }

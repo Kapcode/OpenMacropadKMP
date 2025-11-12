@@ -1,9 +1,13 @@
 package switchdektoptocompose
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,7 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
     val macroFiles by viewModel.macroFiles.collectAsState()
@@ -22,15 +26,28 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
         TopAppBar(
             title = { Text("Macro Manager") },
             actions = {
-                Button(onClick = { /* TODO */ }) { Text("Add") }
-                Button(onClick = { viewModel.toggleSelectionMode() }) {
-                    Text(if (isSelectionMode) "Cancel" else "Select")
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = { /* TODO: Implement New Macro Action */ }) {
+                        Icon(Icons.Default.Add, contentDescription = "New Macro")
+                    }
+                }
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text(if (isSelectionMode) "Cancel Selection" else "Select Macros", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = { viewModel.toggleSelectionMode() }) {
+                        if (isSelectionMode) {
+                            Icon(Icons.Default.Cancel, contentDescription = "Cancel Selection")
+                        } else {
+                            Icon(Icons.Default.CheckBox, contentDescription = "Select Macros")
+                        }
+                    }
                 }
                 if (isSelectionMode) {
-                    Button(
-                        onClick = { viewModel.deleteSelectedMacros() },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                    ) { Text("Delete Selected") }
+                    TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Selected", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                        IconButton(
+                            onClick = { viewModel.deleteSelectedMacros() }
+                        ) {
+                            Icon(Icons.Default.DeleteForever, contentDescription = "Delete Selected", tint = MaterialTheme.colorScheme.error)
+                        }
+                    }
                 }
             }
         )
@@ -46,12 +63,13 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
                     onEdit = { viewModel.onEditMacro(macroState) },
                     onDelete = { viewModel.onDeleteMacro(macroState) }
                 )
-                HorizontalDivider() // Corrected from Divider
+                Divider()
             }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MacroItem(
     state: MacroFileState,
@@ -92,14 +110,21 @@ private fun MacroItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Button(onClick = onPlay, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Play") }
-            Button(onClick = onEdit, contentPadding = PaddingValues(horizontal = 8.dp)) { Text("Edit") }
-            Button(
-                onClick = onDelete,
-                enabled = state.file != null,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                contentPadding = PaddingValues(horizontal = 8.dp)
-            ) { Text("Del") }
+            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Play Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                IconButton(onClick = onPlay) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = "Play Macro")
+                }
+            }
+            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Edit Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Edit Macro")
+                }
+            }
+            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                IconButton(onClick = onDelete, enabled = state.file != null) {
+                    Icon(Icons.Default.Delete, contentDescription = "Delete Macro", tint = if (state.file != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                }
+            }
         }
     }
 }
