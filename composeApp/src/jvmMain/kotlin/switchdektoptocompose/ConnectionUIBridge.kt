@@ -121,32 +121,36 @@ class WifiServer : Wifi() {
     }
 
     private fun createSecureEnvironment(port: Int): ApplicationEngineEnvironment? {
-        val keystorePath = System.getProperty("keystore.path", "keystore.jks")
-        val keystorePassword = System.getProperty("keystore.password", "password")
-        val privateKeyPassword = System.getProperty("private.key.password", "password")
-        val keystoreFile = File(keystorePath)
+        val keystoreFile = File("/home/kyle/IMPORTED_ANDROID_STUDIO_PROJECTS/OpenMacropadKMP/keystore.p12")
+        val keystorePassword = "hoopla"
+        val privateKeyPassword = "hoopla"
+        val keyAlias = "macropad"
 
         if (!keystoreFile.exists()) {
             listener?.onError("Encryption enabled, but keystore not found at: ${keystoreFile.absolutePath}")
             return null
         }
 
-        val keyStore = KeyStore.getInstance("JKS").apply {
-            load(keystoreFile.inputStream(), keystorePassword.toCharArray())
-        }
-
-        return applicationEngineEnvironment {
-            sslConnector(
-                keyStore = keyStore,
-                keyAlias = "selfsigned",
-                keyStorePassword = { keystorePassword.toCharArray() },
-                privateKeyPassword = { privateKeyPassword.toCharArray() }
-            ) {
-                this.port = port
-                host = "0.0.0.0"
-                // clientAuth = io.ktor.server.engine.ClientAuth.NONE // No client auth for now
+        return try {
+            val keyStore = KeyStore.getInstance("PKCS12").apply {
+                load(keystoreFile.inputStream(), keystorePassword.toCharArray())
             }
-            module { moduleWithWebsockets() }
+
+            applicationEngineEnvironment {
+                sslConnector(
+                    keyStore = keyStore,
+                    keyAlias = keyAlias,
+                    keyStorePassword = { keystorePassword.toCharArray() },
+                    privateKeyPassword = { privateKeyPassword.toCharArray() }
+                ) {
+                    this.port = port
+                    host = "0.0.0.0"
+                }
+                module { moduleWithWebsockets() }
+            }
+        } catch (e: Exception) {
+            listener?.onError("Error loading keystore: ${e.message}")
+            null
         }
     }
 

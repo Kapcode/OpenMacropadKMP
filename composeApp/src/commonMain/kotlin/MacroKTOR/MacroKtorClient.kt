@@ -16,7 +16,8 @@ import kotlinx.coroutines.launch
 class MacroKtorClient(
     private val client: HttpClient,
     private val host: String,
-    private val port: Int
+    private val port: Int,
+    private val isSecure: Boolean // Explicitly tell the client if WSS should be used
 ) {
     private var session: ClientWebSocketSession? = null
     val incomingMessages = Channel<Frame>(Channel.UNLIMITED)
@@ -30,7 +31,6 @@ class MacroKtorClient(
     suspend fun connect(deviceName: String) {
         // This function now suspends until the WebSocket session is created.
         session = client.webSocketSession {
-            val isSecure = port == 8443
             url(
                 scheme = if (isSecure) "wss" else "ws",
                 host = this@MacroKtorClient.host,

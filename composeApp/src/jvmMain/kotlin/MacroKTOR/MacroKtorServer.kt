@@ -11,20 +11,26 @@ import java.security.KeyStore
 import java.time.Duration
 
 fun main() {
-    // To generate a keystore for development, you can use the following command:
-    // keytool -genkey -keyalg RSA -alias selfsigned -keystore keystore.jks -storepass password -validity 360 -keysize 2048 -ext SAN=DNS:localhost,IP:127.0.0.1
-    // Make sure to replace 'password' with a secure password.
-    // Place the generated 'keystore.jks' file in a known location.
+    // To generate a keystore for development, use the following command:
+    // keytool -genkeypair -alias macropad -keyalg RSA -storetype PKCS12 -keystore keystore.p12 -storepass hoopla -keypass hoopla -validity 365
+    // Make sure to replace 'hoopla' with a secure password.
 
-    val keystoreFile = File("path/to/your/keystore.jks") // CHANGE THIS
-    val keyAlias = "selfsigned"
-    val keystorePassword = "password" // CHANGE THIS
-    val privateKeyPassword = "password" // CHANGE THIS
+    // Using an ABSOLUTE path to avoid any ambiguity about the file location.
+    val keystoreFile = File("/home/kyle/IMPORTED_ANDROID_STUDIO_PROJECTS/OpenMacropadKMP/keystore.p12")
+    val keyAlias = "macropad" // This MUST match the alias used during keystore generation
+    val keystorePassword = "hoopla" // This MUST match your keystore password
+    val privateKeyPassword = "hoopla" // This MUST match your private key password
 
     val environment = applicationEngineEnvironment {
         if (keystoreFile.exists()) {
+            // Explicitly load the PKCS12 keystore. This is more robust than relying on format detection.
+            val keyStore = KeyStore.getInstance("PKCS12")
+            keystoreFile.inputStream().use {
+                keyStore.load(it, keystorePassword.toCharArray())
+            }
+
             sslConnector(
-                keyStore = KeyStore.getInstance(keystoreFile, keystorePassword.toCharArray()),
+                keyStore = keyStore,
                 keyAlias = keyAlias,
                 keyStorePassword = { keystorePassword.toCharArray() },
                 privateKeyPassword = { privateKeyPassword.toCharArray() }
@@ -34,7 +40,7 @@ fun main() {
         } else {
             // Fallback to a regular connector if the keystore is not found
             // For production, you might want to throw an error instead.
-            println("Warning: Keystore not found. Using unencrypted connection.")
+            println("Warning: Keystore not found at ${keystoreFile.absolutePath}. Using unencrypted connection.")
             connector {
                 port = 8080
             }

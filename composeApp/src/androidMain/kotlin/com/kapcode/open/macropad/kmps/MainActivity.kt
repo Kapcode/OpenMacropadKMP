@@ -34,9 +34,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             val foundServers by clientDiscovery.foundServers.collectAsState()
 
-            // Map DiscoveredServer to the String the App composable expects
-            val serverAddresses = remember(foundServers) {
-                foundServers.map { it.address }
+            // Map DiscoveredServer to the platform-agnostic ServerInfo
+            val serverInfos = remember(foundServers) {
+                foundServers.map {
+                    ServerInfo(
+                        name = it.name,
+                        address = it.address,
+                        isSecure = true // Discovered servers are always secure
+                    )
+                }
             }
 
             Scaffold(
@@ -55,12 +61,13 @@ class MainActivity : ComponentActivity() {
                         clientDiscovery.foundServers.value = emptyList() // Clear previous results
                         clientDiscovery.start()
                     },
-                    foundServers = serverAddresses,
-                    onConnectClick = { serverAddress, deviceName ->
-                        Log.d(TAG, "Launching ClientActivity for: $serverAddress with device name: $deviceName")
+                    foundServers = serverInfos,
+                    onConnectClick = { serverInfo, deviceName ->
+                        Log.d(TAG, "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})")
                         val intent = Intent(this, ClientActivity::class.java).apply {
-                            putExtra("SERVER_ADDRESS", serverAddress)
+                            putExtra("SERVER_ADDRESS", serverInfo.address)
                             putExtra("DEVICE_NAME", deviceName)
+                            putExtra("IS_SECURE", serverInfo.isSecure)
                         }
                         startActivity(intent)
                     }
@@ -88,8 +95,10 @@ class MainActivity : ComponentActivity() {
 @Preview
 @Composable
 fun AppAndroidPreview() {
-    // Preview with some sample data
-    val sampleServers = listOf("192.168.1.100:8443", "Desktop-PC:8443")
+    val sampleServers = listOf(
+        ServerInfo("Server 1", "192.168.1.100:8443", true),
+        ServerInfo("Desktop-PC", "192.168.1.108:8449", true)
+    )
     App(
         scanServers = {},
         foundServers = sampleServers,

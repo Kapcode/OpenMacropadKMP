@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
 
@@ -26,7 +27,7 @@ class DesktopViewModel(
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
-    private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
+    private val _encryptionEnabled = MutableStateFlow(true) // Default to ON
     val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
 
     private val _isMacroExecutionEnabled = MutableStateFlow(true) // Default to ON
@@ -62,8 +63,11 @@ class DesktopViewModel(
 
     private fun findLocalIpAddress() {
         val ip = try {
-            NetworkInterface.getNetworkInterfaces().asSequence().flatMap { it.inetAddresses.asSequence() }
-                .firstOrNull { !it.isLoopbackAddress && it is java.net.Inet4Address }?.hostAddress
+            NetworkInterface.getNetworkInterfaces().asSequence()
+                .filter { it.isUp && !it.isLoopback && !it.isVirtual }
+                .flatMap { it.inetAddresses.asSequence() }
+                .firstOrNull { it is Inet4Address && it.isSiteLocalAddress }
+                ?.hostAddress
         } catch (e: Exception) {
             null
         }

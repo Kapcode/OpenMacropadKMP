@@ -1,12 +1,9 @@
 package com.kapcode.open.macropad.kmps
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,36 +15,65 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 fun App(
     modifier: Modifier = Modifier,
     scanServers: () -> Unit,
-    foundServers: List<String>,
-    onConnectClick: (serverAddress: String, deviceName: String) -> Unit = { _, _ -> }
+    foundServers: List<ServerInfo>,
+    onConnectClick: (serverInfo: ServerInfo, deviceName: String) -> Unit
 ) {
     var deviceName by remember { mutableStateOf("Android Device") }
+    var manualIpAddress by remember { mutableStateOf("") }
+    var isManualSecure by remember { mutableStateOf(true) }
 
     MaterialTheme {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()), // Make the column scrollable
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // --- Device Name ---
             TextField(
                 value = deviceName,
                 onValueChange = { deviceName = it },
-                label = { Text("Device Name") }
+                label = { Text("Device Name") },
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Button(onClick = {
-                scanServers()
-            }) {
-                Text("Scan for Available Servers")
+            // --- Manual Connection ---
+            Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
+            TextField(
+                value = manualIpAddress,
+                onValueChange = { manualIpAddress = it },
+                label = { Text("Server IP:Port") },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = isManualSecure, onCheckedChange = { isManualSecure = it })
+                Text("Use Secure Connection (WSS)")
             }
+            Button(
+                onClick = {
+                    if (manualIpAddress.isNotBlank()) {
+                        val manualServer = ServerInfo("Manual", manualIpAddress, isManualSecure)
+                        onConnectClick(manualServer, deviceName)
+                    }
+                },
+                enabled = manualIpAddress.isNotBlank()
+            ) {
+                Text("Connect Manually")
+            }
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-            // Display found servers
-            foundServers.forEach { serverAddress ->
+            // --- Server Discovery ---
+            Button(onClick = scanServers) {
+                Text("Scan for Servers")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            foundServers.forEach { server ->
                 ConnectionItem(
-                    name = "Discovered Server", // You might want to get a real name later
-                    ipAddressPort = serverAddress,
-                    onClick = { onConnectClick(serverAddress, deviceName) }
+                    name = server.name,
+                    ipAddressPort = server.address,
+                    onClick = { onConnectClick(server, deviceName) }
                 )
             }
         }
@@ -57,9 +83,13 @@ fun App(
 @Preview
 @Composable
 fun AppPreview() {
+    val sampleServers = listOf(
+        ServerInfo("Server 1", "192.168.1.100:8443", true),
+        ServerInfo("Desktop-PC", "192.168.1.108:8449", true)
+    )
     App(
         scanServers = {},
-        foundServers = listOf("192.168.1.10:9999", "192.168.1.15:9999"),
-        onConnectClick = { _, _ -> /* Preview click handler */ }
+        foundServers = sampleServers,
+        onConnectClick = { _, _ -> }
     )
 }

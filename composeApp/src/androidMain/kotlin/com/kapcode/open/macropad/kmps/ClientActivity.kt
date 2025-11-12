@@ -1,6 +1,7 @@
 package com.kapcode.open.macropad.kmps
 
 import MacroKTOR.MacroKtorClient
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
@@ -36,6 +37,10 @@ import io.ktor.client.plugins.websocket.WebSockets
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.receiveAsFlow
+import okhttp3.OkHttpClient
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 class ClientActivity : ComponentActivity() {
@@ -50,6 +55,7 @@ class ClientActivity : ComponentActivity() {
 
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
         val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Android Device"
+        val isSecure = intent.getBooleanExtra("IS_SECURE", false)
         val addressParts = serverAddressFull?.split(":")
         val ipAddress = addressParts?.getOrNull(0)
         val port = addressParts?.getOrNull(1)?.toIntOrNull()
@@ -60,7 +66,7 @@ class ClientActivity : ComponentActivity() {
             return
         }
 
-        Log.d("ClientActivity", "Attempting to connect to $ipAddress:$port")
+        Log.d("ClientActivity", "Attempting to connect to $ipAddress:$port (Secure: $isSecure)")
 
         setContent {
             val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -120,7 +126,7 @@ class ClientActivity : ComponentActivity() {
                             var serverName by remember { mutableStateOf<String?>(null) }
 
                             LaunchedEffect(Unit) {
-                                connectToServer(ipAddress, port, deviceName) { status, name ->
+                                connectToServer(ipAddress, port, deviceName, isSecure) { status, name ->
                                     connectionStatus = status
                                     serverName = name
                                 }
@@ -159,14 +165,21 @@ class ClientActivity : ComponentActivity() {
         ipAddress: String,
         port: Int,
         deviceName: String,
+        isSecure: Boolean,
         onUpdate: (status: String, serverName: String?) -> Unit
     ) {
 
         val ktorHttpClient = HttpClient(OkHttp) {
             install(WebSockets)
+
+            engine {
+                if (isSecure) {
+                    preconfigured = createUnsafeOkHttpClient()
+                }
+            }
         }
 
-        client = MacroKtorClient(ktorHttpClient, ipAddress, port)
+        client = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
 
         clientJob = activityScope.launch {
             try {
@@ -176,7 +189,6 @@ class ClientActivity : ComponentActivity() {
 
                 onUpdate("Connected", ipAddress)
 
-                // Request the list of macros from the server
                 client?.send("getMacros")
 
                 client?.incomingMessages?.receiveAsFlow()?.collect { frame ->
@@ -199,6 +211,29 @@ class ClientActivity : ComponentActivity() {
             } finally {
                 onUpdate("Disconnected", null)
             }
+        }
+    }
+    
+    private fun createUnsafeOkHttpClient(): OkHttpClient {
+        try {
+            val trustAllCerts = arrayOf<X509TrustManager>(
+                @SuppressLint("CustomX509TrustManager")
+                object : X509TrustManager {
+                    override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                    override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                    override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+                }
+            )
+
+            val sslContext = SSLContext.getInstance("SSL")
+            sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+            val sslSocketFactory = sslContext.socketFactory
+
+            return OkHttpClient.Builder()
+                .sslSocketFactory(sslSocketFactory, trustAllCerts[0])
+                .hostnameVerifier { _, _ -> true }.build()
+        } catch (e: Exception) {
+            throw RuntimeException(e)
         }
     }
 
