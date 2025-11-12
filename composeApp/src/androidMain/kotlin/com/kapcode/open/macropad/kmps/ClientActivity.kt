@@ -4,6 +4,7 @@ import MacroKTOR.MacroKtorClient
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -42,6 +43,7 @@ class ClientActivity : ComponentActivity() {
     private var clientJob: Job? = null
     private val macros = mutableStateListOf<String>()
     private val settingsViewModel = SettingsViewModel()
+    private val MAX_RETRIES = 5
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -102,6 +104,7 @@ class ClientActivity : ComponentActivity() {
         clientJob = activityScope.launch {
             var backoffMillis = 1000L
             val maxBackoffMillis = 16000L
+            var retryCount = 0
 
             while (isActive) {
                 var tempClient: MacroKtorClient? = null
@@ -121,6 +124,7 @@ class ClientActivity : ComponentActivity() {
 
                     onUpdate("Connected", ipAddress)
                     backoffMillis = 1000L // Reset backoff on success
+                    retryCount = 0
                     tempClient.send("getMacros") // Request macros on successful connection
 
                     tempClient.incomingMessages.receiveAsFlow().collect { frame ->
@@ -143,8 +147,21 @@ class ClientActivity : ComponentActivity() {
                         onUpdate("Disconnected", null)
                         throw e // Exit the loop if the job is cancelled
                     }
+                    retryCount++
+                    if (retryCount > MAX_RETRIES) {
+                        Log.e("ClientActivity", "Max retries reached. Finishing activity.")
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@ClientActivity,
+                                "Connection failed. Max retries reached.",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                        finish()
+                        return@launch
+                    }
                     val errorMsg = e.message ?: "Unknown error"
-                    onUpdate("Connection Lost: Retrying...", null)
+                    onUpdate("Connection Lost: Retrying ($retryCount/$MAX_RETRIES)...", null)
                     Log.w("ClientActivity", "Connection failed ($errorMsg), retrying in ${backoffMillis / 1000}s")
                 } finally {
                     tempClient?.close()
