@@ -15,7 +15,8 @@ import java.net.InetAddress
 data class DiscoveredServer(
     val name: String,
     val address: String, // e.g., "192.168.1.10:8443"
-    val host: InetAddress
+    val host: InetAddress,
+    val isSecure: Boolean
 )
 
 class ClientDiscovery {
@@ -49,17 +50,23 @@ class ClientDiscovery {
                     val json = JSONObject(jsonString)
 
                     val serverName = json.getString("serverName")
-                    val wssPort = json.getInt("wssPort")
+                    val port = json.getInt("port")
+                    val isSecure = json.getBoolean("isSecure")
                     val hostAddress = packet.address
-                    val serverAddress = "${hostAddress.hostAddress}:$wssPort"
+                    val serverAddress = "${hostAddress.hostAddress}:$port"
 
-                    val newServer = DiscoveredServer(serverName, serverAddress, hostAddress)
+                    val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure)
 
                     // Update the list of found servers
                     val currentServers = foundServers.value.toMutableList()
                     val existingServer = currentServers.find { it.host == newServer.host }
                     if (existingServer == null) {
                         currentServers.add(newServer)
+                        foundServers.value = currentServers
+                    } else if (existingServer != newServer) {
+                        // Replace existing server if details have changed
+                        val index = currentServers.indexOf(existingServer)
+                        currentServers[index] = newServer
                         foundServers.value = currentServers
                     }
                 } catch (e: Exception) {

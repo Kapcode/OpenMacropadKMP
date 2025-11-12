@@ -1,5 +1,6 @@
 package switchdektoptocompose
 
+import MacroKTOR.MacroKtorServer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,7 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel(
     private val settingsViewModel: SettingsViewModel,
-) : ConnectionListener {
+) {
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
@@ -30,7 +31,6 @@ class DesktopViewModel(
     private val _isMacroExecutionEnabled = MutableStateFlow(true)
     val isMacroExecutionEnabled: StateFlow<Boolean> = _isMacroExecutionEnabled.asStateFlow()
 
-    private val wifiServer = WifiServer()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
@@ -38,12 +38,18 @@ class DesktopViewModel(
 
     private val _isServerRunning = MutableStateFlow(false)
     val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
-    
+
     private val _serverIpAddress = MutableStateFlow("Determining IP...")
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
+    private val server = MacroKtorServer(
+        onMessageReceived = ::onDataReceived,
+        onClientConnected = ::onClientConnected,
+        onClientDisconnected = ::onClientDisconnected
+    )
+    private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
+
     init {
-        wifiServer.setConnectionListener(this)
         findLocalIpAddresses()
     }
 
@@ -72,15 +78,19 @@ class DesktopViewModel(
     }
 
     fun startServer() {
-        if (wifiServer.isListening()) return
+        if (server.isRunning()) return
         try {
             val port = if (_encryptionEnabled.value) {
                 settingsViewModel.secureServerPort.value
             } else {
                 settingsViewModel.serverPort.value
             }
-            wifiServer.startListening(port, encryptionEnabled.value)
-            _isServerRunning.value = wifiServer.isListening()
+            server.start(port, _encryptionEnabled.value)
+            _isServerRunning.value = server.isRunning()
+            if (server.isRunning()) {
+                val serverName = System.getProperty("user.name") ?: "OpenMacropad Server"
+                discoveryAnnouncer.start(serverName, port, _encryptionEnabled.value)
+            }
         } catch (e: Exception) {
             e.printStackTrace()
             _isServerRunning.value = false
@@ -88,9 +98,10 @@ class DesktopViewModel(
     }
 
     fun stopServer() {
-        if (!wifiServer.isListening()) return
+        if (!server.isRunning()) return
+        discoveryAnnouncer.stop()
         viewModelScope.launch {
-            wifiServer.stopListening()
+            server.stop()
             _isServerRunning.value = false
         }
     }
@@ -102,29 +113,30 @@ class DesktopViewModel(
     fun sendMacroListToAllClients() {
         val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
         val macroListString = "macros:${macroNames.joinToString(",")}"
-        wifiServer.sendData(macroListString.toByteArray())
+        server.sendToAll(macroListString)
     }
 
-    override fun onClientConnected(clientId: String, clientName: String) {
+    private fun onClientConnected(clientId: String, clientName: String) {
         _connectedDevices.update { currentList ->
             if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
         }
     }
 
-    override fun onClientDisconnected(clientId: String) {
+    private fun onClientDisconnected(clientId: String) {
         _connectedDevices.update { currentList ->
             currentList.filterNot { it.id == clientId }
         }
     }
 
-    override fun onDataReceived(clientId: String, data: ByteArray) {
-        val message = String(data).trim()
+    private fun onDataReceived(clientId: String, message: String) {
         println("Data received from $clientId: $message")
 
         if (message == "getMacros") {
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
             val macroListString = "macros:${macroNames.joinToString(",")}"
-            wifiServer.sendDataToClient(clientId, macroListString.toByteArray())
+            viewModelScope.launch {
+                server.sendToClient(clientId, macroListString)
+            }
         } else if (message.startsWith("play:")) {
             if (_isMacroExecutionEnabled.value) {
                 val macroName = message.substringAfter("play:")
@@ -136,7 +148,7 @@ class DesktopViewModel(
         }
     }
 
-    override fun onError(error: String) {
+    fun onError(error: String) {
         System.err.println("SERVER ERROR: $error")
     }
 }

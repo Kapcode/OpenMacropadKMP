@@ -79,12 +79,14 @@ class MainActivity : ComponentActivity() {
                         )
                     } else {
                         val foundServers by clientDiscovery.foundServers.collectAsState()
+                        // The `App` composable does not need to be aware of the `DiscoveredServer` type.
+                        // We map it to a simpler `ServerInfo` type that the UI can use.
                         val serverInfos = remember(foundServers) {
                             foundServers.map {
                                 ServerInfo(
                                     name = it.name,
                                     address = it.address,
-                                    isSecure = true
+                                    isSecure = it.isSecure
                                 )
                             }
                         }

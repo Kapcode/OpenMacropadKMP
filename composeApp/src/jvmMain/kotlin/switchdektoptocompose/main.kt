@@ -184,8 +184,18 @@ fun DesktopApp(
                             }
                         }
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(text = { Text("Start Server") }, onClick = { desktopViewModel.startServer(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.PlayArrow, null) })
-                            DropdownMenuItem(text = { Text("Stop Server") }, onClick = { desktopViewModel.stopServer(); menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Stop, null) })
+                            DropdownMenuItem(
+                                text = { Text("Start Server") },
+                                onClick = { desktopViewModel.startServer(); menuExpanded = false },
+                                enabled = !isServerRunning,
+                                leadingIcon = { Icon(Icons.Default.PlayArrow, null) }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Stop Server") },
+                                onClick = { desktopViewModel.stopServer(); menuExpanded = false },
+                                enabled = isServerRunning,
+                                leadingIcon = { Icon(Icons.Default.Stop, null) }
+                            )
                             Divider()
                             DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
                             Divider()

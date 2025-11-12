@@ -60,8 +60,8 @@ class MacroKtorClient(
     fun close() {
         clientScope.launch {
             session?.close(CloseReason(CloseReason.Codes.NORMAL, "Client closing connection"))
-            client.close()
-            println("Client closed.")
+            // Do not close the underlying HttpClient here, as it's managed by the Activity.
+            println("Client session closed.")
         }
     }
 }
