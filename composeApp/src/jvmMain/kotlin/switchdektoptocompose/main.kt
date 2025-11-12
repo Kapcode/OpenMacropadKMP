@@ -35,6 +35,7 @@ fun main() = application {
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
+    val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
@@ -66,12 +67,16 @@ fun main() = application {
         }
     }
 
+    val inspectorManager = remember { InspectorManager(inspectorViewModel, consoleViewModel) }
+
     DisposableEffect(Unit) {
         desktopViewModel.startServer()
         triggerListener.startListening()
+        inspectorManager.startListening()
         onDispose {
             desktopViewModel.shutdown()
             triggerListener.shutdown()
+            inspectorManager.stopListening()
         }
     }
 
@@ -89,6 +94,7 @@ fun main() = application {
         DesktopApp(
             desktopViewModel = desktopViewModel,
             consoleViewModel = consoleViewModel,
+            inspectorViewModel = inspectorViewModel,
             macroEditorViewModel = macroEditorViewModel,
             macroManagerViewModel = macroManagerViewModel,
             settingsViewModel = settingsViewModel,
@@ -105,6 +111,7 @@ fun main() = application {
 fun DesktopApp(
     desktopViewModel: DesktopViewModel,
     consoleViewModel: ConsoleViewModel,
+    inspectorViewModel: InspectorViewModel,
     macroEditorViewModel: MacroEditorViewModel,
     macroManagerViewModel: MacroManagerViewModel,
     settingsViewModel: SettingsViewModel,
@@ -232,7 +239,7 @@ fun DesktopApp(
 
                         // --- Inspector ---
                         Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
-                            InspectorScreen()
+                            InspectorScreen(viewModel = inspectorViewModel)
                         }
                     }
                 }

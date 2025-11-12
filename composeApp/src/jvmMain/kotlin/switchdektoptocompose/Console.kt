@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,15 +41,17 @@ fun Console(
         }
 
         // Log messages
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface)
-        ) {
-            items(logMessages) { message ->
-                Text(
-                    text = message,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
+        SelectionContainer {
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+            ) {
+                items(logMessages) { message ->
+                    Text(
+                        text = message,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
             }
         }
     }
