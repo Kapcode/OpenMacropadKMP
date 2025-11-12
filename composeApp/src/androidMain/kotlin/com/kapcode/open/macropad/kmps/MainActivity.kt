@@ -17,6 +17,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
 const val TAG = "MainActivity"
 
@@ -32,46 +33,48 @@ class MainActivity : ComponentActivity() {
         clientDiscovery = ClientDiscovery()
 
         setContent {
-            val foundServers by clientDiscovery.foundServers.collectAsState()
+            AppTheme {
+                val foundServers by clientDiscovery.foundServers.collectAsState()
 
-            // Map DiscoveredServer to the platform-agnostic ServerInfo
-            val serverInfos = remember(foundServers) {
-                foundServers.map {
-                    ServerInfo(
-                        name = it.name,
-                        address = it.address,
-                        isSecure = true // Discovered servers are always secure
-                    )
-                }
-            }
-
-            Scaffold(
-                topBar = {
-                    CommonAppBar(
-                        title = "Open Macropad",
-                        onSettingsClick = {
-                            Toast.makeText(this, "Settings Clicked", Toast.LENGTH_SHORT).show()
-                        }
-                    )
-                }
-            ) { innerPadding ->
-                App(
-                    modifier = Modifier.padding(innerPadding),
-                    scanServers = {
-                        clientDiscovery.foundServers.value = emptyList() // Clear previous results
-                        clientDiscovery.start()
-                    },
-                    foundServers = serverInfos,
-                    onConnectClick = { serverInfo, deviceName ->
-                        Log.d(TAG, "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})")
-                        val intent = Intent(this, ClientActivity::class.java).apply {
-                            putExtra("SERVER_ADDRESS", serverInfo.address)
-                            putExtra("DEVICE_NAME", deviceName)
-                            putExtra("IS_SECURE", serverInfo.isSecure)
-                        }
-                        startActivity(intent)
+                // Map DiscoveredServer to the platform-agnostic ServerInfo
+                val serverInfos = remember(foundServers) {
+                    foundServers.map {
+                        ServerInfo(
+                            name = it.name,
+                            address = it.address,
+                            isSecure = true // Discovered servers are always secure
+                        )
                     }
-                )
+                }
+
+                Scaffold(
+                    topBar = {
+                        CommonAppBar(
+                            title = "Open Macropad",
+                            onSettingsClick = {
+                                Toast.makeText(this, "Settings Clicked", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                ) { innerPadding ->
+                    App(
+                        modifier = Modifier.padding(innerPadding),
+                        scanServers = {
+                            clientDiscovery.foundServers.value = emptyList() // Clear previous results
+                            clientDiscovery.start()
+                        },
+                        foundServers = serverInfos,
+                        onConnectClick = { serverInfo, deviceName ->
+                            Log.d(TAG, "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})")
+                            val intent = Intent(this, ClientActivity::class.java).apply {
+                                putExtra("SERVER_ADDRESS", serverInfo.address)
+                                putExtra("DEVICE_NAME", deviceName)
+                                putExtra("IS_SECURE", serverInfo.isSecure)
+                            }
+                            startActivity(intent)
+                        }
+                    )
+                }
             }
         }
     }
@@ -86,6 +89,8 @@ class MainActivity : ComponentActivity() {
         clientDiscovery.stop()
     }
 
+
+
     override fun onDestroy() {
         super.onDestroy()
         clientDiscovery.stop()
@@ -99,9 +104,11 @@ fun AppAndroidPreview() {
         ServerInfo("Server 1", "192.168.1.100:8443", true),
         ServerInfo("Desktop-PC", "192.168.1.108:8449", true)
     )
-    App(
-        scanServers = {},
-        foundServers = sampleServers,
-        onConnectClick = { _, _ -> }
-    )
+    AppTheme {
+        App(
+            scanServers = {},
+            foundServers = sampleServers,
+            onConnectClick = { _, _ -> }
+        )
+    }
 }

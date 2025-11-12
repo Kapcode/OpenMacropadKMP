@@ -13,19 +13,22 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
+import com.formdev.flatlaf.FlatDarkLaf
+import com.formdev.flatlaf.FlatLightLaf
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
+import javax.swing.SwingUtilities
+import javax.swing.UIManager
 
 fun main() = application {
-    val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
+    // Set the initial Look and Feel
+    UIManager.setLookAndFeel(FlatDarkLaf())
 
+    val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
-
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
@@ -100,6 +103,18 @@ fun DesktopApp(
     newEventViewModel: NewEventViewModel,
     onExit: () -> Unit = {}
 ) {
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+
+    // This effect will run once and whenever the selectedTheme changes.
+    LaunchedEffect(selectedTheme) {
+        val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name
+        UIManager.setLookAndFeel(laf)
+        // This is necessary to update the UI of any open Swing dialogs
+        for (window in java.awt.Window.getWindows()) {
+            SwingUtilities.updateComponentTreeUI(window)
+        }
+    }
+
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
@@ -108,18 +123,11 @@ fun DesktopApp(
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val currentPort = if (encryptionEnabled) secureServerPort else serverPort
-    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
-
-    val colorScheme = when (selectedTheme) {
-        "Dark Blue" -> DarkBlueColorScheme
-        "Light Blue" -> LightBlueColorScheme
-        else -> DarkBlueColorScheme
-    }
 
     // --- Dialogs ---
     if (showSettingsDialog) {
@@ -138,6 +146,7 @@ fun DesktopApp(
     if (showNewEventDialog) {
         NewEventDialog(
             viewModel = newEventViewModel,
+            selectedTheme = selectedTheme,
             onDismissRequest = { showNewEventDialog = false },
             onAddEvent = {
                 if (newEventViewModel.isTriggerEvent.value) {
@@ -154,7 +163,7 @@ fun DesktopApp(
         )
     }
 
-    MaterialTheme(colorScheme = colorScheme) {
+    AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
         Surface(modifier = Modifier.fillMaxSize()) {
             val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
             val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
@@ -169,7 +178,7 @@ fun DesktopApp(
                         var menuExpanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.padding(start = 4.dp)) {
                             TextButton(onClick = { menuExpanded = true }) {
-                                Text("Menu", color = MaterialTheme.colorScheme.onSurface)
+                                Text("Menu") // Color is now handled by the theme
                             }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(text = { Text("Start Server") }, onClick = { desktopViewModel.startServer(); menuExpanded = false })
@@ -188,9 +197,9 @@ fun DesktopApp(
                             Column {
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("Address: $serverIpAddress:$currentPort", color = MaterialTheme.colorScheme.onSurface)
+                                Text("Address: $serverIpAddress:$currentPort")
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Macros Enabled:", color = MaterialTheme.colorScheme.onSurface)
+                                    Text("Macros Enabled:")
                                     Switch(
                                         checked = isMacroExecutionEnabled,
                                         onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
@@ -216,7 +225,7 @@ fun DesktopApp(
                                }
                                // --- Console ---
                                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
-                                   Text("Console Area", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                   Text("Console Area")
                                }
                            }
                         }

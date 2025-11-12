@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.websocket.WebSockets
@@ -69,11 +70,11 @@ class ClientActivity : ComponentActivity() {
         Log.d("ClientActivity", "Attempting to connect to $ipAddress:$port (Secure: $isSecure)")
 
         setContent {
-            val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-            val scope = rememberCoroutineScope()
-            val context = LocalContext.current
+            AppTheme {
+                val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+                val scope = rememberCoroutineScope()
+                val context = LocalContext.current
 
-            MaterialTheme {
                 ModalNavigationDrawer(
                     drawerState = drawerState,
                     drawerContent = {
