@@ -5,14 +5,10 @@ import org.gradle.api.JavaVersion // Import JavaVersion for compileOptions
 // Force dependency versions to resolve conflicts
 configurations.all {
     resolutionStrategy {
-        // Force the specific coroutine version that Ktor 2.3.8 is compatible with
         force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
         force("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
         force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
         force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
-
-        // THE FIX: Force a single, consistent version for all Netty components.
-        // Ktor 2.3.8 uses a version in this range. This resolves the compile-time errors.
         eachDependency {
             if (requested.group == "io.netty") {
                 useVersion("4.1.94.Final")
@@ -37,7 +33,11 @@ kotlin {
         }
     }
 
-    jvm()
+    jvm {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_11)
+        }
+    }
 
     sourceSets {
         androidMain.dependencies {
@@ -45,8 +45,6 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
             implementation("com.google.android.gms:play-services-ads:24.7.0")
-            implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
-            implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -63,6 +61,9 @@ kotlin {
             implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
             implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8")
             implementation(compose.materialIconsExtended)
+            // Moved Bouncy Castle to commonMain to be shared
+            implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+            implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -87,7 +88,6 @@ kotlin {
 android {
     namespace = "com.kapcode.open.macropad.kmps"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
-
     defaultConfig {
         applicationId = "com.kapcode.open.macropad.kmp"
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -119,7 +119,6 @@ dependencies {
 compose.desktop {
     application {
         mainClass = "com.kapcode.open.macropad.kmp.MainKt"
-
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "com.kapcode.open.macropad.kmp"

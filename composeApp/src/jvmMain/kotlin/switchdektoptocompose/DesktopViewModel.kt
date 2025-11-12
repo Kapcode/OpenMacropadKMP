@@ -105,7 +105,6 @@ class DesktopViewModel(
         wifiServer.sendData(macroListString.toByteArray())
     }
 
-    // --- ConnectionListener Implementation ---
     override fun onClientConnected(clientId: String, clientName: String) {
         _connectedDevices.update { currentList ->
             if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)

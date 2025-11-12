@@ -3,16 +3,14 @@ package com.kapcode.open.macropad.kmps.settings
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-// A simple enum to represent the available themes in a type-safe way.
 enum class AppTheme {
     LightBlue,
     DarkBlue
 }
 
 /**
- * A ViewModel for handling application settings.
- *
- * This can be shared between Android and Desktop to provide consistent settings logic.
+ * A shared ViewModel for handling application settings across both
+ * Android and Desktop platforms.
  */
 class SettingsViewModel {
 

@@ -4,32 +4,22 @@ import MacroKTOR.MacroKtorClient
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
-import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.BottomAppBar
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
+import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
+import com.kapcode.open.macropad.kmps.settings.SettingsScreen
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import io.ktor.client.HttpClient
@@ -51,6 +41,7 @@ class ClientActivity : ComponentActivity() {
     private val activityScope = CoroutineScope(Dispatchers.Main.immediate)
     private var clientJob: Job? = null
     private val macros = mutableStateListOf<String>()
+    private val settingsViewModel = SettingsViewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -71,7 +62,8 @@ class ClientActivity : ComponentActivity() {
         Log.d("ClientActivity", "Targeting $ipAddress:$port (Secure: $isSecure)")
 
         setContent {
-            AppTheme {
+            val theme by settingsViewModel.theme.collectAsState()
+            AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
                 var connectionStatus by remember { mutableStateOf("Connecting...") }
                 var serverName by remember { mutableStateOf<String?>(null) }
 
@@ -86,9 +78,8 @@ class ClientActivity : ComponentActivity() {
                     connectionStatus = connectionStatus,
                     serverName = serverName ?: serverAddressFull,
                     macros = macros,
-                    onGetMacros = {
-                        activityScope.launch { client?.send("getMacros") }
-                    },
+                    settingsViewModel = settingsViewModel,
+                    onGetMacros = { activityScope.launch { client?.send("getMacros") } },
                     onMacroClick = ::sendMacro
                 )
             }
@@ -160,7 +151,6 @@ class ClientActivity : ComponentActivity() {
                     this@ClientActivity.client = null
                 }
 
-                // If code reaches here, it means the connection dropped. Wait before retrying.
                 delay(backoffMillis)
                 backoffMillis = (backoffMillis * 2).coerceAtMost(maxBackoffMillis)
             }
@@ -205,36 +195,28 @@ fun ClientScreen(
     connectionStatus: String,
     serverName: String?,
     macros: List<String>,
+    settingsViewModel: SettingsViewModel,
     onGetMacros: () -> Unit,
     onMacroClick: (String) -> Unit
 ) {
+    var showSettings by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                LazyColumn {
-                    items(macros) { macro ->
-                        Text(text = macro, modifier = Modifier.padding(all = 16.dp))
-                    }
-                }
-            }
+    BackHandler(enabled = showSettings) {
+        showSettings = false
+    }
+
+    Scaffold(
+        topBar = {
+            CommonAppBar(
+                title = if (showSettings) "Settings" else "Open Macropad",
+                onSettingsClick = { showSettings = !showSettings },
+                onBackClick = if (showSettings) { { showSettings = false } } else null
+            )
         },
-        gesturesEnabled = drawerState.isOpen
-    ) {
-        Scaffold(
-            topBar = {
-                CommonAppBar(
-                    title = "Open Macropad",
-                    onSettingsClick = {
-                        Toast.makeText(context, "Settings Clicked", Toast.LENGTH_SHORT).show()
-                    }
-                )
-            },
-            bottomBar = {
+        bottomBar = {
+            if (!showSettings) {
                 BottomAppBar {
                     Box(modifier = Modifier.fillMaxSize()) {
                         TextButton(
@@ -251,27 +233,50 @@ fun ClientScreen(
                     }
                 }
             }
-        ) { innerPadding ->
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                color = MaterialTheme.colorScheme.background
+        }
+    ) { innerPadding ->
+        if (showSettings) {
+            SettingsScreen(
+                viewModel = settingsViewModel,
+                modifier = Modifier.padding(innerPadding)
             ) {
-                if (macros.isNotEmpty()) {
-                    MacroButtonsScreen(macros = macros, onMacroClick = onMacroClick)
-                } else {
-                    Column(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text("Connected to:")
-                        Text(
-                            serverName ?: "N/A",
-                            style = MaterialTheme.typography.headlineMedium
-                        )
-                        Text("Status: $connectionStatus")
+                ClientSettingsSection()
+            }
+        } else {
+            ModalNavigationDrawer(
+                drawerState = drawerState,
+                drawerContent = {
+                    ModalDrawerSheet {
+                        LazyColumn {
+                            items(macros) { macro ->
+                                Text(text = macro, modifier = Modifier.padding(all = 16.dp))
+                            }
+                        }
+                    }
+                },
+                gesturesEnabled = drawerState.isOpen
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    if (macros.isNotEmpty()) {
+                        MacroButtonsScreen(macros = macros, onMacroClick = onMacroClick)
+                    } else {
+                        Column(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text("Connected to:")
+                            Text(
+                                serverName ?: "N/A",
+                                style = MaterialTheme.typography.headlineMedium
+                            )
+                            Text("Status: $connectionStatus")
+                        }
                     }
                 }
             }

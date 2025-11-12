@@ -42,7 +42,6 @@ class MainActivity : ComponentActivity() {
             val theme by settingsViewModel.theme.collectAsState()
             var showSettings by remember { mutableStateOf(false) }
 
-            // Handle the system back button
             BackHandler(enabled = showSettings) {
                 showSettings = false
             }
@@ -52,9 +51,7 @@ class MainActivity : ComponentActivity() {
                     topBar = {
                         CommonAppBar(
                             title = if (showSettings) "Settings" else "Open Macropad",
-                            onSettingsClick = {
-                                showSettings = !showSettings
-                            },
+                            onSettingsClick = { showSettings = !showSettings },
                             onBackClick = if (showSettings) { { showSettings = false } } else null
                         )
                     }
@@ -62,7 +59,8 @@ class MainActivity : ComponentActivity() {
                     if (showSettings) {
                         SettingsScreen(
                             viewModel = settingsViewModel,
-                            modifier = Modifier.padding(innerPadding) // Apply the padding here
+                            modifier = Modifier.padding(innerPadding)
+                            // No specific settings needed here, the default empty lambda is used
                         )
                     } else {
                         val foundServers by clientDiscovery.foundServers.collectAsState()

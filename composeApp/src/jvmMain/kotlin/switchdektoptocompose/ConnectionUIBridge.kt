@@ -7,11 +7,19 @@ import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
+import org.bouncycastle.asn1.x500.X500Name
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder
 import java.io.File
+import java.io.FileOutputStream
+import java.math.BigInteger
 import java.net.InetAddress
+import java.security.KeyPairGenerator
 import java.security.KeyStore
+import java.security.cert.X509Certificate
 import java.time.Duration
-import java.util.UUID
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -23,7 +31,7 @@ interface ConnectionUIBridge {
     fun getConnectedClients(): List<String>
     fun disconnectClient(clientId: String)
     fun setConnectionListener(listener: ConnectionListener)
-    fun sendDataToClient(clientId: String, data: ByteArray) // Added for direct messaging
+    fun sendDataToClient(clientId: String, data: ByteArray)
 }
 
 interface ConnectionListener {
@@ -150,14 +158,19 @@ class WifiServer : Wifi() {
     }
 
     private fun createSecureEnvironment(port: Int): ApplicationEngineEnvironment? {
-        val keystoreFile = File("/home/kyle/IMPORTED_ANDROID_STUDIO_PROJECTS/OpenMacropadKMP/keystore.p12")
+        val keystoreFile = File("keystore.p12")
         val keystorePassword = "hoopla"
-        val privateKeyPassword = "hoopla"
         val keyAlias = "macropad"
 
         if (!keystoreFile.exists()) {
-            listener?.onError("Encryption enabled, but keystore not found at: ${keystoreFile.absolutePath}")
-            return null
+            try {
+                generateKeystore(keystoreFile, keyAlias, keystorePassword)
+                listener?.onError("New keystore generated at: ${keystoreFile.absolutePath}")
+            } catch (e: Exception) {
+                listener?.onError("Failed to generate keystore: ${e.message}")
+                e.printStackTrace()
+                return null
+            }
         }
 
         return try {
@@ -170,7 +183,7 @@ class WifiServer : Wifi() {
                     keyStore = keyStore,
                     keyAlias = keyAlias,
                     keyStorePassword = { keystorePassword.toCharArray() },
-                    privateKeyPassword = { privateKeyPassword.toCharArray() }
+                    privateKeyPassword = { keystorePassword.toCharArray() }
                 ) {
                     this.port = port
                     host = "0.0.0.0"
@@ -180,6 +193,38 @@ class WifiServer : Wifi() {
         } catch (e: Exception) {
             listener?.onError("Error loading keystore: ${e.message}")
             null
+        }
+    }
+
+    @Throws(Exception::class)
+    private fun generateKeystore(keystoreFile: File, alias: String, password: String) {
+        val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
+        keyPairGenerator.initialize(2048)
+        val keyPair = keyPairGenerator.generateKeyPair()
+
+        val owner = X500Name("CN=OpenMacropad")
+        val now = Date()
+        val expiry = Date(now.time + Duration.ofDays(3650).toMillis())
+        val serialNumber = BigInteger(64, Random())
+
+        val certBuilder = JcaX509v3CertificateBuilder(
+            owner,
+            serialNumber,
+            now,
+            expiry,
+            owner,
+            keyPair.public
+        )
+
+        val contentSigner = JcaContentSignerBuilder("SHA256WithRSA").build(keyPair.private)
+        val certificate = JcaX509CertificateConverter().getCertificate(certBuilder.build(contentSigner))
+
+        val keyStore = KeyStore.getInstance("PKCS12")
+        keyStore.load(null, password.toCharArray())
+        keyStore.setKeyEntry(alias, keyPair.private, password.toCharArray(), arrayOf<X509Certificate>(certificate))
+
+        FileOutputStream(keystoreFile).use { fos ->
+            keyStore.store(fos, password.toCharArray())
         }
     }
 
