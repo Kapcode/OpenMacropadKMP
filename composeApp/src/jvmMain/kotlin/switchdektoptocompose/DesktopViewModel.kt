@@ -21,6 +21,7 @@ data class ClientInfo(val id: String, val name: String)
  */
 class DesktopViewModel(
     private val settingsViewModel: SettingsViewModel,
+    val consoleViewModel: ConsoleViewModel
 ) {
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
@@ -51,15 +52,18 @@ class DesktopViewModel(
 
     init {
         findLocalIpAddresses()
+        consoleViewModel.addLog(LogLevel.Info, "DesktopViewModel Initialized")
     }
 
     fun setMacroExecutionEnabled(enabled: Boolean) {
         _isMacroExecutionEnabled.value = enabled
+        consoleViewModel.addLog(LogLevel.Info, "Macro execution ${if (enabled) "enabled" else "disabled"}")
     }
 
     fun setEncryption(enabled: Boolean) {
         if (!_isServerRunning.value) {
             _encryptionEnabled.value = enabled
+            consoleViewModel.addLog(LogLevel.Info, "Encryption ${if (enabled) "enabled" else "disabled"}")
         }
     }
 
@@ -75,10 +79,12 @@ class DesktopViewModel(
             "Not Found"
         }
         _serverIpAddress.value = if (ips.isBlank()) "Not Found" else ips
+        consoleViewModel.addLog(LogLevel.Verbose, "Found local IPs: $ips")
     }
 
     fun startServer() {
         if (server.isRunning()) return
+        consoleViewModel.addLog(LogLevel.Info, "Starting server...")
         try {
             val port = if (_encryptionEnabled.value) {
                 settingsViewModel.secureServerPort.value
@@ -90,19 +96,25 @@ class DesktopViewModel(
             if (server.isRunning()) {
                 val serverName = System.getProperty("user.name") ?: "OpenMacropad Server"
                 discoveryAnnouncer.start(serverName, port, _encryptionEnabled.value)
+                consoleViewModel.addLog(LogLevel.Info, "Server started on port $port")
+            } else {
+                consoleViewModel.addLog(LogLevel.Error, "Server failed to start")
             }
         } catch (e: Exception) {
             e.printStackTrace()
             _isServerRunning.value = false
+            consoleViewModel.addLog(LogLevel.Error, "Error starting server: ${e.message}")
         }
     }
 
     fun stopServer() {
         if (!server.isRunning()) return
+        consoleViewModel.addLog(LogLevel.Info, "Stopping server...")
         discoveryAnnouncer.stop()
         viewModelScope.launch {
             server.stop()
             _isServerRunning.value = false
+            consoleViewModel.addLog(LogLevel.Info, "Server stopped")
         }
     }
 
@@ -114,22 +126,26 @@ class DesktopViewModel(
         val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
         val macroListString = "macros:${macroNames.joinToString(",")}"
         server.sendToAll(macroListString)
+        consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to all clients")
     }
 
     private fun onClientConnected(clientId: String, clientName: String) {
         _connectedDevices.update { currentList ->
             if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
         }
+        consoleViewModel.addLog(LogLevel.Info, "Client connected: $clientName ($clientId)")
     }
 
     private fun onClientDisconnected(clientId: String) {
+        val client = _connectedDevices.value.find { it.id == clientId }
         _connectedDevices.update { currentList ->
             currentList.filterNot { it.id == clientId }
         }
+        consoleViewModel.addLog(LogLevel.Info, "Client disconnected: ${client?.name ?: clientId}")
     }
 
     private fun onDataReceived(clientId: String, message: String) {
-        println("Data received from $clientId: $message")
+        consoleViewModel.addLog(LogLevel.Debug, "Data received from $clientId: $message")
 
         if (message == "getMacros") {
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
@@ -137,18 +153,24 @@ class DesktopViewModel(
             viewModelScope.launch {
                 server.sendToClient(clientId, macroListString)
             }
+            consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
         } else if (message.startsWith("play:")) {
             if (_isMacroExecutionEnabled.value) {
                 val macroName = message.substringAfter("play:")
                 val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
                 if (macroToPlay != null) {
                     macroManagerViewModel.onPlayMacro(macroToPlay)
+                    consoleViewModel.addLog(LogLevel.Info, "Playing macro '$macroName' for $clientId")
+                } else {
+                    consoleViewModel.addLog(LogLevel.Warn, "Macro '$macroName' not found for $clientId")
                 }
+            } else {
+                consoleViewModel.addLog(LogLevel.Info, "Macro execution is disabled. Ignoring play request from $clientId")
             }
         }
     }
 
     fun onError(error: String) {
-        System.err.println("SERVER ERROR: $error")
+        consoleViewModel.addLog(LogLevel.Error, "SERVER ERROR: $error")
     }
 }

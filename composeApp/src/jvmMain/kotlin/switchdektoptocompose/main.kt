@@ -34,7 +34,8 @@ fun main() = application {
     val windowState = rememberWindowState(placement = WindowPlacement.Maximized)
     val settingsViewModel = remember { SettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
-    val desktopViewModel = remember { DesktopViewModel(settingsViewModel) }
+    val consoleViewModel = remember { ConsoleViewModel() }
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
     val macroEditorViewModel = remember {
@@ -87,6 +88,7 @@ fun main() = application {
 
         DesktopApp(
             desktopViewModel = desktopViewModel,
+            consoleViewModel = consoleViewModel,
             macroEditorViewModel = macroEditorViewModel,
             macroManagerViewModel = macroManagerViewModel,
             settingsViewModel = settingsViewModel,
@@ -102,6 +104,7 @@ fun main() = application {
 @Preview
 fun DesktopApp(
     desktopViewModel: DesktopViewModel,
+    consoleViewModel: ConsoleViewModel,
     macroEditorViewModel: MacroEditorViewModel,
     macroManagerViewModel: MacroManagerViewModel,
     settingsViewModel: SettingsViewModel,
@@ -243,7 +246,7 @@ fun DesktopApp(
                                }
                                // --- Console ---
                                Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
-                                   Text("Console Area")
+                                   Console(viewModel = consoleViewModel)
                                }
                            }
                         }
