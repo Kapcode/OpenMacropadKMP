@@ -60,12 +60,16 @@ fun MacroButton(
 }
 
 @Composable
-fun MacroButtonsScreen(macros: List<String>, onMacroClick: (String) -> Unit) {
+fun MacroButtonsScreen(
+    macros: List<String>,
+    onMacroClick: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var lastClickedMacro by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

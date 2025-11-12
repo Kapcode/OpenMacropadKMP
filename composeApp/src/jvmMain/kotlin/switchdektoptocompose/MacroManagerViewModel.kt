@@ -6,6 +6,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
+import java.io.FileOutputStream
+import java.util.Properties
 
 data class MacroFileState(
     val id: String,
@@ -58,18 +61,32 @@ class MacroManagerViewModel(
 
     private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
     val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
-    
+
     private val macroPlayer = MacroPlayer()
     private val viewModelScope = CoroutineScope(Dispatchers.IO)
 
+    private val activeMacrosFile = File(System.getProperty("user.home"), ".open-macropad-active-macros.properties")
+    private val activeMacrosProps = Properties()
+
     init {
+        loadActiveMacros()
         viewModelScope.launch {
             settingsViewModel.macroDirectory.collect { directoryPath ->
                 loadMacrosFromDisk(directoryPath)
             }
         }
     }
-    
+
+    private fun loadActiveMacros() {
+        if (activeMacrosFile.exists()) {
+            FileInputStream(activeMacrosFile).use { activeMacrosProps.load(it) }
+        }
+    }
+
+    private fun saveActiveMacros() {
+        FileOutputStream(activeMacrosFile).use { activeMacrosProps.store(it, "Active Macros") }
+    }
+
     private fun loadMacrosFromDisk(directoryPath: String) {
         val macroDir = File(directoryPath)
         val fileMacros = if (!macroDir.exists() || !macroDir.isDirectory) {
@@ -81,7 +98,7 @@ class MacroManagerViewModel(
                         val content = file.readText()
                         val trigger = JSONObject(content).optJSONObject("trigger")
                         val allowedClients = trigger?.optString("allowedClients", "") ?: ""
-                        val isActive = _macroFiles.value.find { it.id == file.absolutePath }?.isActive ?: false
+                        val isActive = activeMacrosProps.getProperty(file.absolutePath, "false").toBoolean()
                         MacroFileState(
                             id = file.absolutePath,
                             file = file,
@@ -96,21 +113,23 @@ class MacroManagerViewModel(
                     }
                 }?.sortedBy { it.name } ?: emptyList()
         }
-        
+
         val sampleTrigger = JSONObject(sampleMacroContent).optJSONObject("trigger")
         val sampleAllowedClients = sampleTrigger?.optString("allowedClients", "") ?: ""
+        val sampleMacroIsActive = activeMacrosProps.getProperty("__SAMPLE_MACRO__", "false").toBoolean()
         val sampleMacro = MacroFileState(
             id = "__SAMPLE_MACRO__",
             file = null,
             name = "Sample Macro",
             content = sampleMacroContent,
-            isActive = _macroFiles.value.find { it.id == "__SAMPLE_MACRO__" }?.isActive ?: false,
+            isActive = sampleMacroIsActive,
             allowedClients = sampleAllowedClients
         )
-        
+
         _macroFiles.value = listOf(sampleMacro) + fileMacros
         onMacrosUpdated()
     }
+
 
     fun getActiveMacrosForClient(clientName: String): List<MacroFileState> {
         return _macroFiles.value.filter { macro ->
@@ -220,5 +239,7 @@ class MacroManagerViewModel(
                 if (it.id == macroId) it.copy(isActive = isActive) else it
             }
         }
+        activeMacrosProps.setProperty(macroId, isActive.toString())
+        saveActiveMacros()
     }
 }

@@ -1,7 +1,6 @@
 package com.kapcode.open.macropad.kmps.ui.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -15,22 +14,12 @@ import androidx.compose.runtime.Composable
 fun CommonAppBar(
     title: String,
     onSettingsClick: () -> Unit,
-    onBackClick: (() -> Unit)? = null // Optional back navigation action
+    navigationIcon: @Composable () -> Unit,
 ) {
     TopAppBar(
         title = { Text(title) },
-        navigationIcon = {
-            if (onBackClick != null) {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Back"
-                    )
-                }
-            }
-        },
+        navigationIcon = navigationIcon,
         actions = {
-            // Directly show the Settings icon
             IconButton(onClick = onSettingsClick) {
                 Icon(
                     imageVector = Icons.Default.Settings,

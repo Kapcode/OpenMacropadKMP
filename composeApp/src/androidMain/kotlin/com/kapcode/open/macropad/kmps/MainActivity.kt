@@ -8,7 +8,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.BottomAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -23,6 +28,7 @@ import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.google.android.gms.ads.MobileAds
 
 const val TAG = "MainActivity"
 
@@ -35,6 +41,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        MobileAds.initialize(this) {}
 
         clientDiscovery = ClientDiscovery()
 
@@ -52,9 +60,16 @@ class MainActivity : ComponentActivity() {
                         CommonAppBar(
                             title = if (showSettings) "Settings" else "Open Macropad",
                             onSettingsClick = { showSettings = !showSettings },
-                            onBackClick = if (showSettings) { { showSettings = false } } else null
+                            navigationIcon = {
+                                if (showSettings) {
+                                    IconButton(onClick = { showSettings = false }) {
+                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    }
+                                }
+                            }
                         )
-                    }
+                    },
+                    bottomBar = { BottomAppBar { AdmobBanner() } }
                 ) { innerPadding ->
                     if (showSettings) {
                         SettingsScreen(
