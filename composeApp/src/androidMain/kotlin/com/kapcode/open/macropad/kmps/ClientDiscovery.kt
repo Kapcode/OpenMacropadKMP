@@ -22,15 +22,21 @@ class ClientDiscovery {
 
     private val discoveryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var discoveryJob: Job? = null
-    private val socket = DatagramSocket(null).apply {
-        reuseAddress = true
-        bind(java.net.InetSocketAddress(9998)) // Listen on the well-known discovery port
-    }
+    private var socket: DatagramSocket? = null
 
     val foundServers = MutableStateFlow<List<DiscoveredServer>>(emptyList())
 
+    fun isDiscovering(): Boolean {
+        return discoveryJob?.isActive == true
+    }
+
     fun start() {
-        if (discoveryJob?.isActive == true) return
+        if (isDiscovering()) return
+        
+        socket = DatagramSocket(null).apply {
+            reuseAddress = true
+            bind(java.net.InetSocketAddress(9998)) // Listen on the well-known discovery port
+        }
 
         discoveryJob = discoveryScope.launch {
             val buffer = ByteArray(1024)
@@ -38,7 +44,7 @@ class ClientDiscovery {
 
             while (isActive) {
                 try {
-                    socket.receive(packet)
+                    socket?.receive(packet)
                     val jsonString = String(packet.data, 0, packet.length)
                     val json = JSONObject(jsonString)
 
@@ -56,9 +62,10 @@ class ClientDiscovery {
                         currentServers.add(newServer)
                         foundServers.value = currentServers
                     }
-                    // In a real app, you might want to add a timeout to remove servers that are no longer broadcasting
                 } catch (e: Exception) {
-                    println("Error receiving discovery packet: ${e.message}")
+                    if (isActive) { // Don't log errors on a planned shutdown
+                        println("Error receiving discovery packet: ${e.message}")
+                    }
                 }
             }
         }
@@ -66,6 +73,8 @@ class ClientDiscovery {
 
     fun stop() {
         discoveryJob?.cancel()
-        socket.close()
+        socket?.close()
+        socket = null
+        discoveryJob = null
     }
 }

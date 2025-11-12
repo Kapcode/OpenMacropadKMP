@@ -39,6 +39,21 @@ fun App(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
+            // --- Server Discovery ---
+            Button(onClick = scanServers) {
+                Text("Scan for Servers")
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            foundServers.forEach { server ->
+                ConnectionItem(
+                    name = server.name,
+                    ipAddressPort = server.address,
+                    onClick = { onConnectClick(server, deviceName) }
+                )
+            }
+            
+            Divider(modifier = Modifier.padding(vertical = 16.dp))
+
             // --- Manual Connection ---
             Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
             TextField(
@@ -62,20 +77,6 @@ fun App(
             ) {
                 Text("Connect Manually")
             }
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
-
-            // --- Server Discovery ---
-            Button(onClick = scanServers) {
-                Text("Scan for Servers")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            foundServers.forEach { server ->
-                ConnectionItem(
-                    name = server.name,
-                    ipAddressPort = server.address,
-                    onClick = { onConnectClick(server, deviceName) }
-                )
-            }
         }
     }
 }
@@ -84,7 +85,7 @@ fun App(
 @Composable
 fun AppPreview() {
     val sampleServers = listOf(
-        ServerInfo("Server 1", "192.168.1.100:8443", true),
+        ServerInfo("Server 1", "192.18.1.100:8443", true),
         ServerInfo("Desktop-PC", "192.168.1.108:8449", true)
     )
     App(
