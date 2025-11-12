@@ -124,6 +124,7 @@ class MacroManagerViewModel(
     }
 
     fun onPlayMacro(macro: MacroFileState) {
+        if (!macro.isActive) return
         viewModelScope.launch {
             try {
                 val content = macro.file?.readText() ?: macro.content

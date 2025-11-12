@@ -29,6 +29,13 @@ class DesktopViewModel(
     private val _encryptionEnabled = MutableStateFlow(false) // Default to OFF
     val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
 
+    private val _isMacroExecutionEnabled = MutableStateFlow(true) // Default to ON
+    val isMacroExecutionEnabled: StateFlow<Boolean> = _isMacroExecutionEnabled.asStateFlow()
+
+    fun setMacroExecutionEnabled(enabled: Boolean) {
+        _isMacroExecutionEnabled.value = enabled
+    }
+
     private val wifiServer = WifiServer()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
@@ -121,14 +128,17 @@ class DesktopViewModel(
             val macroListString = "macros:${macroNames.joinToString(",")}"
             wifiServer.sendDataToClient(clientId, macroListString.toByteArray())
         } else if (message.startsWith("play:")) {
-            val macroName = message.substringAfter("play:")
-            println("Attempting to play macro: $macroName")
-            val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
-            if (macroToPlay != null) {
-                println("Found macro: ${macroToPlay.name}. Playing...")
-                macroManagerViewModel.onPlayMacro(macroToPlay)
-            } else {
-                println("Macro '$macroName' not found.")
+            if (_isMacroExecutionEnabled.value) {
+                val macroName = message.substringAfter("play:")
+                println("Attempting to play macro: $macroName")
+                val macroToPlay =
+                    macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
+                if (macroToPlay != null) {
+                    println("Found macro: ${macroToPlay.name}. Playing...")
+                    macroManagerViewModel.onPlayMacro(macroToPlay)
+                } else {
+                    println("Macro '$macroName' not found.")
+                }
             }
         }
     }

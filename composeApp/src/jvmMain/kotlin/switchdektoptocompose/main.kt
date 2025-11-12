@@ -52,7 +52,7 @@ fun main() = application {
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
     val triggerListener = remember {
-        TriggerListener { macroToPlay ->
+        TriggerListener(desktopViewModel) { macroToPlay ->
             macroManagerViewModel.onPlayMacro(macroToPlay)
         }
     }
@@ -104,6 +104,7 @@ fun DesktopApp(
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
+    val isMacroExecutionEnabled by desktopViewModel.isMacroExecutionEnabled.collectAsState()
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val currentPort = if (encryptionEnabled) secureServerPort else serverPort
@@ -188,6 +189,13 @@ fun DesktopApp(
                                 Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
                                 Spacer(modifier = Modifier.height(4.dp))
                                 Text("Address: $serverIpAddress:$currentPort", color = MaterialTheme.colorScheme.onSurface)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Macros Enabled:", color = MaterialTheme.colorScheme.onSurface)
+                                    Switch(
+                                        checked = isMacroExecutionEnabled,
+                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
+                                    )
+                                }
                             }
                         }
                         // --- Inspector ---

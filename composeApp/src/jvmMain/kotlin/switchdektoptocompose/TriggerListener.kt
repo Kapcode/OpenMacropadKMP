@@ -18,6 +18,7 @@ data class ActiveTrigger(
 )
 
 class TriggerListener(
+    private val viewModel: DesktopViewModel,
     private val onTrigger: (MacroFileState) -> Unit
 ) : NativeKeyListener {
 
@@ -84,14 +85,16 @@ class TriggerListener(
     }
 
     override fun nativeKeyReleased(e: NativeKeyEvent) {
-        activeTriggers[e.keyCode]?.let { trigger ->
-            println("Trigger key detected: ${NativeKeyEvent.getKeyText(e.keyCode)}")
-            if (trigger.macro.isActive) {
-                println("   - Firing trigger for active macro: ${trigger.macro.name}")
-                // TODO: Add client filtering logic using trigger.allowedClients
-                onTrigger(trigger.macro)
-            } else {
-                println("   - Ignoring trigger for inactive macro: ${trigger.macro.name}")
+        if (viewModel.isMacroExecutionEnabled.value) {
+            activeTriggers[e.keyCode]?.let { trigger ->
+                println("Trigger key detected: ${NativeKeyEvent.getKeyText(e.keyCode)}")
+                if (trigger.macro.isActive) {
+                    println("   - Firing trigger for active macro: ${trigger.macro.name}")
+                    // TODO: Add client filtering logic using trigger.allowedClients
+                    onTrigger(trigger.macro)
+                } else {
+                    println("   - Ignoring trigger for inactive macro: ${trigger.macro.name}")
+                }
             }
         }
     }
