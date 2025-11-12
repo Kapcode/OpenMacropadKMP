@@ -8,7 +8,6 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import java.io.File
-import java.io.InputStream
 import java.net.InetAddress
 import java.security.KeyStore
 import java.time.Duration
@@ -16,7 +15,6 @@ import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
 
-// ... (interfaces and abstract class are unchanged)
 interface ConnectionUIBridge {
     fun startListening(port: Int, encryptionEnabled: Boolean)
     suspend fun stopListening()
@@ -25,6 +23,7 @@ interface ConnectionUIBridge {
     fun getConnectedClients(): List<String>
     fun disconnectClient(clientId: String)
     fun setConnectionListener(listener: ConnectionListener)
+    fun sendDataToClient(clientId: String, data: ByteArray) // Added for direct messaging
 }
 
 interface ConnectionListener {
@@ -62,6 +61,7 @@ abstract class Wifi : ConnectionUIBridge {
         }
     }
 }
+
 class WifiServer : Wifi() {
 
     private var server: NettyApplicationEngine? = null
@@ -86,7 +86,7 @@ class WifiServer : Wifi() {
             createPlainEnvironment(currentPort)
         }
 
-        if (environment == null) return // Error creating environment
+        if (environment == null) return
 
         server = embeddedServer(Netty, environment)
         serverJob = serverScope.launch {
@@ -94,11 +94,9 @@ class WifiServer : Wifi() {
                 val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
                 discovery = ServerDiscovery(serverName, currentPort)
                 discovery?.start()
-
                 server?.start(wait = true)
             } catch (e: Exception) {
                 if (e is CancellationException) {
-                    // This is expected when the job is cancelled, so don't log as an error
                     println("Server job cancelled.")
                 } else {
                     listener?.onError("Failed to start server: ${e.message}")
@@ -109,6 +107,37 @@ class WifiServer : Wifi() {
         }
     }
 
+    override suspend fun stopListening() {
+        serverJob?.cancelAndJoin()
+        server?.stop(1000, 5000)
+        server = null
+        sessions.clear()
+        connectedClients.clear()
+    }
+
+    override fun isListening(): Boolean {
+        return serverJob?.isActive == true
+    }
+
+    override fun sendData(data: ByteArray) {
+        serverScope.launch {
+            sessions.values.forEach { session ->
+                if (session.isActive) {
+                    session.send(Frame.Binary(fin = true, data))
+                }
+            }
+        }
+    }
+
+    override fun sendDataToClient(clientId: String, data: ByteArray) {
+        serverScope.launch {
+            sessions[clientId]?.let {
+                if (it.isActive) {
+                    it.send(Frame.Binary(fin = true, data))
+                }
+            }
+        }
+    }
 
     private fun createPlainEnvironment(port: Int): ApplicationEngineEnvironment {
         return applicationEngineEnvironment {
@@ -170,14 +199,8 @@ class WifiServer : Wifi() {
                 try {
                     for (frame in incoming) {
                         when(frame) {
-                            is Frame.Binary -> {
-                                val data = frame.readBytes()
-                                listener?.onDataReceived(clientId, data)
-                            }
-                            is Frame.Text -> {
-                                val data = frame.readBytes()
-                                listener?.onDataReceived(clientId, data)
-                            }
+                            is Frame.Binary -> listener?.onDataReceived(clientId, frame.readBytes())
+                            is Frame.Text -> listener?.onDataReceived(clientId, frame.readBytes())
                             else -> {}
                         }
                     }
@@ -186,47 +209,6 @@ class WifiServer : Wifi() {
                     handleDisconnection(clientId)
                 }
             }
-        }
-    }
-
-    override suspend fun stopListening() {
-        serverJob?.cancelAndJoin()
-        server?.stop(1000, 5000)
-        server = null
-        sessions.clear()
-        connectedClients.clear()
-    }
-
-
-    override fun isListening(): Boolean {
-        return serverJob?.isActive == true
-    }
-
-    override fun sendData(data: ByteArray) {
-        serverScope.launch {
-            sessions.values.forEach { session ->
-                if (session.isActive) {
-                    session.send(Frame.Binary(fin = true, data))
-                }
-            }
-        }
-    }
-
-    fun sendDataToClient(clientId: String, data: ByteArray) {
-        serverScope.launch {
-            sessions[clientId]?.let {
-                if (it.isActive) {
-                    it.send(Frame.Binary(fin = true, data))
-                }
-            }
-        }
-    }
-
-    override fun disconnectClient(clientId: String) {
-        serverScope.launch {
-            sessions[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected by server"))
-            sessions.remove(clientId)
-            super.disconnectClient(clientId)
         }
     }
 }

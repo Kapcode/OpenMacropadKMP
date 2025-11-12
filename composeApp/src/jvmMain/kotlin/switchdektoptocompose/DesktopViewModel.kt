@@ -7,10 +7,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.json.JSONArray
-import org.json.JSONObject
 import java.net.Inet4Address
-import java.net.InetAddress
 import java.net.NetworkInterface
 
 /**
@@ -27,15 +24,11 @@ class DesktopViewModel(
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
-    private val _encryptionEnabled = MutableStateFlow(true) // Default to ON
+    private val _encryptionEnabled = MutableStateFlow(true)
     val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
 
-    private val _isMacroExecutionEnabled = MutableStateFlow(true) // Default to ON
+    private val _isMacroExecutionEnabled = MutableStateFlow(true)
     val isMacroExecutionEnabled: StateFlow<Boolean> = _isMacroExecutionEnabled.asStateFlow()
-
-    fun setMacroExecutionEnabled(enabled: Boolean) {
-        _isMacroExecutionEnabled.value = enabled
-    }
 
     private val wifiServer = WifiServer()
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
@@ -45,45 +38,48 @@ class DesktopViewModel(
 
     private val _isServerRunning = MutableStateFlow(false)
     val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
-
+    
     private val _serverIpAddress = MutableStateFlow("Determining IP...")
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
     init {
         wifiServer.setConnectionListener(this)
-        findLocalIpAddress()
+        findLocalIpAddresses()
+    }
+
+    fun setMacroExecutionEnabled(enabled: Boolean) {
+        _isMacroExecutionEnabled.value = enabled
     }
 
     fun setEncryption(enabled: Boolean) {
-        // Prevent changing encryption while the server is running
         if (!_isServerRunning.value) {
             _encryptionEnabled.value = enabled
         }
     }
 
-    private fun findLocalIpAddress() {
-        val ip = try {
+    private fun findLocalIpAddresses() {
+        val ips = try {
             NetworkInterface.getNetworkInterfaces().asSequence()
-                .filter { it.isUp && !it.isLoopback && !it.isVirtual }
+                .filter { it.isUp && !it.isLoopback }
                 .flatMap { it.inetAddresses.asSequence() }
-                .firstOrNull { it is Inet4Address && it.isSiteLocalAddress }
-                ?.hostAddress
+                .filterIsInstance<Inet4Address>()
+                .map { it.hostAddress }
+                .joinToString(", ")
         } catch (e: Exception) {
-            null
+            "Not Found"
         }
-        _serverIpAddress.value = ip ?: "Not Found"
+        _serverIpAddress.value = if (ips.isBlank()) "Not Found" else ips
     }
 
     fun startServer() {
         if (wifiServer.isListening()) return
         try {
-            // Pass the current encryption setting to the server
             val port = if (_encryptionEnabled.value) {
                 settingsViewModel.secureServerPort.value
             } else {
                 settingsViewModel.serverPort.value
             }
-            wifiServer.startListening(port, encryptionEnabled = _encryptionEnabled.value)
+            wifiServer.startListening(port, encryptionEnabled.value)
             _isServerRunning.value = wifiServer.isListening()
         } catch (e: Exception) {
             e.printStackTrace()
@@ -110,7 +106,6 @@ class DesktopViewModel(
     }
 
     // --- ConnectionListener Implementation ---
-
     override fun onClientConnected(clientId: String, clientName: String) {
         _connectedDevices.update { currentList ->
             if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
@@ -134,14 +129,9 @@ class DesktopViewModel(
         } else if (message.startsWith("play:")) {
             if (_isMacroExecutionEnabled.value) {
                 val macroName = message.substringAfter("play:")
-                println("Attempting to play macro: $macroName")
-                val macroToPlay =
-                    macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
+                val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
                 if (macroToPlay != null) {
-                    println("Found macro: ${macroToPlay.name}. Playing...")
                     macroManagerViewModel.onPlayMacro(macroToPlay)
-                } else {
-                    println("Macro '$macroName' not found.")
                 }
             }
         }
