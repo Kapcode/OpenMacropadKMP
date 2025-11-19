@@ -5,6 +5,7 @@ import kotlinx.coroutines.yield
 import java.awt.MouseInfo
 import java.awt.Robot
 import java.awt.event.InputEvent
+import java.awt.event.KeyEvent
 
 class MacroPlayer {
     private val robot = Robot().apply {
@@ -93,6 +94,23 @@ class MacroPlayer {
             val nextY = (startY + dy * i).toInt()
             robot.mouseMove(nextX, nextY)
             delay(stepTime.toLong())
+        }
+    }
+    
+    fun emergencyReleaseAll() {
+        try {
+            // Release modifier keys
+            robot.keyRelease(KeyEvent.VK_SHIFT)
+            robot.keyRelease(KeyEvent.VK_CONTROL)
+            robot.keyRelease(KeyEvent.VK_ALT)
+            robot.keyRelease(KeyEvent.VK_META) // Windows/Super key
+
+            // Release mouse buttons
+            robot.mouseRelease(InputEvent.BUTTON1_DOWN_MASK)
+            robot.mouseRelease(InputEvent.BUTTON2_DOWN_MASK)
+            robot.mouseRelease(InputEvent.BUTTON3_DOWN_MASK)
+        } catch (e: Exception) {
+            // Logged by the caller
         }
     }
 }

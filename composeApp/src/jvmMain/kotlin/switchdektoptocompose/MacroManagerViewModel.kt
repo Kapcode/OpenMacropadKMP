@@ -176,19 +176,25 @@ class MacroManagerViewModel(
             } else {
                 val msg = "Macro '${macro.name}' dropped: Another macro is currently running."
                 println(msg)
-                // Optional: Log as debug or warn if you want the user to know why it didn't fire
                 consoleViewModel.addLog(LogLevel.Warn, msg) 
             }
         }
     }
     
     fun cancelAllMacros() {
-        // Canceling the job will cause the running macro (inside try block) to throw CancellationException
-        // The finally block will unlock the mutex.
         playbackJob.cancelChildren()
         val msg = "All running macros have been cancelled."
         println(msg)
         consoleViewModel.addLog(LogLevel.Warn, msg)
+        
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                MacroPlayer().emergencyReleaseAll()
+                consoleViewModel.addLog(LogLevel.Verbose, "Emergency release executed for modifier keys and mouse buttons.")
+            } catch(e: Exception) {
+                consoleViewModel.addLog(LogLevel.Error, "Error during emergency release: ${e.message}")
+            }
+        }
     }
 
     private fun parseEventsFromJson(jsonContent: String): List<MacroEventState> {
