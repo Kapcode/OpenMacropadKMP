@@ -13,6 +13,7 @@ object AppSettings {
     private const val MACRO_DIR_KEY = "macroDirectory"
     private const val SERVER_PORT_KEY = "serverPort"
     private const val SECURE_SERVER_PORT_KEY = "secureServerPort"
+    private const val ESTOP_KEY_KEY = "eStopKey"
 
     init {
         if (!configDir.exists()) {
@@ -52,6 +53,13 @@ object AppSettings {
         get() = properties.getProperty(SECURE_SERVER_PORT_KEY, "8449").toIntOrNull() ?: 8449
         set(value) {
             properties.setProperty(SECURE_SERVER_PORT_KEY, value.toString())
+            save()
+        }
+    
+    var eStopKey: String
+        get() = properties.getProperty(ESTOP_KEY_KEY, "F12")
+        set(value) {
+            properties.setProperty(ESTOP_KEY_KEY, value)
             save()
         }
 

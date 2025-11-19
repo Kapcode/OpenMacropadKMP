@@ -15,7 +15,7 @@ data class TriggerState(
 
 sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class KeyEvent(val keyName: String, val action: KeyAction) : MacroEventState()
-    data class MouseEvent(val x: Int, val y: Int, val action: MouseAction) : MacroEventState()
+    data class MouseEvent(val x: Int, val y: Int, val action: MouseAction, val isAnimated: Boolean = false) : MacroEventState()
     data class MouseButtonEvent(val buttonNumber: Int, val action: KeyAction) : MacroEventState()
     data class ScrollEvent(val scrollAmount: Int) : MacroEventState()
     data class DelayEvent(val durationMs: Long) : MacroEventState()
@@ -90,6 +90,7 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                     eventJson.put("action", event.action.name)
                     eventJson.put("x", event.x)
                     eventJson.put("y", event.y)
+                    eventJson.put("isAnimated", event.isAnimated)
                 }
                 is MacroEventState.MouseButtonEvent -> {
                     eventJson.put("type", "mousebutton")
@@ -133,7 +134,12 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                     eventsArray.getJSONObject(i)?.let { eventObj ->
                         when (eventObj.getString("type").lowercase()) {
                             "key" -> newEvents.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
-                            "mouse" -> newEvents.add(MacroEventState.MouseEvent(eventObj.optInt("x", 0), eventObj.optInt("y", 0), MouseAction.valueOf(eventObj.getString("action").uppercase())))
+                            "mouse" -> newEvents.add(MacroEventState.MouseEvent(
+                                eventObj.optInt("x", 0), 
+                                eventObj.optInt("y", 0), 
+                                MouseAction.valueOf(eventObj.getString("action").uppercase()),
+                                eventObj.optBoolean("isAnimated", false)
+                            ))
                             "mousebutton" -> newEvents.add(MacroEventState.MouseButtonEvent(eventObj.getInt("buttonNumber"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
                             "scroll" -> newEvents.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
                             "delay" -> newEvents.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))

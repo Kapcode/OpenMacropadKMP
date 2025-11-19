@@ -1,11 +1,12 @@
 package switchdektoptocompose
 
 import com.github.kwhat.jnativehook.GlobalScreen
-import com.github.kwhat.jnativehook.dispatcher.SwingDispatchService
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,19 +23,33 @@ class TriggerListener(
     private val onTrigger: (MacroFileState) -> Unit
 ) : NativeKeyListener {
 
-    private val activeTriggers = ConcurrentHashMap<Int, ActiveTrigger>()
+    private val activeTriggers = ConcurrentHashMap<Int, MutableList<ActiveTrigger>>()
+    private var eStopKeyCode: Int? = null
+    private val listenerScope = CoroutineScope(Dispatchers.Default)
 
     init {
-        // REMOVED: GlobalScreen.setEventDispatcher(SwingDispatchService())
-        // This prevents JNativeHook from dispatching events on the EDT, which can cause delays if the UI is busy.
-
         val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
-        logger.level = Level.INFO
+        logger.level = Level.WARNING // Reduce logging level to avoid spam
         logger.useParentHandlers = false
+
+        // Ensure cleanup on JVM shutdown
+        Runtime.getRuntime().addShutdownHook(Thread {
+            if (GlobalScreen.isNativeHookRegistered()) {
+                try {
+                    GlobalScreen.unregisterNativeHook()
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+        })
     }
 
-    fun updateActiveTriggers(macros: List<MacroFileState>) {
+    fun updateActiveTriggers(macros: List<MacroFileState>, eStopKeyName: String = "F12") {
         activeTriggers.clear()
+        
+        eStopKeyCode = KeyParser.parseNativeHookKeys(eStopKeyName).firstOrNull()
+        println("Trigger Listener: E-Stop key set to $eStopKeyName (${eStopKeyCode})")
+
         macros.filter { it.isActive }.forEach { macroState ->
             try {
                 val content = macroState.file?.readText() ?: macroState.content
@@ -45,7 +60,8 @@ class TriggerListener(
                     val keyName = triggerJson.getString("keyName")
                     val allowedClients = triggerJson.optString("allowedClients", "")
                     KeyParser.parseNativeHookKeys(keyName).firstOrNull()?.let { keyCode ->
-                        activeTriggers[keyCode] = ActiveTrigger(keyCode, macroState, allowedClients)
+                        activeTriggers.computeIfAbsent(keyCode) { mutableListOf() }
+                            .add(ActiveTrigger(keyCode, macroState, allowedClients))
                         println("Trigger registered: ${NativeKeyEvent.getKeyText(keyCode)} for ${macroState.name}")
                     }
                 }
@@ -53,7 +69,19 @@ class TriggerListener(
                 e.printStackTrace()
             }
         }
-        println("Active triggers updated. Total: ${activeTriggers.size}")
+
+        // Check for collisions
+        activeTriggers.forEach { (keyCode, triggers) ->
+            if (triggers.size > 1) {
+                val macroNames = triggers.joinToString(", ") { it.macro.name }
+                val keyName = NativeKeyEvent.getKeyText(keyCode)
+                val warningMsg = "Warning: Multiple macros bound to '$keyName': $macroNames"
+                println(warningMsg)
+                viewModel.consoleViewModel.addLog(LogLevel.Warn, warningMsg)
+            }
+        }
+
+        println("Active triggers updated. Total keys monitored: ${activeTriggers.size}")
     }
 
     fun startListening() {
@@ -70,30 +98,35 @@ class TriggerListener(
     }
 
     fun shutdown() {
-        // Use invokeLater to ensure shutdown is non-blocking and on the correct thread.
         if (GlobalScreen.isNativeHookRegistered()) {
-            SwingUtilities.invokeLater {
-                try {
-                    GlobalScreen.removeNativeKeyListener(this)
-                    GlobalScreen.unregisterNativeHook()
-                    println("Trigger Listener: Shutdown complete.")
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
+            try {
+                GlobalScreen.removeNativeKeyListener(this)
+                GlobalScreen.unregisterNativeHook()
+                println("Trigger Listener: Shutdown complete.")
+            } catch (e: Exception) {
+                e.printStackTrace()
             }
         }
     }
 
     override fun nativeKeyReleased(e: NativeKeyEvent) {
+        // Check for E-Stop first
+        if (e.keyCode == eStopKeyCode) {
+            println("Trigger Listener: E-STOP ACTIVATED!")
+            viewModel.stopAllMacros()
+            return
+        }
+
         if (viewModel.isMacroExecutionEnabled.value) {
-            activeTriggers[e.keyCode]?.let { trigger ->
-                println("Trigger key detected: ${NativeKeyEvent.getKeyText(e.keyCode)}")
-                if (trigger.macro.isActive) {
-                    println("   - Firing trigger for active macro: ${trigger.macro.name}")
-                    // TODO: Add client filtering logic using trigger.allowedClients
-                    onTrigger(trigger.macro)
-                } else {
-                    println("   - Ignoring trigger for inactive macro: ${trigger.macro.name}")
+            val triggers = activeTriggers[e.keyCode]
+            if (triggers != null) {
+                // Offload the processing to a coroutine to return from the native callback ASAP
+                listenerScope.launch {
+                    triggers.forEach { trigger ->
+                        if (trigger.macro.isActive) {
+                            onTrigger(trigger.macro)
+                        }
+                    }
                 }
             }
         }

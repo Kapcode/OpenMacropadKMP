@@ -16,6 +16,9 @@ class SettingsViewModel {
     private val _secureServerPort = MutableStateFlow(AppSettings.secureServerPort)
     val secureServerPort = _secureServerPort.asStateFlow()
 
+    private val _eStopKey = MutableStateFlow(AppSettings.eStopKey)
+    val eStopKey = _eStopKey.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -51,6 +54,11 @@ class SettingsViewModel {
             _secureServerPort.value = it
             AppSettings.secureServerPort = it
         }
+    }
+
+    fun setEStopKey(key: String) {
+        _eStopKey.value = key
+        AppSettings.eStopKey = key
     }
 
     fun selectTheme(theme: String) {

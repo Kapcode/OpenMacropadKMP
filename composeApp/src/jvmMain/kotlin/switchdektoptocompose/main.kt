@@ -48,6 +48,7 @@ fun main() = application {
     macroManagerViewModel = remember {
         MacroManagerViewModel(
             settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
             onEditMacroRequested = { macroState ->
                 macroEditorViewModel.openOrSwitchToTab(macroState)
             },
@@ -86,9 +87,10 @@ fun main() = application {
         title = "Open Macropad (Compose)"
     ) {
         val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+        val eStopKey by settingsViewModel.eStopKey.collectAsState()
 
-        LaunchedEffect(macroFiles) {
-            triggerListener.updateActiveTriggers(macroFiles)
+        LaunchedEffect(macroFiles, eStopKey) {
+            triggerListener.updateActiveTriggers(macroFiles, eStopKey)
         }
 
         DesktopApp(
@@ -120,6 +122,8 @@ fun DesktopApp(
     onExit: () -> Unit = {}
 ) {
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(selectedTheme) {
         val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name
@@ -128,6 +132,18 @@ fun DesktopApp(
             SwingUtilities.updateComponentTreeUI(window)
         }
     }
+    
+    // Add a hook to listen to logs and show errors/E-Stop in snackbar
+    val logs by consoleViewModel.logMessages.collectAsState()
+    LaunchedEffect(logs) {
+        if (logs.isNotEmpty()) {
+            val lastLog = logs.last()
+            if (lastLog.contains("MACRO FINISHED") || lastLog.contains("MACRO CANCELLED") || lastLog.contains("E-STOP")) {
+                 snackbarHostState.showSnackbar(lastLog)
+            }
+        }
+    }
+
 
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
@@ -139,6 +155,7 @@ fun DesktopApp(
     val currentPort = if (encryptionEnabled) secureServerPort else serverPort
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
+    val eStopKey by settingsViewModel.eStopKey.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
@@ -177,96 +194,128 @@ fun DesktopApp(
     }
 
     AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
-            val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
+        Scaffold(
+            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+            modifier = Modifier.fillMaxSize()
+        ) { paddingValues ->
+            Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
+                val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
 
-            VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
-                first(minSize = 100.dp) {
-                    Row(
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        var menuExpanded by remember { mutableStateOf(false) }
-                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Menu", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                            IconButton(onClick = { menuExpanded = true }) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu")
-                            }
-                        }
-                        DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Start Server") },
-                                onClick = { desktopViewModel.startServer(); menuExpanded = false },
-                                enabled = !isServerRunning,
-                                leadingIcon = { Icon(Icons.Default.PlayArrow, null) }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Stop Server") },
-                                onClick = { desktopViewModel.stopServer(); menuExpanded = false },
-                                enabled = isServerRunning,
-                                leadingIcon = { Icon(Icons.Default.Stop, null) }
-                            )
-                            Divider()
-                            DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
-                            Divider()
-                            DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.Default.ExitToApp, null) })
-                        }
-                        
-                        Spacer(Modifier.width(16.dp))
-
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp),
-                            contentAlignment = Alignment.CenterStart
+                VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
+                    first(minSize = 100.dp) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column {
-                                Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Address: $serverIpAddress:$currentPort")
+                            var menuExpanded by remember { mutableStateOf(false) }
+                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Menu", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                                IconButton(onClick = { menuExpanded = true }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
+                                }
                             }
-                        }
-                        
-                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Power, contentDescription = "Macros Enabled")
-                                Switch(
-                                    checked = isMacroExecutionEnabled,
-                                    onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
+                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Start Server") },
+                                    onClick = { desktopViewModel.startServer(); menuExpanded = false },
+                                    enabled = !isServerRunning,
+                                    leadingIcon = { Icon(Icons.Default.PlayArrow, null) }
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("Stop Server") },
+                                    onClick = { desktopViewModel.stopServer(); menuExpanded = false },
+                                    enabled = isServerRunning,
+                                    leadingIcon = { Icon(Icons.Default.Stop, null) }
+                                )
+                                Divider()
+                                DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                                Divider()
+                                DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.Default.ExitToApp, null) })
                             }
-                        }
-                        
-                        Spacer(Modifier.width(16.dp))
+                            
+                            Spacer(Modifier.width(16.dp))
 
-                        // --- Inspector ---
-                        Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
-                            InspectorScreen(viewModel = inspectorViewModel)
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                Column {
+                                    Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Address: $serverIpAddress:$currentPort")
+                                }
+                            }
+                            
+                            // E-Stop Key Selector
+                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Emergency Stop Key", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                                var eStopMenuExpanded by remember { mutableStateOf(false) }
+                                Box {
+                                    OutlinedButton(onClick = { eStopMenuExpanded = true }) {
+                                        Text("E-Stop: $eStopKey")
+                                    }
+                                    DropdownMenu(
+                                        expanded = eStopMenuExpanded,
+                                        onDismissRequest = { eStopMenuExpanded = false }
+                                    ) {
+                                        val fKeys = (1..12).map { "F$it" }
+                                        fKeys.forEach { key ->
+                                            DropdownMenuItem(
+                                                text = { Text(key) },
+                                                onClick = {
+                                                    settingsViewModel.setEStopKey(key)
+                                                    eStopMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(Modifier.width(16.dp))
+
+                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Power, contentDescription = "Macros Enabled")
+                                    Switch(
+                                        checked = isMacroExecutionEnabled,
+                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
+                                    )
+                                }
+                            }
+                            
+                            Spacer(Modifier.width(16.dp))
+
+                            // --- Inspector ---
+                            Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
+                                InspectorScreen(viewModel = inspectorViewModel)
+                            }
                         }
                     }
-                }
-                second(minSize = 200.dp) {
-                    HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
-                        first(minSize = 250.dp) {
-                           Column {
-                               // --- Connected Devices ---
-                               Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                                   ConnectedDevicesScreen(devices = connectedDevices)
+                    second(minSize = 200.dp) {
+                        HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
+                            first(minSize = 250.dp) {
+                               Column {
+                                   // --- Connected Devices ---
+                                   Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
+                                       ConnectedDevicesScreen(devices = connectedDevices)
+                                   }
+                                   // --- Console ---
+                                   Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
+                                       Console(viewModel = consoleViewModel)
+                                   }
                                }
-                               // --- Console ---
-                               Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
-                                   Console(viewModel = consoleViewModel)
-                               }
-                           }
-                        }
-                        second(minSize = 500.dp) {
-                            MacroEditingArea(
-                                macroManagerViewModel = macroManagerViewModel,
-                                macroEditorViewModel = macroEditorViewModel,
-                                macroTimelineViewModel = macroTimelineViewModel,
-                                onAddEventClicked = {
-                                    newEventViewModel.reset()
-                                    showNewEventDialog = true
-                                }
-                            )
+                            }
+                            second(minSize = 500.dp) {
+                                MacroEditingArea(
+                                    macroManagerViewModel = macroManagerViewModel,
+                                    macroEditorViewModel = macroEditorViewModel,
+                                    macroTimelineViewModel = macroTimelineViewModel,
+                                    onAddEventClicked = {
+                                        newEventViewModel.reset()
+                                        showNewEventDialog = true
+                                    }
+                                )
+                            }
                         }
                     }
                 }

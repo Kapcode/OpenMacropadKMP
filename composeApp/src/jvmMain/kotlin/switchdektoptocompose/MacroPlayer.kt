@@ -1,82 +1,98 @@
 package switchdektoptocompose
 
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
+import java.awt.MouseInfo
 import java.awt.Robot
 import java.awt.event.InputEvent
 
 class MacroPlayer {
     private val robot = Robot().apply {
         isAutoWaitForIdle = false
-        autoDelay = 50 // Set a default 50ms delay between all robot actions
+        autoDelay = 0 // We will handle delays manually to allow cancellation
     }
 
-    fun play(events: List<MacroEventState>) {
-        println("MacroPlayer: Starting playback of ${events.size} events.")
+    suspend fun play(events: List<MacroEventState>) {
         val initialAutoDelay = robot.autoDelay
         try {
             for ((index, event) in events.withIndex()) {
-                println("MacroPlayer: Processing event $index: $event")
+                yield() // Check for cancellation
+                // Concise logging
+                // println("Event $index: $event") 
+                
                 when (event) {
                     is MacroEventState.KeyEvent -> {
                         val keyCodes = KeyParser.parseAwtKeys(event.keyName)
                         for (keyCode in keyCodes) {
                             when (event.action) {
                                 KeyAction.PRESS -> {
-                                    println("MacroPlayer: Robot keyPress $keyCode")
                                     robot.keyPress(keyCode)
                                 }
                                 KeyAction.RELEASE -> {
-                                    println("MacroPlayer: Robot keyRelease $keyCode")
                                     robot.keyRelease(keyCode)
                                 }
                             }
+                            delay(50) // Manual delay
                         }
                     }
                     is MacroEventState.SetAutoWaitEvent -> {
-                        robot.autoDelay = event.delayMs
+                        // No-op
                     }
                     is MacroEventState.DelayEvent -> {
-                        println("MacroPlayer: Delaying ${event.durationMs}ms")
-                        robot.delay(event.durationMs.toInt())
+                        delay(event.durationMs)
                     }
                     is MacroEventState.MouseEvent -> {
                         if (event.action == MouseAction.MOVE) {
-                            println("MacroPlayer: Robot mouseMove ${event.x}, ${event.y}")
-                            robot.mouseMove(event.x, event.y)
+                            if (event.isAnimated) {
+                                animateMouse(event.x, event.y)
+                            } else {
+                                robot.mouseMove(event.x, event.y)
+                            }
                         } else {
-                            println("Simulating Mouse Event (Not Implemented): ${event.action} at (${event.x}, ${event.y})")
+                            println("Warning: Mouse click via MouseEvent not supported, use MouseButtonEvent.")
                         }
+                        delay(50)
                     }
                     is MacroEventState.MouseButtonEvent -> {
                         try {
                             val mask = InputEvent.getMaskForButton(event.buttonNumber)
-                            println("Simulating Mouse Button: ${event.action} on button ${event.buttonNumber} (Mask: $mask)")
                             when (event.action) {
-                                KeyAction.PRESS -> {
-                                    println("MacroPlayer: Robot mousePress $mask")
-                                    robot.mousePress(mask)
-                                }
-                                KeyAction.RELEASE -> {
-                                    println("MacroPlayer: Robot mouseRelease $mask")
-                                    robot.mouseRelease(mask)
-                                }
+                                KeyAction.PRESS -> robot.mousePress(mask)
+                                KeyAction.RELEASE -> robot.mouseRelease(mask)
                             }
+                            delay(50)
                         } catch (e: IllegalArgumentException) {
                             System.err.println("Invalid mouse button number: ${event.buttonNumber}")
                         }
                     }
                     is MacroEventState.ScrollEvent -> {
-                        println("MacroPlayer: Robot mouseWheel ${event.scrollAmount}")
                         robot.mouseWheel(event.scrollAmount)
+                        delay(50)
                     }
                 }
-                println("MacroPlayer: Finished event $index")
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
         } finally {
-            // Restore the initial auto delay after playback
             robot.autoDelay = initialAutoDelay
-            println("MacroPlayer: Playback finished.")
+        }
+    }
+
+    private suspend fun animateMouse(targetX: Int, targetY: Int) {
+        val currentPos = MouseInfo.getPointerInfo().location
+        val startX = currentPos.x
+        val startY = currentPos.y
+        val duration = 500 // Animation duration in ms
+        val steps = 50 // Number of steps
+
+        val stepTime = duration / steps
+        val dx = (targetX - startX).toDouble() / steps
+        val dy = (targetY - startY).toDouble() / steps
+
+        for (i in 1..steps) {
+            yield() // Allow cancellation during animation
+            val nextX = (startX + dx * i).toInt()
+            val nextY = (startY + dy * i).toInt()
+            robot.mouseMove(nextX, nextY)
+            delay(stepTime.toLong())
         }
     }
 }

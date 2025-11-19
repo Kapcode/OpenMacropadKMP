@@ -1,9 +1,8 @@
 package switchdektoptocompose
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 import org.json.JSONObject
 import java.io.File
 import java.io.FileInputStream
@@ -22,6 +21,7 @@ data class MacroFileState(
 
 class MacroManagerViewModel(
     private val settingsViewModel: SettingsViewModel,
+    private val consoleViewModel: ConsoleViewModel,
     var onEditMacroRequested: (MacroFileState) -> Unit,
     private val onMacrosUpdated: () -> Unit
 ) {
@@ -61,9 +61,10 @@ class MacroManagerViewModel(
 
     private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
     val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
-
-    private val macroPlayer = MacroPlayer()
-    private val viewModelScope = CoroutineScope(Dispatchers.IO)
+    
+    private val playbackJob = SupervisorJob()
+    private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
+    private val executionMutex = Mutex()
 
     private val activeMacrosFile = File(System.getProperty("user.home"), ".open-macropad-active-macros.properties")
     private val activeMacrosProps = Properties()
@@ -144,13 +145,50 @@ class MacroManagerViewModel(
 
     fun onPlayMacro(macro: MacroFileState) {
         if (!macro.isActive) return
+        
         viewModelScope.launch {
-            try {
-                val content = macro.file?.readText() ?: macro.content
-                val events = parseEventsFromJson(content)
-                macroPlayer.play(events)
-            } catch (e: Exception) { e.printStackTrace() }
+            if (executionMutex.tryLock()) {
+                try {
+                    val logStart = ">>> MACRO STARTING: ${macro.name}"
+                    println(logStart)
+                    consoleViewModel.addLog(LogLevel.Info, logStart)
+                    val startTime = System.currentTimeMillis()
+                    val content = macro.file?.readText() ?: macro.content
+                    val events = parseEventsFromJson(content)
+                    MacroPlayer().play(events)
+                    val duration = System.currentTimeMillis() - startTime
+                    val logFinish = "<<< MACRO FINISHED: ${macro.name} (Duration: ${duration}ms)"
+                    println(logFinish)
+                    consoleViewModel.addLog(LogLevel.Info, logFinish)
+                } catch (e: CancellationException) {
+                    val logCancel = "!!! MACRO CANCELLED: ${macro.name}"
+                    println(logCancel)
+                    consoleViewModel.addLog(LogLevel.Warn, logCancel)
+                    throw e
+                } catch (e: Exception) {
+                    val logError = "!!! MACRO ERROR: ${macro.name} - ${e.message}"
+                    println(logError)
+                    consoleViewModel.addLog(LogLevel.Error, logError)
+                    e.printStackTrace()
+                } finally {
+                    executionMutex.unlock()
+                }
+            } else {
+                val msg = "Macro '${macro.name}' dropped: Another macro is currently running."
+                println(msg)
+                // Optional: Log as debug or warn if you want the user to know why it didn't fire
+                consoleViewModel.addLog(LogLevel.Warn, msg) 
+            }
         }
+    }
+    
+    fun cancelAllMacros() {
+        // Canceling the job will cause the running macro (inside try block) to throw CancellationException
+        // The finally block will unlock the mutex.
+        playbackJob.cancelChildren()
+        val msg = "All running macros have been cancelled."
+        println(msg)
+        consoleViewModel.addLog(LogLevel.Warn, msg)
     }
 
     private fun parseEventsFromJson(jsonContent: String): List<MacroEventState> {
@@ -162,7 +200,12 @@ class MacroManagerViewModel(
                     eventsArray.getJSONObject(i)?.let { eventObj ->
                         when (eventObj.getString("type").lowercase()) {
                             "key" -> events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
-                            "mouse" -> events.add(MacroEventState.MouseEvent(eventObj.optInt("x", 0), eventObj.optInt("y", 0), MouseAction.valueOf(eventObj.getString("action").uppercase())))
+                            "mouse" -> events.add(MacroEventState.MouseEvent(
+                                eventObj.optInt("x", 0), 
+                                eventObj.optInt("y", 0), 
+                                MouseAction.valueOf(eventObj.getString("action").uppercase()),
+                                eventObj.optBoolean("isAnimated", false)
+                            ))
                             "mousebutton" -> events.add(MacroEventState.MouseButtonEvent(eventObj.getInt("buttonNumber"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
                             "scroll" -> events.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
                             "delay" -> events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))

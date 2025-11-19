@@ -59,6 +59,11 @@ class DesktopViewModel(
         _isMacroExecutionEnabled.value = enabled
         consoleViewModel.addLog(LogLevel.Info, "Macro execution ${if (enabled) "enabled" else "disabled"}")
     }
+    
+    fun stopAllMacros() {
+        consoleViewModel.addLog(LogLevel.Warn, "E-STOP ACTIVATED - Stopping all macros")
+        macroManagerViewModel.cancelAllMacros()
+    }
 
     fun setEncryption(enabled: Boolean) {
         if (!_isServerRunning.value) {

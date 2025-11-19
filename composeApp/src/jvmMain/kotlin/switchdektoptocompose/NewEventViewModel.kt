@@ -144,7 +144,7 @@ class NewEventViewModel {
             addedAction = true
             val x = mouseX.value.toIntOrNull() ?: 0
             val y = mouseY.value.toIntOrNull() ?: 0
-            events.add(MacroEventState.MouseEvent(x, y, MouseAction.MOVE))
+            events.add(MacroEventState.MouseEvent(x, y, MouseAction.MOVE, animateMouseMovement.value))
         }
 
         if (useDelay.value) {

@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
 @Composable
@@ -46,10 +47,19 @@ fun Console(
                 modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface)
             ) {
                 items(logMessages) { message ->
+                    val color = when {
+                        message.startsWith("[Error]") -> MaterialTheme.colorScheme.error
+                        message.startsWith("[Warn]") -> Color(0xFFFFA500) // Orange
+                        message.startsWith("[Info]") -> MaterialTheme.colorScheme.onSurface
+                        message.startsWith("[Debug]") -> Color.Gray
+                        else -> MaterialTheme.colorScheme.onSurface
+                    }
+                    
                     Text(
                         text = message,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = color
                     )
                 }
             }
