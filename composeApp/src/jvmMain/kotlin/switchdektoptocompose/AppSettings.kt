@@ -14,6 +14,7 @@ object AppSettings {
     private const val SERVER_PORT_KEY = "serverPort"
     private const val SECURE_SERVER_PORT_KEY = "secureServerPort"
     private const val ESTOP_KEY_KEY = "eStopKey"
+    private const val MINIMIZE_TO_TRAY_KEY = "minimizeToTray"
 
     init {
         if (!configDir.exists()) {
@@ -60,6 +61,13 @@ object AppSettings {
         get() = properties.getProperty(ESTOP_KEY_KEY, "F12")
         set(value) {
             properties.setProperty(ESTOP_KEY_KEY, value)
+            save()
+        }
+
+    var minimizeToTray: Boolean
+        get() = properties.getProperty(MINIMIZE_TO_TRAY_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(MINIMIZE_TO_TRAY_KEY, value.toString())
             save()
         }
 

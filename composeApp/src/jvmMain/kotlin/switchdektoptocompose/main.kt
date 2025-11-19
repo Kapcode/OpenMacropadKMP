@@ -14,11 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
-import androidx.compose.ui.window.WindowPlacement
-import androidx.compose.ui.window.application
-import androidx.compose.ui.window.rememberWindowState
+import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLightLaf
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
@@ -40,6 +38,10 @@ fun main() = application {
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
+    
+    var isWindowVisible by remember { mutableStateOf(true) }
+    val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
+    val icon = painterResource("macropadIcon64.png")
 
     val macroEditorViewModel = remember {
         MacroEditorViewModel(settingsViewModel) {
@@ -82,30 +84,49 @@ fun main() = application {
             inspectorManager.stopListening()
         }
     }
-
-    Window(
-        onCloseRequest = ::exitApplication,
-        state = windowState,
-        title = "Open Macropad (Compose)"
-    ) {
-        val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
-        val eStopKey by settingsViewModel.eStopKey.collectAsState()
-
-        LaunchedEffect(macroFiles, eStopKey) {
-            triggerListener.updateActiveTriggers(macroFiles, eStopKey)
+    
+    Tray(
+        icon = icon,
+        tooltip = "Open Macropad Server",
+        menu = {
+            Item("Show", onClick = { isWindowVisible = true })
+            Separator()
+            Item("Exit", onClick = ::exitApplication)
         }
+    )
 
-        DesktopApp(
-            desktopViewModel = desktopViewModel,
-            consoleViewModel = consoleViewModel,
-            inspectorViewModel = inspectorViewModel,
-            macroEditorViewModel = macroEditorViewModel,
-            macroManagerViewModel = macroManagerViewModel,
-            settingsViewModel = settingsViewModel,
-            macroTimelineViewModel = macroTimelineViewModel,
-            newEventViewModel = newEventViewModel,
-            onExit = ::exitApplication
-        )
+    if (isWindowVisible) {
+        Window(
+            onCloseRequest = {
+                if (minimizeToTray) {
+                    isWindowVisible = false
+                } else {
+                    exitApplication()
+                }
+            },
+            state = windowState,
+            title = "Open Macropad (Compose)",
+            icon = icon
+        ) {
+            val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+            val eStopKey by settingsViewModel.eStopKey.collectAsState()
+
+            LaunchedEffect(macroFiles, eStopKey) {
+                triggerListener.updateActiveTriggers(macroFiles, eStopKey)
+            }
+
+            DesktopApp(
+                desktopViewModel = desktopViewModel,
+                consoleViewModel = consoleViewModel,
+                inspectorViewModel = inspectorViewModel,
+                macroEditorViewModel = macroEditorViewModel,
+                macroManagerViewModel = macroManagerViewModel,
+                settingsViewModel = settingsViewModel,
+                macroTimelineViewModel = macroTimelineViewModel,
+                newEventViewModel = newEventViewModel,
+                onExit = ::exitApplication
+            )
+        }
     }
 }
 

@@ -31,8 +31,9 @@ fun SettingsDialog(
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
+    val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
 
-    val dialogState = rememberDialogState(width = 600.dp, height = 450.dp)
+    val dialogState = rememberDialogState(width = 600.dp, height = 550.dp) // Increased height
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
@@ -77,6 +78,21 @@ fun SettingsDialog(
                         }
                     }
 
+                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    
+                    // --- Behavior Settings ---
+                     Text("Behavior", style = MaterialTheme.typography.titleMedium)
+                     Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Minimize to System Tray", modifier = Modifier.weight(1f))
+                        Checkbox(
+                            checked = minimizeToTray,
+                            onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
+                        )
+                    }
+                    
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // --- Server Ports ---

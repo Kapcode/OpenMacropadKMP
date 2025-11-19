@@ -18,6 +18,9 @@ class SettingsViewModel {
 
     private val _eStopKey = MutableStateFlow(AppSettings.eStopKey)
     val eStopKey = _eStopKey.asStateFlow()
+    
+    private val _minimizeToTray = MutableStateFlow(AppSettings.minimizeToTray)
+    val minimizeToTray = _minimizeToTray.asStateFlow()
 
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
@@ -59,6 +62,11 @@ class SettingsViewModel {
     fun setEStopKey(key: String) {
         _eStopKey.value = key
         AppSettings.eStopKey = key
+    }
+    
+    fun setMinimizeToTray(enabled: Boolean) {
+        _minimizeToTray.value = enabled
+        AppSettings.minimizeToTray = enabled
     }
 
     fun selectTheme(theme: String) {
