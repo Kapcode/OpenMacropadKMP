@@ -30,13 +30,13 @@ fun MacroTimelineItem(
         when (event) {
             is MacroEventState.KeyEvent -> KeyItem(event)
             is MacroEventState.MouseEvent -> MouseItem(event)
+            is MacroEventState.MouseButtonEvent -> MouseButtonItem(event)
+            is MacroEventState.ScrollEvent -> ScrollItem(event)
             is MacroEventState.DelayEvent -> DelayItem(event)
-            is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event) // Added the missing branch
+            is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event)
         }
     }
 }
-
-// ... (KeyItem, MouseItem, and DelayItem are unchanged)
 
 @Composable
 private fun KeyItem(event: MacroEventState.KeyEvent) {
@@ -75,6 +75,39 @@ private fun MouseItem(event: MacroEventState.MouseEvent) {
 }
 
 @Composable
+private fun MouseButtonItem(event: MacroEventState.MouseButtonEvent) {
+    Row(
+        modifier = Modifier.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("MOUSE BTN", fontWeight = FontWeight.Bold, color = Color(0xFFB568BB), fontSize = 12.sp)
+        Spacer(Modifier.width(16.dp))
+        Box(
+            modifier = Modifier
+                .border(1.dp, Color.Gray, shape = MaterialTheme.shapes.small)
+                .padding(horizontal = 8.dp, vertical = 4.dp)
+        ) {
+            Text("Button ${event.buttonNumber}")
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(event.action.name, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+@Composable
+private fun ScrollItem(event: MacroEventState.ScrollEvent) {
+    Row(
+        modifier = Modifier.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("SCROLL", fontWeight = FontWeight.Bold, color = Color(0xFFE6A23C), fontSize = 12.sp)
+        Spacer(Modifier.width(16.dp))
+        val amount = if (event.scrollAmount > 0) "+${event.scrollAmount}" else "${event.scrollAmount}"
+        Text("Amount: $amount", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
 private fun DelayItem(event: MacroEventState.DelayEvent) {
     Row(
         modifier = Modifier.padding(8.dp),
@@ -86,9 +119,6 @@ private fun DelayItem(event: MacroEventState.DelayEvent) {
     }
 }
 
-/**
- * A new Composable to display the SetAutoWaitEvent.
- */
 @Composable
 private fun SetAutoWaitItem(event: MacroEventState.SetAutoWaitEvent) {
     Row(

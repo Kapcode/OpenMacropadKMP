@@ -162,6 +162,9 @@ class MacroManagerViewModel(
                     eventsArray.getJSONObject(i)?.let { eventObj ->
                         when (eventObj.getString("type").lowercase()) {
                             "key" -> events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                            "mouse" -> events.add(MacroEventState.MouseEvent(eventObj.optInt("x", 0), eventObj.optInt("y", 0), MouseAction.valueOf(eventObj.getString("action").uppercase())))
+                            "mousebutton" -> events.add(MacroEventState.MouseButtonEvent(eventObj.getInt("buttonNumber"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                            "scroll" -> events.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
                             "delay" -> events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
                             "set_auto_wait" -> events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
                         }
@@ -185,7 +188,7 @@ class MacroManagerViewModel(
 
     fun confirmDeletion() {
         _filePendingDeletion.value?.let { file ->
-            // file.delete()
+            file.delete()
             refresh()
         }
         _filePendingDeletion.value = null
@@ -203,7 +206,7 @@ class MacroManagerViewModel(
 
     fun confirmMultipleDeletion() {
         _filesPendingDeletion.value?.forEach {
-            // it.delete()
+            it.delete()
         }
         _filesPendingDeletion.value = null
         refresh()

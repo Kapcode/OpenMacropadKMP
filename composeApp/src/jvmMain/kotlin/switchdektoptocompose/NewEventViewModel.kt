@@ -3,7 +3,6 @@ package switchdektoptocompose
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE, TYPE }
@@ -74,8 +73,6 @@ class NewEventViewModel {
         val events = mutableListOf<MacroEventState>()
         
         if (isTriggerEvent.value) {
-            // Trigger creation is now handled by the timeline VM directly
-            // This function will only produce regular events
             return emptyList()
         }
         
@@ -104,6 +101,41 @@ class NewEventViewModel {
                         events.add(MacroEventState.KeyEvent(char.toString(), KeyAction.RELEASE))
                     }
                 }
+            }
+        }
+
+        if (useMouseButtons.value && mouseButtonsText.value.isNotBlank()) {
+            val buttonNumber = mouseButtonsText.value.toIntOrNull()
+            if (buttonNumber != null) {
+                if (addedAction && delayBetweenActions.value) autoDelay?.let { events.add(MacroEventState.DelayEvent(it)) }
+                addedAction = true
+                when (selectedAction.value) {
+                    MacroAction.PRESS, MacroAction.`ON-PRESS` -> {
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.PRESS))
+                    }
+                    MacroAction.RELEASE, MacroAction.`ON-RELEASE` -> {
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.RELEASE))
+                    }
+                    MacroAction.PRESS_THEN_RELEASE -> {
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.PRESS))
+                        if (delayBetweenActions.value) autoDelay?.let { events.add(MacroEventState.DelayEvent(it)) }
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.RELEASE))
+                    }
+                    MacroAction.TYPE -> { 
+                         // TYPE doesn't really apply to mouse buttons in the same way, treat as press then release
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.PRESS))
+                        events.add(MacroEventState.MouseButtonEvent(buttonNumber, KeyAction.RELEASE))
+                    }
+                }
+            }
+        }
+
+        if (useMouseScroll.value && mouseScrollText.value.isNotBlank()) {
+            val scrollAmount = mouseScrollText.value.toIntOrNull()
+            if (scrollAmount != null) {
+                if (addedAction && delayBetweenActions.value) autoDelay?.let { events.add(MacroEventState.DelayEvent(it)) }
+                addedAction = true
+                events.add(MacroEventState.ScrollEvent(scrollAmount))
             }
         }
 

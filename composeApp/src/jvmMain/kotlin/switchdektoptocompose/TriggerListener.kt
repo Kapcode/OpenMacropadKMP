@@ -25,8 +25,8 @@ class TriggerListener(
     private val activeTriggers = ConcurrentHashMap<Int, ActiveTrigger>()
 
     init {
-        // Set the event dispatcher to the Swing dispatch service
-        GlobalScreen.setEventDispatcher(SwingDispatchService())
+        // REMOVED: GlobalScreen.setEventDispatcher(SwingDispatchService())
+        // This prevents JNativeHook from dispatching events on the EDT, which can cause delays if the UI is busy.
 
         val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
         logger.level = Level.INFO
