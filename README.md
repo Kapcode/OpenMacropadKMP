@@ -1,91 +1,57 @@
 # OpenMacropadKMP
 
-OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android device into a powerful, remote macropad for your desktop computer. Create and manage complex macros on the desktop application and trigger them instantly from your phone.
+OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android device into a powerful, remote macropad for your desktop computer. It includes a full-featured desktop server application for creating, managing, and executing powerful automation macros.
 
-## Main Features
+## Key Features
 
--   **Cross-Platform Control:** The server runs on any desktop (Windows, macOS, Linux), and the client is an Android app.
--   **Remote Macro Execution:** Trigger intricate macros on your desktop with a single tap on your Android device.
--   **Powerful Desktop Macro Editor:** A feature-rich editor to create, manage, and test complex macros, including key presses, delays, and triggers.
--   **Secure Communication:** All communication between the client and server is secured using WebSockets over TLS (WSS), ensuring your commands are encrypted.
--   **Automatic Network Discovery:** The Android client automatically discovers compatible servers on your local network using UDP broadcasts, making it easy to connect.
--   **Persistent State:** The active state of your macros is saved on the desktop application, so your configuration is remembered every time you launch the app.
--   **Modern UI:** Built with Compose Multiplatform for a modern and responsive user experience on both desktop and Android.
+### 🖥️ Desktop Server (Compose for Desktop)
+*   **Modern UI:** Built entirely with Jetpack Compose for Desktop for a responsive and themable interface.
+*   **Advanced Macro Editor:** 
+    *   Visual timeline editor for creating complex macros.
+    *   Support for **Keyboard Events**, **Mouse Clicks**, **Mouse Movements** (with animation), **Scrolling**, and **Delays**.
+    *   JSON-based storage for easy sharing and version control.
+*   **Global Hotkeys:** Trigger macros using any keyboard key, even when the application is in the background.
+*   **Safety First:** 
+    *   **Global Emergency Stop (E-Stop):** Instantly cancel all running macros with a configurable hotkey (default F12).
+    *   **Collision Detection:** Prevents multiple macros from running simultaneously to avoid system lockups.
+*   **Inspector Tool:** A built-in utility to inspect pixel colors (Hex/ARGB) and mouse coordinates, with optional screenshot capability.
+*   **Live Console:** Real-time logs for macro execution, errors, and client connections, with color-coded output.
+
+### 📱 Android Client
+*   **Remote Control:** Trigger desktop macros with a single tap.
+*   **Auto-Discovery:** Automatically finds OpenMacropad servers on your local network.
+*   **Secure Connection:** Uses TLS/SSL (WSS) encryption for all communications.
 
 ---
 
-## Project Structure
+## Getting Started
 
--   `composeApp`: Contains the shared code for Android and Desktop platforms using Compose Multiplatform, as well as platform-specific implementations.
+### Prerequisites
+*   **Desktop:** Java Runtime Environment (JRE) 17 or higher.
+*   **Android:** Device running Android 8.0+.
 
-## Developer Notes
+### Configuration
+*   **Macros:** Macros are saved as `.json` files. The application will prompt you to select a directory on first launch.
+*   **Network:** Ensure your firewall allows traffic on the configured port (default 8449 for secure, 8090 for plain).
 
-### A Note on Package Naming and Imports
+---
 
-This project follows the standard Kotlin/JVM convention where package names must map directly to the directory structure.
+## Architecture
 
-**Important:** The core package for shared code is `com.kapcode.open.macropad.kmps` (note the plural **'s'**).
+This project follows a clean architecture using **Kotlin Multiplatform**:
 
-For example, a file located at:
-`composeApp/src/commonMain/kotlin/com/kapcode/open/macropad/kmps/ui/components/ConnectionItem.kt`
+*   **`commonMain`**: Shared business logic and UI components (where applicable).
+*   **`jvmMain`**: Desktop-specific implementation using:
+    *   **Compose for Desktop** for UI.
+    *   **JNativeHook** for global keyboard listening.
+    *   **Java AWT Robot** for input simulation.
+    *   **Ktor** for the WebSocket server.
+*   **`androidMain`**: Android client implementation.
 
-Must be imported using:
-`import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem`
+### Developer Notes
 
-Mistyping this (e.g., as `...macropad.kmp...`) will lead to "Unresolved reference" compilation errors.
+For detailed technical documentation regarding the challenges faced during development (concurrency, native hooks, Swing/Compose interoperability), please refer to [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md).
 
-### Troubleshooting Cross-Source Set Imports
+## License
 
-A common issue in Kotlin Multiplatform projects is having the IDE or Gradle fail to resolve an import from `commonMain` into a platform-specific source set like `jvmMain` or `androidMain`, even when the code and imports are syntactically correct. This is often due to a stale or corrupted build cache.
-
-**Symptom:** You will see "Unresolved reference" errors on valid `import` statements. A "Clean Build" may not fix the issue.
-
-**Solution:** A forceful way to resolve this is to rename the package containing the code you are trying to import.
-
-1.  In the `commonMain` source set, rename the directory of the package (e.g., from `.../kmp/` to `.../kmps/`).
-2.  Update the `package` declaration at the top of all `.kt` files within that directory to match the new name.
-3.  Update the corresponding `import` statements in your `jvmMain` or `androidMain` code.
-
-This change forces Gradle and the IDE to discard the old cached structure and re-index the project from scratch, often resolving stubborn import issues. This was the solution to a persistent "Unresolved reference" error for `ConnectionItem.kt` during the development of the Compose desktop UI.
-
-### Desktop UI Migration from Swing to Compose
-
-**Current Status:** The project is undergoing a migration from a legacy Swing UI to a new UI built with Compose for Desktop.
-
-**Migration Strategy:**
-
-1.  **Decouple Logic:** Business logic (like `WifiServer`, `DesktopViewModel`, `MacroEditorViewModel`) is separated from the UI layer.
-2.  **New Compose Entry Point:** A new desktop entry point (`switchdektoptocompose/main.kt`) is being developed using Compose Multiplatform.
-3.  **ViewModel-Driven UI:** Compose UI components interact with the `DesktopViewModel` and `MacroEditorViewModel` to manage state and UI logic.
-4.  **Hybrid Approach (Transition):** The `SwingPanel` composable is used to embed existing Swing components (`RSyntaxTextArea`) within the new Compose UI, allowing for a gradual transition without losing functionality.
-5.  **Layout:** Nested `HorizontalSplitPane` and `VerticalSplitPane` components are used to replicate the complex layout of the original Swing application in a Compose-idiomatic way.
-
-**Challenges Encountered:**
-
--   **Package Name Resolution:** Navigating and resolving imports between `commonMain` and platform-specific `jvmMain` source sets, particularly when dealing with the correct package name (`com.kapcode.open.macropad.kmps`). This was addressed by consistently using the correct package name and understanding how to force cache invalidation (e.g., by renaming packages temporarily).
--   **`SwingPanel` API Compatibility:** The exact parameter names for cleanup callbacks in `SwingPanel` can vary between Compose Multiplatform versions. We encountered issues with `onDispose`, `onRelease`, and `disposer`, ultimately removing the cleanup logic temporarily to get the application compiling.
--   **Dependency Management:** Ensuring that specific Compose Multiplatform features like `splitpane` are correctly declared in `build.gradle.kts` and managed via `libs.versions.toml`.
-
-## Network Library
-
-This project uses a custom TCP socket implementation for client-server communication. It establishes a secure, end-to-end encrypted channel for exchanging `DataModel` objects.
-
-The handshake protocol features a Diffie-Hellman key exchange where the server generates and sends its DH parameters to the client. This ensures that both parties use compatible parameters for generating the shared secret key. During the handshake, the server and client also exchange device names for identification in the UI.
-
-## Desktop UI (Legacy Swing)
-
-The current desktop application is built using Java Swing.
-
-**Developer Note:** The next major step for the desktop application is to migrate the UI from Swing to Compose for Desktop. The information below pertains to the legacy Swing implementation.
-
-### UI Layout and Theming Fixes
-
-During development of the Swing UI, two main issues were addressed: missing UI elements and the lack of a modern theme.
-
--   **Issue #1: Missing UI Elements (`TabbedUI` / `MacroManagerUI`)**
-    -   **Problem:** The `TabbedUI` and `MacroManagerUI` components were being created but not added to the main `JFrame`. The frame only contained a `JSplitPane` with other status panels.
-    -   **Solution:** A new root `JSplitPane` was created to hold both the `TabbedUI` and the existing `mainSplitPane`. This `rootSplitPane` was then added to the `JFrame`, ensuring all components are part of the layout hierarchy.
-
--   **Issue #2: Dark Mode Not Applied**
-    -   **Problem:** Swing defaults to a basic, OS-dependent Look and Feel (LaF).
-    -   **Solution:** The [FlatLaf](https://www.formdev.com/flatlaf/) library was added to the project dependencies. The `FlatDarkLaf` theme is now set programmatically at the start of the `main()` function, before any UI components are created, providing a modern dark theme for the application.
+[License Name] - See LICENSE file for details.

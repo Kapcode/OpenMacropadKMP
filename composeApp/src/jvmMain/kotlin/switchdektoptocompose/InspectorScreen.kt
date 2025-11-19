@@ -34,17 +34,25 @@ fun InspectorScreen(viewModel: InspectorViewModel) {
             }
             DropdownMenu(
                 expanded = fKeyMenuExpanded,
-                onDismissRequest = { fKeyMenuExpanded = false }
+                onDismissRequest = { fKeyMenuExpanded = false },
+                modifier = Modifier.heightIn(max = 300.dp) // Limit height
             ) {
-                fKeys.forEach { key ->
-                    DropdownMenuItem(
-                        text = { Text(key) },
-                        onClick = {
-                            viewModel.onFKeySelected(key)
-                            fKeyMenuExpanded = false
-                        }
-                    )
-                }
+                 // Wrap items in a scrollable column if list is long, 
+                 // but DropdownMenu usually handles scrolling if content exceeds screen.
+                 // However, explicit sizing + scrolling is safer for desktop.
+                 Box(modifier = Modifier.sizeIn(maxHeight = 300.dp)) {
+                     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                         fKeys.forEach { key ->
+                             DropdownMenuItem(
+                                 text = { Text(key) },
+                                 onClick = {
+                                     viewModel.onFKeySelected(key)
+                                     fKeyMenuExpanded = false
+                                 }
+                             )
+                         }
+                     }
+                 }
             }
         }
 

@@ -5,6 +5,8 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -255,17 +257,22 @@ fun DesktopApp(
                                     }
                                     DropdownMenu(
                                         expanded = eStopMenuExpanded,
-                                        onDismissRequest = { eStopMenuExpanded = false }
+                                        onDismissRequest = { eStopMenuExpanded = false },
+                                        modifier = Modifier.heightIn(max = 300.dp)
                                     ) {
-                                        val fKeys = (1..12).map { "F$it" }
-                                        fKeys.forEach { key ->
-                                            DropdownMenuItem(
-                                                text = { Text(key) },
-                                                onClick = {
-                                                    settingsViewModel.setEStopKey(key)
-                                                    eStopMenuExpanded = false
+                                        Box(modifier = Modifier.sizeIn(maxHeight = 300.dp)) {
+                                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                                                val fKeys = (1..12).map { "F$it" }
+                                                fKeys.forEach { key ->
+                                                    DropdownMenuItem(
+                                                        text = { Text(key) },
+                                                        onClick = {
+                                                            settingsViewModel.setEStopKey(key)
+                                                            eStopMenuExpanded = false
+                                                        }
+                                                    )
                                                 }
-                                            )
+                                            }
                                         }
                                     }
                                 }
