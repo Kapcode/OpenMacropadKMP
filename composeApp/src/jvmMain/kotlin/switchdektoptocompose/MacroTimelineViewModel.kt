@@ -51,7 +51,13 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     }
 
     fun addEvents(newEvents: List<MacroEventState>) {
-        _events.update { it + newEvents }
+        _events.update { currentEvents ->
+            val autoWaitEvents = newEvents.filterIsInstance<MacroEventState.SetAutoWaitEvent>()
+            val otherEvents = newEvents.filterNot { it is MacroEventState.SetAutoWaitEvent }
+            
+            // Prepend auto-wait events, append the rest
+            autoWaitEvents + currentEvents + otherEvents
+        }
         updateEditorText()
     }
 

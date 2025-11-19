@@ -11,6 +11,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
@@ -47,9 +48,12 @@ fun NewEventDialog(
             val animateMouse by viewModel.animateMouseMovement.collectAsState()
             val useDelay by viewModel.useDelay.collectAsState()
             val delayText by viewModel.delayText.collectAsState()
-            val delayBetweenActions by viewModel.delayBetweenActions.collectAsState()
             val useAutoDelay by viewModel.useAutoDelay.collectAsState()
             val autoDelayText by viewModel.autoDelayText.collectAsState()
+
+            val validationState by viewModel.validationState.collectAsState()
+            val isValid = validationState.first
+            val validationMessage = validationState.second
 
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(
@@ -97,11 +101,6 @@ fun NewEventDialog(
                         }
                         
                         Divider()
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = delayBetweenActions, onCheckedChange = { viewModel.delayBetweenActions.value = it })
-                            Text("Delay between each action in this event")
-                        }
                         
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -118,14 +117,29 @@ fun NewEventDialog(
                         }
                     }
 
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        TooltipArea(
-                            tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Add Event", modifier = Modifier.padding(4.dp)) } },
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                            delayMillis = 0
-                        ) {
-                            FloatingActionButton(onClick = onAddEvent) {
-                                Icon(Icons.Default.Done, contentDescription = "Add Event")
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        if (!isValid) {
+                            Text(
+                                text = validationMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                        }
+                        
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            TooltipArea(
+                                tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text(if(isValid) "Add Event" else "Fix errors to add", modifier = Modifier.padding(4.dp)) } },
+                                modifier = Modifier.align(Alignment.BottomEnd),
+                                delayMillis = 0
+                            ) {
+                                FloatingActionButton(
+                                    onClick = { if (isValid) onAddEvent() },
+                                    containerColor = if (isValid) MaterialTheme.colorScheme.primaryContainer else Color.Gray,
+                                    contentColor = if (isValid) MaterialTheme.colorScheme.onPrimaryContainer else Color.DarkGray
+                                ) {
+                                    Icon(Icons.Default.Done, contentDescription = "Add Event")
+                                }
                             }
                         }
                     }

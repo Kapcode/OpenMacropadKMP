@@ -11,14 +11,14 @@ class MacroPlayer {
         isAutoWaitForIdle = false
         autoDelay = 0 // We will handle delays manually to allow cancellation
     }
+    
+    private var currentAutoDelay = 50L // Default manual delay
 
     suspend fun play(events: List<MacroEventState>) {
         val initialAutoDelay = robot.autoDelay
         try {
             for ((index, event) in events.withIndex()) {
                 yield() // Check for cancellation
-                // Concise logging
-                // println("Event $index: $event") 
                 
                 when (event) {
                     is MacroEventState.KeyEvent -> {
@@ -32,11 +32,11 @@ class MacroPlayer {
                                     robot.keyRelease(keyCode)
                                 }
                             }
-                            delay(50) // Manual delay
+                            delay(currentAutoDelay)
                         }
                     }
                     is MacroEventState.SetAutoWaitEvent -> {
-                        // No-op
+                        currentAutoDelay = event.delayMs.toLong()
                     }
                     is MacroEventState.DelayEvent -> {
                         delay(event.durationMs)
@@ -51,7 +51,7 @@ class MacroPlayer {
                         } else {
                             println("Warning: Mouse click via MouseEvent not supported, use MouseButtonEvent.")
                         }
-                        delay(50)
+                        delay(currentAutoDelay)
                     }
                     is MacroEventState.MouseButtonEvent -> {
                         try {
@@ -60,14 +60,14 @@ class MacroPlayer {
                                 KeyAction.PRESS -> robot.mousePress(mask)
                                 KeyAction.RELEASE -> robot.mouseRelease(mask)
                             }
-                            delay(50)
+                            delay(currentAutoDelay)
                         } catch (e: IllegalArgumentException) {
                             System.err.println("Invalid mouse button number: ${event.buttonNumber}")
                         }
                     }
                     is MacroEventState.ScrollEvent -> {
                         robot.mouseWheel(event.scrollAmount)
-                        delay(50)
+                        delay(currentAutoDelay)
                     }
                 }
             }
