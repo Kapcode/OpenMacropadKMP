@@ -19,15 +19,32 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 
 ### 📱 Android Client
 *   **Remote Control:** Trigger desktop macros with a single tap.
+*   **Freemium Model:** The app is free to use and supported by rewarded ads.
 *   **Auto-Discovery:** Automatically finds OpenMacropad servers on your local network.
 *   **Secure Connection:** Uses TLS/SSL (WSS) encryption for all communications.
+
+---
+
+## Android Freemium Model
+
+The Android app uses a "token" system to provide a free, ad-supported experience.
+
+*   **How it Works:**
+    *   You start with a generous balance of **500 tokens**.
+    *   Triggering one macro from your phone costs **1 token**.
+*   **Getting More Tokens:**
+    *   When you're running low, simply tap your token balance in the top-right corner of the app.
+    *   You'll be given the option to watch a short rewarded video ad.
+    *   After watching an ad, you'll receive **25 tokens**.
+
+This model allows the app to be free for all users, with heavy users supporting development by watching ads.
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-*   **Desktop:** Java Runtime Environment (JRE) 17 or higher.
+*   **Desktop:** Java Runtime Environment (JRE) 11 or higher.
 *   **Android:** Device running Android 8.0+.
 
 ### Configuration

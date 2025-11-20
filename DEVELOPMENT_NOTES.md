@@ -93,6 +93,18 @@ With the introduction of automated mouse movements and loops, there was a risk o
 - **Solution**:
     - Replaced `AlertDialog` with `DialogWindow`. `DialogWindow` creates a separate, always-on-top window that is not affected by the layering of Swing components within the main application window. This ensures that dialogs like the "Rename Macro" dialog are always visible to the user.
 
+## 9. Android Freemium Model
+
+### Challenge: Implement a Rewarded Ad-Based Token System
+- **Problem**: The app needed a way to monetize on Android while providing a free service. The chosen model was a freemium system where users spend "tokens" to execute macros and can earn more tokens by watching rewarded ads.
+- **Root Cause**: This required state management for the token balance, integration with Google AdMob, and UI components to display the balance and prompt users.
+- **Solution**:
+    1.  **Centralized State:** A `TokenManager` class was created as a singleton. This ensures that all parts of the app (different Activities, UI components) access and modify a single, consistent token balance. It uses `SharedPreferences` for persistence.
+    2.  **Configurable Economy:** A `BillingConstants.kt` file was created to hold the core values of the economy (`TOKENS_PER_REWARDED_AD`, `TOKENS_PER_MACRO_PRESS`, `STARTING_TOKENS`). This allows for easy tuning of the model without searching through the codebase.
+    3.  **UI Integration:** The `CommonAppBar` was modified to include a token balance display. Tapping this display shows an `AlertDialog` (`GetTokensDialog`) which prompts the user to watch an ad.
+    4.  **AdMob Integration:** A `RewardedAd.kt` file was created to encapsulate the logic for loading and showing a rewarded ad from AdMob. When a user successfully watches an ad, the `TokenManager` is called to award the specified number of tokens.
+    5.  **Token Consumption:** The `ClientActivity` was updated to call `tokenManager.spendTokens()` before sending a macro command. If the user is out of tokens, a `Toast` message is shown instead.
+
 ## Architecture Overview
 
 *   **UI Layer:** Pure Jetpack Compose for Desktop (`DesktopApp`, `InspectorScreen`, `Console`, etc.).
