@@ -36,6 +36,7 @@ fun main() = application {
     val newEventViewModel = remember { NewEventViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
+    val recordMacroViewModel = remember { RecordMacroViewModel() }
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
     lateinit var macroManagerViewModel: MacroManagerViewModel
     
@@ -119,6 +120,7 @@ fun main() = application {
                 desktopViewModel = desktopViewModel,
                 consoleViewModel = consoleViewModel,
                 inspectorViewModel = inspectorViewModel,
+                recordMacroViewModel = recordMacroViewModel,
                 macroEditorViewModel = macroEditorViewModel,
                 macroManagerViewModel = macroManagerViewModel,
                 settingsViewModel = settingsViewModel,
@@ -137,6 +139,7 @@ fun DesktopApp(
     desktopViewModel: DesktopViewModel,
     consoleViewModel: ConsoleViewModel,
     inspectorViewModel: InspectorViewModel,
+    recordMacroViewModel: RecordMacroViewModel,
     macroEditorViewModel: MacroEditorViewModel,
     macroManagerViewModel: MacroManagerViewModel,
     settingsViewModel: SettingsViewModel,
@@ -156,7 +159,6 @@ fun DesktopApp(
         }
     }
     
-    // Add a hook to listen to logs and show errors/E-Stop in snackbar
     val logs by consoleViewModel.logMessages.collectAsState()
     LaunchedEffect(logs) {
         if (logs.isNotEmpty()) {
@@ -182,6 +184,7 @@ fun DesktopApp(
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
+    var showRecordDialog by remember { mutableStateOf(false) }
 
     if (showSettingsDialog) {
         SettingsDialog(
@@ -212,6 +215,18 @@ fun DesktopApp(
                     macroTimelineViewModel.addEvents(events)
                 }
                 showNewEventDialog = false
+            }
+        )
+    }
+    
+    if (showRecordDialog) {
+        RecordMacroDialog(
+            viewModel = recordMacroViewModel,
+            selectedTheme = selectedTheme,
+            onDismissRequest = { showRecordDialog = false },
+            onStartRecording = {
+                macroManagerViewModel.startRecording(recordMacroViewModel)
+                showRecordDialog = false
             }
         )
     }
@@ -269,7 +284,6 @@ fun DesktopApp(
                                 }
                             }
                             
-                            // E-Stop Key Selector
                             TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Emergency Stop Key", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
                                 var eStopMenuExpanded by remember { mutableStateOf(false) }
                                 Box {
@@ -313,7 +327,6 @@ fun DesktopApp(
                             
                             Spacer(Modifier.width(16.dp))
 
-                            // --- Inspector ---
                             Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
                                 InspectorScreen(viewModel = inspectorViewModel)
                             }
@@ -323,11 +336,9 @@ fun DesktopApp(
                         HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
                             first(minSize = 250.dp) {
                                Column {
-                                   // --- Connected Devices ---
                                    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
                                        ConnectedDevicesScreen(devices = connectedDevices)
                                    }
-                                   // --- Console ---
                                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
                                        Console(viewModel = consoleViewModel)
                                    }
@@ -341,6 +352,10 @@ fun DesktopApp(
                                     onAddEventClicked = {
                                         newEventViewModel.reset()
                                         showNewEventDialog = true
+                                    },
+                                    onRecordMacroClicked = {
+                                        recordMacroViewModel.reset()
+                                        showRecordDialog = true
                                     }
                                 )
                             }

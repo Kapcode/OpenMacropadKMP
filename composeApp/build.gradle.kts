@@ -27,6 +27,8 @@ plugins {
 }
 
 kotlin {
+    jvmToolchain(11) // Add this line to specify the JDK version
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -118,10 +120,10 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.kapcode.open.macropad.kmp.MainKt"
+        mainClass = "switchdektoptocompose.MainKt"
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.kapcode.open.macropad.kmp"
+            packageName = "OpenMacropadServer"
             packageVersion = "1.0.0"
         }
     }

@@ -12,7 +12,8 @@ fun MacroEditingArea(
     macroManagerViewModel: MacroManagerViewModel,
     macroEditorViewModel: MacroEditorViewModel,
     macroTimelineViewModel: MacroTimelineViewModel,
-    onAddEventClicked: () -> Unit // Added callback
+    onAddEventClicked: () -> Unit, // Added callback
+    onRecordMacroClicked: () -> Unit
 ) {
     val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.7f)
     val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
@@ -33,7 +34,8 @@ fun MacroEditingArea(
         second(minSize = 150.dp) {
             MacroTimelineScreen(
                 viewModel = macroTimelineViewModel,
-                onAddEventClicked = onAddEventClicked // Pass callback down
+                onAddEventClicked = onAddEventClicked, // Pass callback down
+                onRecordMacroClicked = onRecordMacroClicked
             )
         }
     }

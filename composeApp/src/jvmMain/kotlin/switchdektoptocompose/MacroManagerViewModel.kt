@@ -181,6 +181,31 @@ class MacroManagerViewModel(
         }
     }
     
+    fun startRecording(recordMacroViewModel: RecordMacroViewModel) {
+        consoleViewModel.addLog(LogLevel.Info, "Starting macro recording...")
+        val recorder = MacroRecorder(recordMacroViewModel) { recordedJson ->
+            viewModelScope.launch {
+                val macroName = recordMacroViewModel.macroName.value
+                val filename = macroName.replace(Regex("[^a-zA-Z0-9_]"), "") + ".json"
+                val file = File(settingsViewModel.macroDirectory.value, filename)
+                
+                // Write the file
+                file.writeText(recordedJson)
+                
+                // Refresh the macro list
+                refresh()
+                
+                // Find the new macro state and open it in the editor
+                _macroFiles.value.find { it.file == file }?.let { newMacroState ->
+                     onEditMacroRequested(newMacroState)
+                }
+                
+                consoleViewModel.addLog(LogLevel.Info, "Macro '$macroName' saved to $filename")
+            }
+        }
+        recorder.start()
+    }
+    
     fun cancelAllMacros() {
         playbackJob.cancelChildren()
         val msg = "All running macros have been cancelled."

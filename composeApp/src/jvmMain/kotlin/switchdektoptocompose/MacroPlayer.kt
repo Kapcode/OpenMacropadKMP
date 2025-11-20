@@ -9,7 +9,7 @@ import java.awt.event.KeyEvent
 
 class MacroPlayer {
     private val robot = Robot().apply {
-        isAutoWaitForIdle = false
+        isAutoWaitForIdle = true
         autoDelay = 0 // We will handle delays manually to allow cancellation
     }
     

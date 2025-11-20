@@ -25,6 +25,7 @@ import com.mohamedrejeb.compose.dnd.reorder.rememberReorderState
 fun MacroTimelineScreen(
     viewModel: MacroTimelineViewModel,
     onAddEventClicked: () -> Unit,
+    onRecordMacroClicked: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val triggerEvent by viewModel.triggerEvent.collectAsState()
@@ -57,7 +58,7 @@ fun MacroTimelineScreen(
                     },
                     delayMillis = 0
                 ) {
-                    IconButton(onClick = { /* TODO */ }, enabled = false) {
+                    IconButton(onClick = onRecordMacroClicked) {
                         Icon(Icons.Default.RadioButtonChecked, contentDescription = "Record Macro")
                     }
                 }
