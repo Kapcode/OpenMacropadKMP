@@ -35,7 +35,7 @@ class MacroKtorClient(
                 scheme = if (isSecure) "wss" else "ws",
                 host = this@MacroKtorClient.host,
                 port = this@MacroKtorClient.port,
-                path = "/ws?deviceName=$deviceName"
+                path = "/?deviceName=$deviceName"
             )
         }
 

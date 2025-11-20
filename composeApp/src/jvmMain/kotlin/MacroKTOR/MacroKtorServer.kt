@@ -3,11 +3,13 @@ package MacroKTOR
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import io.ktor.server.plugins.callloging.CallLogging
+import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import java.io.File
+import org.slf4j.event.Level
 import java.io.InputStream
 import java.security.KeyStore
 
@@ -25,8 +27,13 @@ class MacroKtorServer(
         if (isRunning()) return
 
         val environment = applicationEngineEnvironment {
+            // Define the application modules
             module {
                 install(WebSockets)
+                install(CallLogging) {
+                    level = Level.INFO
+                    filter { call -> call.request.path().startsWith("/") }
+                }
                 routing {
                     webSocket("/") {
                         val clientId = call.request.queryParameters["id"] ?: "UnknownDevice"
@@ -49,21 +56,23 @@ class MacroKtorServer(
                 }
             }
 
+            // Configure connectors at the top level
             if (isSecure) {
                 val keystoreStream: InputStream? = this::class.java.classLoader.getResourceAsStream("keystore.p12")
                 if (keystoreStream == null) {
                     throw RuntimeException("Keystore not found in resources. Cannot start encrypted server.")
                 }
-                
+
                 val keystorePassword = "n678nbccfibliboo"
                 val privateKeyPassword = "n678nbccfibliboo"
-                
+                val keyAlias = "your-alias-name"
+
                 val keystore = KeyStore.getInstance("PKCS12")
                 keystore.load(keystoreStream, keystorePassword.toCharArray())
-                
+
                 sslConnector(
                     keyStore = keystore,
-                    keyAlias = "your-alias-name",
+                    keyAlias = keyAlias,
                     keyStorePassword = { keystorePassword.toCharArray() },
                     privateKeyPassword = { privateKeyPassword.toCharArray() }
                 ) {
@@ -77,6 +86,7 @@ class MacroKtorServer(
                 }
             }
         }
+
         server = embeddedServer(Netty, environment)
         server?.start(wait = false)
     }

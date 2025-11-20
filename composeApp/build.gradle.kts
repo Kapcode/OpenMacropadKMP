@@ -73,6 +73,7 @@ kotlin {
             implementation("io.ktor:ktor-server-core:2.3.8")
             implementation("io.ktor:ktor-server-netty:2.3.8")
             implementation("io.ktor:ktor-server-websockets:2.3.8")
+            implementation("io.ktor:ktor-server-call-logging-jvm:2.3.8") // Add this line
             implementation("com.github.kwhat:jnativehook:2.2.2")
             implementation("com.fifesoft:rsyntaxtextarea:3.6.0")
             implementation("com.formdev:flatlaf:3.4.1")
