@@ -85,6 +85,14 @@ With the introduction of automated mouse movements and loops, there was a risk o
     - The `MainActivity` banner was initially obscured by the system navigation bar. This was fixed by wrapping the `AdmobBanner` in a `BottomAppBar`, which correctly respects system insets provided by `enableEdgeToEdge`.
     - The `CommonAppBar` was refactored to accept a composable `navigationIcon` parameter, making it more flexible for different screens (e.g., showing a menu icon on `ClientActivity` and a back arrow on `MainActivity`'s settings screen).
 
+## 8. Compose for Desktop Dialogs
+
+### Challenge: Dialogs Hidden by Swing Components
+- **Problem**: Standard `AlertDialog` composables were being obscured by the Swing-based code editor component.
+- **Root Cause**: The layering of standard dialogs was incompatible with the heavyweight Swing `ComposePanel`.
+- **Solution**:
+    - Replaced `AlertDialog` with `DialogWindow`. `DialogWindow` creates a separate, always-on-top window that is not affected by the layering of Swing components within the main application window. This ensures that dialogs like the "Rename Macro" dialog are always visible to the user.
+
 ## Architecture Overview
 
 *   **UI Layer:** Pure Jetpack Compose for Desktop (`DesktopApp`, `InspectorScreen`, `Console`, etc.).

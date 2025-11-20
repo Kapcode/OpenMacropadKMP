@@ -21,6 +21,15 @@ import androidx.compose.ui.unit.dp
 fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
     val macroFiles by viewModel.macroFiles.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
+    val macroBeingRenamed by viewModel.macroBeingRenamed.collectAsState()
+
+    macroBeingRenamed?.let { macro ->
+        RenameMacroDialog(
+            currentName = macro.name,
+            onDismissRequest = { viewModel.cancelRename() },
+            onRename = { newName -> viewModel.confirmRename(newName) }
+        )
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
@@ -61,6 +70,7 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
                     onSelectForDeletion = { isSelected -> viewModel.selectMacroForDeletion(macroState.id, isSelected) },
                     onPlay = { viewModel.onPlayMacro(macroState) },
                     onEdit = { viewModel.onEditMacro(macroState) },
+                    onRename = { viewModel.onRenameMacro(macroState) },
                     onDelete = { viewModel.onDeleteMacro(macroState) }
                 )
                 Divider()
@@ -78,6 +88,7 @@ private fun MacroItem(
     onSelectForDeletion: (Boolean) -> Unit,
     onPlay: () -> Unit,
     onEdit: () -> Unit,
+    onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
     Row(
@@ -118,6 +129,11 @@ private fun MacroItem(
             TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Edit Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
                 IconButton(onClick = onEdit) {
                     Icon(Icons.Default.Edit, contentDescription = "Edit Macro")
+                }
+            }
+            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Rename Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                IconButton(onClick = onRename, enabled = state.file != null) {
+                    Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename Macro")
                 }
             }
             TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {

@@ -61,7 +61,10 @@ class MacroManagerViewModel(
 
     private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
     val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
-    
+
+    private val _macroBeingRenamed = MutableStateFlow<MacroFileState?>(null)
+    val macroBeingRenamed: StateFlow<MacroFileState?> = _macroBeingRenamed.asStateFlow()
+
     private val playbackJob = SupervisorJob()
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
@@ -293,6 +296,24 @@ class MacroManagerViewModel(
 
     fun onEditMacro(macro: MacroFileState) {
         onEditMacroRequested(macro)
+    }
+
+    fun onRenameMacro(macro: MacroFileState) {
+        _macroBeingRenamed.value = macro
+    }
+
+    fun confirmRename(newName: String) {
+        _macroBeingRenamed.value?.file?.let { file ->
+            val newFile = File(file.parent, "$newName.json")
+            if (file.renameTo(newFile)) {
+                refresh()
+            }
+        }
+        _macroBeingRenamed.value = null
+    }
+
+    fun cancelRename() {
+        _macroBeingRenamed.value = null
     }
 
     fun toggleSelectionMode() {
