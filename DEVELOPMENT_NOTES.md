@@ -50,23 +50,45 @@ With the introduction of automated mouse movements and loops, there was a risk o
 
 ## 5. Server-Client Connectivity
 
-### Challenge: Client Could Not Discover the Server
-- **Problem**: After replacing the legacy `WifiServer` with the new Ktor-based `MacroKtorServer`, the Android client was unable to find the desktop server on the network.
-- **Root Cause**: The new server implementation was missing the UDP broadcast discovery mechanism that the client relies on.
-- **Solution**: A `ServerDiscoveryAnnouncer` class was created for the desktop application. This class periodically broadcasts a UDP packet on the local network containing a JSON payload with the server's name, port, and security status (`isSecure`). The Android client's `ClientDiscovery` service was updated to parse this new payload.
+### Challenge: SSL/TLS Connection Failure & Keystore Management
+- **Problem**: The desktop server would crash on startup in the production-packaged build, complaining about a missing or incorrect `keystore.p12` file.
+- **Root Cause**: This was a multi-part issue related to how the SSL/TLS certificate was being created, located, and accessed.
+    1.  **Hardcoded Path:** The code was initially looking for the keystore at a fixed file system path (e.g., `/home/kyle/keystore.p12`), which doesn't exist when the app is installed in `/opt/`.
+    2.  **Password Mismatch:** The password used to open the keystore was hardcoded in `MacroKtorServer.kt`. If this password didn't exactly match the password used during the `.p12` file's creation, the server would crash with an `IOException: keystore password was incorrect`.
+    3.  **Build-Time vs. Runtime:** The `.p12` file is a **runtime dependency**, not source code. It should never be committed to version control.
+- **Solution & Workflow**:
+    1.  **Generation:** A self-signed PKCS12 keystore (`.p12`) is created **once** using the `keytool` command. This requires setting a password and an alias.
+        ```bash
+        keytool -genkeypair -alias your-alias-name -keyalg RSA -keysize 2048 -storetype PKCS12 -keystore keystore.p12 -validity 10000
+        ```
+    2.  **Placement:** The generated `keystore.p12` file is manually placed in the `composeApp/src/jvmMain/resources/` directory before building. This ensures it gets bundled into the application's resources.
+    3.  **Code Access:** The `MacroKtorServer` was modified to load the keystore as a resource stream from the classpath (`this::class.java.classLoader.getResourceAsStream("keystore.p12")`). This works regardless of the installation directory.
+    4.  **Configuration:** The alias and passwords used during generation are hardcoded into `MacroKtorServer.kt`. It is the developer's responsibility to ensure these values match the `.p12` file.
+    5.  **Security:** The `keystore.p12` file is added to `.gitignore` to prevent the private key from ever being committed to version control.
 
-### Challenge: SSL/TLS Connection Failure
-- **Problem**: Even after discovery was fixed, the Android client would attempt to connect, fail five times, and then exit. Logcat showed "certificate trust" errors.
-- **Root Cause**: This was a multi-part issue:
-    1.  **Incorrect Keystore Path**: The server was hardcoded to look for the `keystore.p12` file in the user's home directory (`~/.open-macropad/`), but the file was located in the project's root directory.
-    2.  **Silent Server Failure**: When the keystore was not found, the server would fail to start its encrypted listener *silently* but would still broadcast that it was a secure server. The client would then try to connect to a non-existent secure port.
-    3.  **Client Reconnection Logic**: The `MacroKtorClient` was incorrectly closing the entire shared `HttpClient` instance on every disconnect, which prevented the client from being able to attempt reconnection.
-- **Solution**:
-    1.  The path in `MacroKtorServer.kt` was corrected to point to the `keystore.p12` file in the project root.
-    2.  The server was modified to throw a `RuntimeException` if it is configured to use encryption but cannot find the keystore file, preventing it from starting in a broken state.
-    3.  The `client.close()` call was removed from the `MacroKtorClient`'s `close()` method, ensuring the underlying `HttpClient` persists for reconnection attempts.
+## 6. Desktop Packaging & Distribution
 
-## 6. State Management on Desktop
+### Challenge: JNativeHook "Permission Denied" on Linux
+- **Problem:** After being packaged into a `.deb` or `.bin` installer and run from a system directory (like `/opt/`), the application would crash with `UnsatisfiedLinkError: ... (Permission denied)` when trying to initialize `JNativeHook`.
+- **Root Cause:** This is a two-part Linux security issue:
+    1.  **User Permissions:** Standard users are not allowed to listen to the global input device stream for security reasons.
+    2.  **File Permissions:** The native library (`.so` file) for JNativeHook was being packaged without the "executable" permission bit set.
+- **Solution:** A robust, multi-layered solution was implemented.
+    1.  **User Group:** The user must be added to the `input` group, which has the rights to read system-wide input events. This is a one-time setup command for the user, followed by a mandatory logout/login. The `README.md` was updated with these user instructions.
+        ```bash
+        sudo usermod -a -G input $USER
+        ```
+    2.  **Gradle File Permissions:** To fix the file permission issue directly, a `doLast` block was added to the `packageDistributionForCurrentOS` task in `build.gradle.kts`. This script automatically runs `chmod +x` on the JNativeHook `.so` file after it's placed in the build directory, ensuring it's always executable in the final package.
+
+### Challenge: Build Cache Issues
+- **Problem:** During troubleshooting, changes made to files (like updating passwords in `MacroKtorServer.kt`) were not reflected in the final packaged application, causing the same error to repeat.
+- **Root Cause:** Gradle's caching mechanism was reusing old, compiled outputs instead of rebuilding with the new code.
+- **Solution:** When troubleshooting packaging issues, always run the build with the `clean` task to ensure a fresh build from source.
+    ```bash
+    ./gradlew clean :composeApp:createDistributable
+    ```
+
+## 7. State Management on Desktop
 
 ### Challenge: Macro Switch State Was Not Persistent
 - **Problem**: The "active" state of the macro switches in the desktop `MacroManagerScreen` would reset to `off` every time the application was relaunched.
@@ -76,7 +98,7 @@ With the introduction of automated mouse movements and loops, there was a risk o
     2.  The `MacroManagerViewModel` now loads these properties on startup.
     3.  Whenever a macro's `isActive` state is toggled, the new state is written to the properties file, ensuring persistence across application launches.
 
-## 7. Android UI and Build Issues
+## 8. Android UI and Build Issues
 
 ### Challenge: UI Layout and Component Refactoring
 - **Problem**: Several UI adjustments were needed, including adding ad banners, handling navigation bar overlap, and modifying the app bar.
@@ -85,7 +107,7 @@ With the introduction of automated mouse movements and loops, there was a risk o
     - The `MainActivity` banner was initially obscured by the system navigation bar. This was fixed by wrapping the `AdmobBanner` in a `BottomAppBar`, which correctly respects system insets provided by `enableEdgeToEdge`.
     - The `CommonAppBar` was refactored to accept a composable `navigationIcon` parameter, making it more flexible for different screens (e.g., showing a menu icon on `ClientActivity` and a back arrow on `MainActivity`'s settings screen).
 
-## 8. Compose for Desktop Dialogs
+## 9. Compose for Desktop Dialogs
 
 ### Challenge: Dialogs Hidden by Swing Components
 - **Problem**: Standard `AlertDialog` composables were being obscured by the Swing-based code editor component.
@@ -93,7 +115,7 @@ With the introduction of automated mouse movements and loops, there was a risk o
 - **Solution**:
     - Replaced `AlertDialog` with `DialogWindow`. `DialogWindow` creates a separate, always-on-top window that is not affected by the layering of Swing components within the main application window. This ensures that dialogs like the "Rename Macro" dialog are always visible to the user.
 
-## 9. Android Freemium Model
+## 10. Android Freemium Model
 
 ### Challenge: Implement a Rewarded Ad-Based Token System
 - **Problem**: The app needed a way to monetize on Android while providing a free service. The chosen model was a freemium system where users spend "tokens" to execute macros and can earn more tokens by watching rewarded ads.

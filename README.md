@@ -51,10 +51,25 @@ This model allows the app to be free for all users, with heavy users supporting 
 ## Getting Started
 
 ### Prerequisites
-*   **Desktop:** Java Runtime Environment (JRE) 11 or higher.
+*   **Desktop:** The provided installers for Windows (`.msi`), macOS (`.dmg`), and Linux (`.deb` or `.bin`) bundle the necessary Java Runtime automatically. No separate Java installation is required.
 *   **Android:** Device running Android 8.0+.
 
-### Configuration
+### Desktop Installation
+
+#### Linux
+The global hotkey feature requires permission to listen to system-wide input events.
+
+1.  **Grant Permissions:** Before installing, add your user to the `input` group. Open a terminal and run:
+    ```bash
+    sudo usermod -a -G input $USER
+    ```
+2.  **Log Out:** You **must log out and log back in** for this change to take effect.
+3.  **Install:** Run the provided `.deb` or `.bin` installer.
+
+#### Windows & macOS
+Run the provided `.msi` (Windows) or `.dmg` (macOS) installer.
+
+#### General Configuration
 *   **Macros:** Macros are saved as `.json` files. The application will prompt you to select a directory on first launch.
 *   **Network:** Ensure your firewall allows traffic on the configured port (default 8449 for secure, 8090 for plain).
 

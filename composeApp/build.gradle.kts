@@ -35,11 +35,7 @@ kotlin {
         }
     }
 
-    jvm {
-        compilerOptions {
-            jvmTarget.set(JvmTarget.JVM_11)
-        }
-    }
+    jvm()
 
     sourceSets {
         androidMain.dependencies {
@@ -101,6 +97,9 @@ android {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
             excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+            excludes += "META-INF/*.RSA"
+            excludes += "META-INF/*.SF"
+            excludes += "META-INF/*.DSA"
         }
     }
     buildTypes {
@@ -125,6 +124,30 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "OpenMacropadServer"
             packageVersion = "1.0.0"
+        }
+    }
+}
+
+// Exclude signature files from all Jar tasks to prevent SecurityException
+tasks.withType<Jar> {
+    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+}
+
+// This block will execute after the main packaging task is done.
+// It specifically finds the JNativeHook .so file and makes it executable.
+tasks.findByName("packageDistributionForCurrentOS")?.let {
+    it.doLast {
+        val osName = System.getProperty("os.name").toLowerCase()
+        if (osName.contains("linux")) {
+            val libDir = project.layout.buildDirectory.dir("compose/binaries/main/app/lib/app")
+            libDir.get().asFile.listFiles()?.forEach { file ->
+                if (file.name.contains("JNativeHook") && file.name.endsWith(".so")) {
+                    println("Making JNativeHook library executable: ${file.name}")
+                    exec {
+                        commandLine("chmod", "+x", file.absolutePath)
+                    }
+                }
+            }
         }
     }
 }

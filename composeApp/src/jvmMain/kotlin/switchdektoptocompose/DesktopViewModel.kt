@@ -131,10 +131,12 @@ class DesktopViewModel(
     }
 
     fun sendMacroListToAllClients() {
-        val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-        val macroListString = "macros:${macroNames.joinToString(",")}"
-        server.sendToAll(macroListString)
-        consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to all clients")
+        viewModelScope.launch {
+            val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+            val macroListString = "macros:${macroNames.joinToString(",")}"
+            server.sendToAll(macroListString)
+            consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to all clients")
+        }
     }
 
     private fun onClientConnected(clientId: String, clientName: String) {
