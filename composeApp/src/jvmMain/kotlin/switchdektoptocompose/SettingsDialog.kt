@@ -32,6 +32,7 @@ fun SettingsDialog(
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
+    val hardEstop by settingsViewModel.hardEstop.collectAsState()
 
     val dialogState = rememberDialogState(width = 600.dp, height = 550.dp) // Increased height
 
@@ -92,7 +93,17 @@ fun SettingsDialog(
                             onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
                         )
                     }
-                    
+                     Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Hard E-Stop", modifier = Modifier.weight(1f))
+                        Checkbox(
+                            checked = hardEstop,
+                            onCheckedChange = { settingsViewModel.setHardEstop(it) }
+                        )
+                    }
+
                     Divider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // --- Server Ports ---

@@ -63,6 +63,9 @@ class DesktopViewModel(
     fun stopAllMacros() {
         consoleViewModel.addLog(LogLevel.Warn, "E-STOP ACTIVATED - Stopping all macros")
         macroManagerViewModel.cancelAllMacros()
+        if (settingsViewModel.hardEstop.value) {
+            setMacroExecutionEnabled(false)
+        }
     }
 
     fun setEncryption(enabled: Boolean) {

@@ -22,6 +22,9 @@ class SettingsViewModel {
     private val _minimizeToTray = MutableStateFlow(AppSettings.minimizeToTray)
     val minimizeToTray = _minimizeToTray.asStateFlow()
 
+    private val _hardEstop = MutableStateFlow(AppSettings.hardEstop)
+    val hardEstop = _hardEstop.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -67,6 +70,11 @@ class SettingsViewModel {
     fun setMinimizeToTray(enabled: Boolean) {
         _minimizeToTray.value = enabled
         AppSettings.minimizeToTray = enabled
+    }
+
+    fun setHardEstop(enabled: Boolean) {
+        _hardEstop.value = enabled
+        AppSettings.hardEstop = enabled
     }
 
     fun selectTheme(theme: String) {
