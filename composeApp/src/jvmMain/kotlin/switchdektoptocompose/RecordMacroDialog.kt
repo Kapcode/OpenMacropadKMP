@@ -37,6 +37,10 @@ fun RecordMacroDialog(
             val useRecordingDuration by viewModel.useRecordingDuration.collectAsState()
             val recordingDurationMs by viewModel.recordingDurationMs.collectAsState()
             val selectedStopKey by viewModel.selectedStopKey.collectAsState()
+            
+            val validationState by viewModel.validationState.collectAsState()
+            val isValid = validationState.first
+            val validationMessage = validationState.second
 
             Surface(modifier = Modifier.fillMaxSize()) {
                 Column(
@@ -76,7 +80,8 @@ fun RecordMacroDialog(
                         value = macroName,
                         onValueChange = { viewModel.macroName.value = it },
                         label = { Text("Macro Name") },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        isError = !isValid
                     )
                     
                     // Recording Stop Condition
@@ -101,11 +106,18 @@ fun RecordMacroDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                         if (!isValid) {
+                            Text(
+                                text = validationMessage,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
                         Button(onClick = onDismissRequest) {
                             Text("Cancel")
                         }
                         Spacer(Modifier.width(16.dp))
-                        Button(onClick = onStartRecording) {
+                        Button(onClick = { if (isValid) onStartRecording() }, enabled = isValid) {
                             Text("Start Recording")
                         }
                     }

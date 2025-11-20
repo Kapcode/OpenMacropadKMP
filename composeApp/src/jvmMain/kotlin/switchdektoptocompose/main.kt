@@ -36,34 +36,37 @@ fun main() = application {
     val newEventViewModel = remember { NewEventViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
-    val recordMacroViewModel = remember { RecordMacroViewModel() }
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
-    lateinit var macroManagerViewModel: MacroManagerViewModel
     
-    var isWindowVisible by remember { mutableStateOf(true) }
-    val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
-    val icon = painterResource("macropadIcon64.png")
-
+    val macroManagerViewModel = remember {
+        MacroManagerViewModel(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            onEditMacroRequested = { /* Will be updated below */ },
+            onMacrosUpdated = {
+                desktopViewModel.sendMacroListToAllClients()
+            }
+        )
+    }
+    
+    val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
+    
     val macroEditorViewModel = remember {
         MacroEditorViewModel(settingsViewModel) {
             macroManagerViewModel.refresh()
         }
     }
 
-    macroManagerViewModel = remember {
-        MacroManagerViewModel(
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            onEditMacroRequested = { macroState ->
-                macroEditorViewModel.openOrSwitchToTab(macroState)
-            },
-            onMacrosUpdated = {
-                desktopViewModel.sendMacroListToAllClients()
-            }
-        )
+    // Now that all VMs are created, we can set the circular dependencies
+    macroManagerViewModel.onEditMacroRequested = { macroState ->
+        macroEditorViewModel.openOrSwitchToTab(macroState)
     }
-
     desktopViewModel.macroManagerViewModel = macroManagerViewModel
+    
+    var isWindowVisible by remember { mutableStateOf(true) }
+    val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
+    val icon = painterResource("macropadIcon64.png")
+
 
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
 
@@ -181,6 +184,7 @@ fun DesktopApp(
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
+    val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
