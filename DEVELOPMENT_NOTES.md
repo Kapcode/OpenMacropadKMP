@@ -135,33 +135,89 @@ With the introduction of automated mouse movements and loops, there was a risk o
 *   **Automation:** `java.awt.Robot` for simulating input events.
 *   **Persistence:** JSON for macro definitions, `Properties` file for application settings and active macro state.
 
-## Building from Source
+## Development & Building Instructions
 
-### Prerequisites (if not using Android Studio)
+### General Prerequisites
+*   **JDK 17 or higher:** A Java Development Kit is required to run Gradle and build the project. We recommend using a distribution like [Eclipse Temurin from Adoptium](https://adoptium.net/).
+*   Ensure the `JAVA_HOME` environment variable is correctly set to your JDK installation path.
 
-1.  **JDK 11:** This project requires JDK version 11. You can download it from a provider like [Adoptium Temurin](https://adoptium.net/temurin/releases/?version=11).
-2.  **Android SDK:** You need the Android SDK Command-Line Tools.
-    *   Download the tools from the [Android Studio downloads page](https://developer.android.com/tools) (scroll down to "Command line tools only").
-    *   Create a directory for your Android SDK (e.g., `~/Android/sdk` or `C:\Android\sdk`).
-    *   Unzip the downloaded tools into the created directory.
-3.  **Environment Variables:**
-    *   Set `JAVA_HOME` to the installation path of your JDK 11.
-    *   Set `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) to the path of your Android SDK directory.
-    *   Add the JDK `bin` directory and the Android SDK `cmdline-tools/latest/bin` and `platform-tools` directories to your system's `PATH`.
+### Building the Desktop App
+The desktop application is built using Compose for Desktop. The build command generates a native, distributable package for the operating system you are currently running on.
 
-### Building the Desktop Application
+#### Building on Windows (.msi / .exe)
+1.  **Prerequisites:**
+    *   **Install the WiX Toolset v3:** The build process uses `jpackage` (from the JDK), which requires the WiX Toolset v3 to create `.msi` installers. The main WiX website promotes newer versions that are not always compatible, so follow these specific steps:
+        a.  Go to the official [WiX v3 GitHub Releases page](https://github.com/wixtoolset/wix3/releases).
+        b.  Download the `.exe` installer for a stable release. **v3.11.2** is a highly recommended and compatible version.
+        c.  **Direct Download Link:** You can use this link for the recommended `wix311.exe` installer: [https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe](https://github.com/wixtoolset/wix3/releases/download/wix3112rtm/wix311.exe)
+        d.  Run the downloaded installer and complete the setup using the default options. No further configuration is needed.
 
-Once the prerequisites are installed and configured, you can build the native desktop distribution from the project's root directory:
+2.  **Build Command:**
+    *   Open a terminal (Command Prompt or PowerShell) in the project's root directory.
+    *   Run the following command:
+        ```bash
+        # In Command Prompt (CMD)
+        gradlew :composeApp:packageDistributionForCurrentOS
 
-**For Windows:**
-```bash
-./gradlew :composeApp:packageDistributionForCurrentOs
-```
+        # In PowerShell
+        ./gradlew :composeApp:packageDistributionForCurrentOS
+        ```
 
-**For macOS or Linux:**
-```bash
-./gradlew :composeApp:packageDistributionForCurrentOs
-```
+3.  **Output Location:**
+    *   The packaged application (`.exe` and `.msi` installer) will be located in: `composeApp/build/compose/binaries/main/app/`
+
+#### Building on macOS (.dmg)
+1.  **Build Command:**
+    *   Open a terminal in the project's root directory.
+    *   Make the Gradle wrapper executable (you only need to do this once): `chmod +x ./gradlew`
+    *   Run the packaging command: `./gradlew :composeApp:packageDistributionForCurrentOS`
+
+2.  **Output Location:**
+    *   The packaged application (`.dmg` file) will be located in: `composeApp/build/compose/binaries/main/app/`
+
+#### Building on Linux (.deb / .rpm)
+1.  **Prerequisites (may be required):**
+    *   Depending on your distribution, you might need to install packaging tools like `fakeroot` or `dpkg-dev`.
+
+2.  **Build Command:**
+    *   Open a terminal in the project's root directory.
+    *   Make the Gradle wrapper executable (you only need to do this once): `chmod +x ./gradlew`
+    *   Run the packaging command: `./gradlew :composeApp:packageDistributionForCurrentOS`
+
+3.  **Output Location:**
+    *   The packaged application (`.deb` or `.rpm` file) will be located in: `composeApp/build/compose/binaries/main/app/`
+
+### Building the Android App (.apk / .aab)
+The Android application can be built directly from Android Studio or via the command line.
+
+#### Using Android Studio (Recommended)
+1.  Open the project in Android Studio.
+2.  To build a debug APK for testing, select the `composeApp` run configuration and click the "Run" button (▶️).
+3.  To build a release bundle for the Google Play Store, go to **Build -> Generate Signed Bundle / APK...** and follow the on-screen instructions.
+
+#### Using the Command Line
+1.  Open a terminal in the project's root directory.
+2.  Run one of the following commands:
+    *   **To build a debug APK:**
+        ```bash
+        # On Windows
+        gradlew :composeApp:assembleDebug
+
+        # On macOS/Linux
+        ./gradlew :composeApp:assembleDebug
+        ```
+    *   **To build a release App Bundle (.aab):**
+        ```bash
+        # On Windows
+        gradlew :composeApp:bundleRelease
+
+        # On macOS/Linux
+        ./gradlew :composeApp:bundleRelease
+        ```
+3.  **Output Location:**
+    *   APKs are found in `composeApp/build/outputs/apk/`.
+    *   App Bundles are found in `composeApp/build/outputs/bundle/`.
+
 
 ## Future Considerations
 
