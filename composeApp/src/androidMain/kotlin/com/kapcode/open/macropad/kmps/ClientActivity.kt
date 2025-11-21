@@ -251,7 +251,7 @@ fun ClientScreen(
         },
         bottomBar = {
             if (!showSettings) {
-                AdmobBanner()
+                BottomAppBar { AdmobBanner() }
             }
         }
     ) { innerPadding ->
