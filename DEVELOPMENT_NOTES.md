@@ -76,7 +76,7 @@ With the introduction of automated mouse movements and loops, there was a risk o
 - **Solution:** A robust, multi-layered solution was implemented.
     1.  **User Group:** The user must be added to the `input` group, which has the rights to read system-wide input events. This is a one-time setup command for the user, followed by a mandatory logout/login. The `README.md` was updated with these user instructions.
         ```bash
-        sudo usermod -a -G input $USER
+        sudo usmod -a -G input $USER
         ```
     2.  **Gradle File Permissions:** To fix the file permission issue directly, a `doLast` block was added to the `packageDistributionForCurrentOS` task in `build.gradle.kts`. This script automatically runs `chmod +x` on the JNativeHook `.so` file after it's placed in the build directory, ensuring it's always executable in the final package.
 
@@ -134,6 +134,34 @@ With the introduction of automated mouse movements and loops, there was a risk o
 *   **Input Handling:** `JNativeHook` for global keyboard listening.
 *   **Automation:** `java.awt.Robot` for simulating input events.
 *   **Persistence:** JSON for macro definitions, `Properties` file for application settings and active macro state.
+
+## Building from Source
+
+### Prerequisites (if not using Android Studio)
+
+1.  **JDK 11:** This project requires JDK version 11. You can download it from a provider like [Adoptium Temurin](https://adoptium.net/temurin/releases/?version=11).
+2.  **Android SDK:** You need the Android SDK Command-Line Tools.
+    *   Download the tools from the [Android Studio downloads page](https://developer.android.com/tools) (scroll down to "Command line tools only").
+    *   Create a directory for your Android SDK (e.g., `~/Android/sdk` or `C:\Android\sdk`).
+    *   Unzip the downloaded tools into the created directory.
+3.  **Environment Variables:**
+    *   Set `JAVA_HOME` to the installation path of your JDK 11.
+    *   Set `ANDROID_HOME` (or `ANDROID_SDK_ROOT`) to the path of your Android SDK directory.
+    *   Add the JDK `bin` directory and the Android SDK `cmdline-tools/latest/bin` and `platform-tools` directories to your system's `PATH`.
+
+### Building the Desktop Application
+
+Once the prerequisites are installed and configured, you can build the native desktop distribution from the project's root directory:
+
+**For Windows:**
+```bash
+./gradlew :composeApp:packageDistributionForCurrentOs
+```
+
+**For macOS or Linux:**
+```bash
+./gradlew :composeApp:packageDistributionForCurrentOs
+```
 
 ## Future Considerations
 
