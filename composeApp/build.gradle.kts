@@ -52,7 +52,12 @@ kotlin {
             implementation(libs.kotlin.test)
         }
         jvmMain.dependencies {
-            implementation(compose.desktop.currentOs)
+            // Include native dependencies for all supported platforms to ensure the Uber JAR is cross-platform
+            implementation(compose.desktop.linux_x64)
+            implementation(compose.desktop.windows_x64)
+            implementation(compose.desktop.macos_x64)
+            implementation(compose.desktop.macos_arm64)
+            
             implementation(libs.kotlinx.coroutinesSwing)
             implementation("io.ktor:ktor-client-okhttp:2.3.8")
             implementation("io.ktor:ktor-server-core:2.3.8")
