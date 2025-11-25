@@ -70,7 +70,7 @@ With the introduction of automated mouse movements and loops, there was a risk o
 
 ### Challenge: JNativeHook "Permission Denied" on Linux
 - **Problem:** After being packaged into a `.deb` or `.bin` installer and run from a system directory (like `/opt/`), the application would crash with `UnsatisfiedLinkError: ... (Permission denied)` when trying to initialize `JNativeHook`.
-- **Root Cause:** This is a two-part Linux security issue:
+- **Root Cause**: This is a two-part Linux security issue:
     1.  **User Permissions:** Standard users are not allowed to listen to the global input device stream for security reasons.
     2.  **File Permissions:** The native library (`.so` file) for JNativeHook was being packaged without the "executable" permission bit set.
 - **Solution:** A robust, multi-layered solution was implemented.
@@ -143,6 +143,27 @@ With the introduction of automated mouse movements and loops, there was a risk o
 
 ### Building the Desktop App
 The desktop application is built using Compose for Desktop. The build command generates a native, distributable package for the operating system you are currently running on.
+
+#### Building the Runnable JAR (Uber JAR)
+To create a single, standalone JAR file that can be run on any system with Java installed:
+
+1.  **Clean and Build the Package:**
+    Run the standard Compose task to generate the initial JAR.
+    ```bash
+    ./gradlew clean :composeApp:packageUberJarForCurrentOS
+    ```
+
+2.  **Strip Signatures (Fix SecurityException):**
+    Run the custom task to remove conflicting signature files that cause the `Invalid signature file digest` error.
+    ```bash
+    ./gradlew :composeApp:stripSignaturesFromUberJar
+    ```
+
+3.  **Run the JAR:**
+    The final, working JAR will be named with the suffix `-unsigned.jar`.
+    ```bash
+    java -jar composeApp/build/compose/jars/OpenMacropadServer-linux-x64-1.0.0-unsigned.jar
+    ```
 
 #### Building on Windows (.msi / .exe)
 1.  **Prerequisites:**

@@ -51,10 +51,24 @@ This model allows the app to be free for all users, with heavy users supporting 
 ## Getting Started
 
 ### Prerequisites
-*   **Desktop:** The provided installers for Windows (`.msi`), macOS (`.dmg`), and Linux (`.deb` or `.bin`) bundle the necessary Java Runtime automatically. No separate Java installation is required.
+*   **Native Installers (Recommended):** The provided installers for Windows (`.msi`), macOS (`.dmg`), and Linux (`.deb`) bundle the necessary Java Runtime automatically. **No separate Java installation is required if using these.**
+*   **Runnable JAR:** If you prefer to run the standalone JAR file manually, you must have **Java 11 or higher** installed.
+    *   **Windows:** [Download Java (Eclipse Temurin)](https://adoptium.net/temurin/releases/?os=windows) - Select "JRE" or "JDK" (version 17 or 21 is recommended).
+    *   **Linux:** `sudo apt install openjdk-17-jre` (or similar for your distro).
+    *   **macOS:** `brew install openjdk`
 *   **Android:** Device running Android 8.0+.
 
 ### Desktop Installation
+
+#### Windows
+1.  **Option 1 (Installer):** Download and run the `.msi` installer.
+2.  **Option 2 (Manual JAR):**
+    *   Install Java from the link above.
+    *   Download the `.jar` file.
+    *   Double-click the `.jar` file, or run via command line:
+        ```powershell
+        java -jar OpenMacropadServer.jar
+        ```
 
 #### Linux
 The global hotkey feature requires permission to listen to system-wide input events.
@@ -65,9 +79,10 @@ The global hotkey feature requires permission to listen to system-wide input eve
     ```
 2.  **Log Out:** You **must log out and log back in** for this change to take effect.
 3.  **Install:** Run the provided `.deb` or `.bin` installer.
+    *   *Alternatively, run the JAR:* `java -jar OpenMacropadServer-linux-x64-1.0.0-unsigned.jar`
 
-#### Windows & macOS
-Run the provided `.msi` (Windows) or `.dmg` (macOS) installer.
+#### macOS
+Run the provided `.dmg` installer and drag the application to your Applications folder.
 
 #### General Configuration
 *   **Macros:** Macros are saved as `.json` files. The application will prompt you to select a directory on first launch.
@@ -89,7 +104,7 @@ This project follows a clean architecture using **Kotlin Multiplatform**:
 
 ### Developer Notes
 
-For detailed technical documentation regarding the challenges faced during development (concurrency, native hooks, Swing/Compose interoperability), please refer to [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md).
+For detailed technical documentation regarding the challenges faced during development (concurrency, native hooks, Swing/Compose interoperability) and **instructions on how to build the project**, please refer to [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md).
 
 ## License
 

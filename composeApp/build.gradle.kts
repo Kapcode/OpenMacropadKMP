@@ -1,21 +1,6 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.gradle.api.JavaVersion // Import JavaVersion for compileOptions
-
-// Force dependency versions to resolve conflicts
-configurations.all {
-    resolutionStrategy {
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
-        eachDependency {
-            if (requested.group == "io.netty") {
-                useVersion("4.1.94.Final")
-            }
-        }
-    }
-}
+import org.gradle.api.JavaVersion
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -27,7 +12,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(11) // Add this line to specify the JDK version
+    jvmToolchain(11)
 
     androidTarget {
         compilerOptions {
@@ -73,7 +58,7 @@ kotlin {
             implementation("io.ktor:ktor-server-core:2.3.8")
             implementation("io.ktor:ktor-server-netty:2.3.8")
             implementation("io.ktor:ktor-server-websockets:2.3.8")
-            implementation("io.ktor:ktor-server-call-logging-jvm:2.3.8") // Add this line
+            implementation("io.ktor:ktor-server-call-logging-jvm:2.3.8")
             implementation("com.github.kwhat:jnativehook:2.2.2")
             implementation("com.fifesoft:rsyntaxtextarea:3.6.0")
             implementation("com.formdev:flatlaf:3.4.1")
@@ -118,6 +103,16 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
+// Force all configurations to use the same version of coroutines to avoid NoSuchMethodError
+configurations.all {
+    resolutionStrategy {
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+    }
+}
+
 compose.desktop {
     application {
         mainClass = "switchdektoptocompose.MainKt"
@@ -129,16 +124,31 @@ compose.desktop {
     }
 }
 
-// Exclude signature files from all Jar tasks to prevent SecurityException
-tasks.withType<Jar> {
-    exclude("META-INF/*.RSA", "META-INF/*.SF", "META-INF/*.DSA")
+// Custom task to strip signature files from the generated Uber JAR
+tasks.register<Jar>("stripSignaturesFromUberJar") {
+    dependsOn("packageUberJarForCurrentOS")
+    val uberJarPath = layout.buildDirectory.file("compose/jars/OpenMacropadServer-linux-x64-1.0.0.jar")
+    
+    // Define output JAR location
+    archiveFileName.set("OpenMacropadServer-linux-x64-1.0.0-unsigned.jar")
+    destinationDirectory.set(layout.buildDirectory.dir("compose/jars"))
+
+    // Use the original Uber JAR as input
+    from(zipTree(uberJarPath)) {
+        exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
+    }
+
+    manifest {
+        attributes["Main-Class"] = "switchdektoptocompose.MainKt"
+    }
+    
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
 // This block will execute after the main packaging task is done.
-// It specifically finds the JNativeHook .so file and makes it executable.
 tasks.findByName("packageDistributionForCurrentOS")?.let {
     it.doLast {
-        val osName = System.getProperty("os.name").toLowerCase()
+        val osName = System.getProperty("os.name").lowercase()
         if (osName.contains("linux")) {
             val libDir = project.layout.buildDirectory.dir("compose/binaries/main/app/lib/app")
             libDir.get().asFile.listFiles()?.forEach { file ->
