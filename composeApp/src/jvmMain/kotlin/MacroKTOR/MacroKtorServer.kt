@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import org.slf4j.event.Level
 import java.io.InputStream
 import java.security.KeyStore
+import java.util.UUID
 
 class MacroKtorServer(
     private val onMessageReceived: (clientId: String, message: String) -> Unit,
@@ -36,8 +37,10 @@ class MacroKtorServer(
                 }
                 routing {
                     webSocket("/") {
-                        val clientId = call.request.queryParameters["id"] ?: "UnknownDevice"
-                        val clientName = call.request.queryParameters["name"] ?: "Unknown"
+                        val queryParams = call.request.queryParameters
+                        val clientName = queryParams["name"] ?: queryParams["deviceName"] ?: "Unknown"
+                        val clientId = queryParams["id"] ?: UUID.randomUUID().toString()
+
                         connections[clientId] = this
                         onClientConnected(clientId, clientName)
                         try {

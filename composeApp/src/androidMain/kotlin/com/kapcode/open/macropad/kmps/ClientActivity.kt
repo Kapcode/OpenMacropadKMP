@@ -91,8 +91,13 @@ class ClientActivity : ComponentActivity() {
     }
 
     private fun sendMacro(macroName: String) {
-        activityScope.launch {
-            client?.send("play:$macroName")
+        val tokenManager = TokenManager.getInstance(this)
+        if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+            activityScope.launch {
+                client?.send("play:$macroName")
+            }
+        } else {
+            Toast.makeText(this, "Not enough tokens! Watch an ad to get more.", Toast.LENGTH_SHORT).show()
         }
     }
 

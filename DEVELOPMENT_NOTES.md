@@ -66,6 +66,14 @@ With the introduction of automated mouse movements and loops, there was a risk o
     4.  **Configuration:** The alias and passwords used during generation are hardcoded into `MacroKtorServer.kt`. It is the developer's responsibility to ensure these values match the `.p12` file.
     5.  **Security:** The `keystore.p12` file is added to `.gitignore` to prevent the private key from ever being committed to version control.
 
+### Challenge: Client Identification and Device Naming
+- **Problem**: Connected devices were appearing as "Unknown Device" or "Unknown" in the desktop UI, and multiple connections could potentially conflict if they used the same default identifier.
+- **Root Cause**: The Ktor WebSocket server was expecting specific query parameters (`id` and `name`) that the client wasn't consistently providing. Additionally, the server used a hardcoded fallback ID (`"UnknownDevice"`), which caused issues when multiple "unknown" devices connected.
+- **Solution**: 
+    1.  **Improved Server Logic:** `MacroKtorServer` was updated to generate a unique `UUID` for any client that doesn't provide an explicit `id`. It also now checks both `name` and `deviceName` query parameters to extract the client's display name.
+    2.  **Client Update:** `MacroKtorClient` now explicitly sends the user-configured device name (e.g., "Android Device") in both `name` and `deviceName` query parameters during the WebSocket handshake.
+    3.  **Persistence:** This ensures that every connection is unique and identifiable in the "Connected Devices" tab and the live console.
+
 ## 6. Desktop Packaging & Distribution
 
 ### Challenge: JNativeHook "Permission Denied" on Linux

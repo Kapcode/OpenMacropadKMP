@@ -20,9 +20,16 @@ kotlin {
         }
     }
 
-    jvm()
+    // Rename the jvm target to "desktop"
+    jvm("desktop")
 
     sourceSets {
+        // Map the "desktop" target to the existing "jvmMain" directory
+        val desktopMain by getting {
+            kotlin.srcDirs("src/jvmMain/kotlin")
+            resources.srcDirs("src/jvmMain/resources")
+        }
+
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
@@ -51,7 +58,7 @@ kotlin {
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
-        jvmMain.dependencies {
+        desktopMain.dependencies {
             // Include native dependencies for all supported platforms to ensure the Uber JAR is cross-platform
             implementation(compose.desktop.linux_x64)
             implementation(compose.desktop.windows_x64)
@@ -129,6 +136,42 @@ compose.desktop {
     }
 }
 
+// Custom task to generate a self-signed keystore for development.
+// It generates keystore.p12 in the resources folder with the hardcoded credentials from MacroKtorServer.kt
+tasks.register<Exec>("generateDevKeystore") {
+    group = "development"
+    description = "Generates a self-signed keystore for WSS encryption"
+
+    val outputDir = file("src/jvmMain/resources")
+    val keystoreFile = file("${outputDir}/keystore.p12")
+    val javaHome = System.getProperty("java.home")
+    val keytoolPath = if (System.getProperty("os.name").contains("Windows")) {
+        "${javaHome}\\bin\\keytool.exe"
+    } else {
+        "${javaHome}/bin/keytool"
+    }
+
+    doFirst {
+        if (!outputDir.exists()) outputDir.mkdirs()
+        if (keystoreFile.exists()) keystoreFile.delete()
+        println("Generating keystore at: ${keystoreFile.absolutePath}")
+    }
+
+    commandLine(
+        keytoolPath, "-genkeypair",
+        "-alias", "your-alias-name",
+        "-keyalg", "RSA",
+        "-keysize", "2048",
+        "-storetype", "PKCS12",
+        "-keystore", keystoreFile.absolutePath,
+        "-validity", "10000",
+        "-storepass", "n678nbccfibliboo",
+        "-keypass", "n678nbccfibliboo",
+        "-dname", "CN=OpenMacropad, OU=Development, O=Kapcode, L=Unknown, ST=Unknown, C=US",
+        "-noprompt"
+    )
+}
+
 // Custom task to strip signature files from the generated Uber JAR
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
@@ -159,9 +202,8 @@ tasks.findByName("packageDistributionForCurrentOS")?.let {
             libDir.get().asFile.listFiles()?.forEach { file ->
                 if (file.name.contains("JNativeHook") && file.name.endsWith(".so")) {
                     println("Making JNativeHook library executable: ${file.name}")
-                    exec {
-                        commandLine("chmod", "+x", file.absolutePath)
-                    }
+                    // Using setExecutable(true) is cleaner and avoids deprecated exec lookup
+                    file.setExecutable(true)
                 }
             }
         }

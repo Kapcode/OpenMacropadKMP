@@ -22,7 +22,7 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
     *   **Global Emergency Stop (E-Stop):** Instantly cancel all running macros with a configurable hotkey (default F12).
     *   **Collision Detection:** Prevents multiple macros from running simultaneously to avoid system lockups.
 *   **Inspector Tool:** A built-in utility to inspect pixel colors (Hex/ARGB) and mouse coordinates, with optional screenshot capability.
-*   **Live Console:** Real-time logs for macro execution, errors, and client connections, with color-coded output.
+*   **Live Console:** Real-time logs for macro execution, errors, and client connections, with color-coded output and improved device identification.
 
 ### 📱 Android Client
 *   **Remote Control:** Trigger desktop macros with a single tap.
