@@ -6,6 +6,7 @@ import javax.crypto.KeyAgreement
 import javax.crypto.SecretKey
 import javax.crypto.spec.DHParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import java.math.BigInteger
 
 /**
  * Manages encryption keys and secure key exchange between client and server
@@ -17,7 +18,7 @@ class EncryptionManager {
     private val keyAgreement: KeyAgreement = KeyAgreement.getInstance("DH")
 
     companion object {
-        private const val KEY_SIZE = 1024 // Using a standard, compatible key size
+        private const val KEY_SIZE = 2048 // Increased from 1024 to resist Logjam/discrete log attacks (Fix 2)
         private const val AES_KEY_SIZE = 256
 
         /**
@@ -35,6 +36,26 @@ class EncryptionManager {
          */
         fun withPreSharedKey(keyString: String): EncryptionManager {
             return withPreSharedKey(DataModel.stringToKey(keyString))
+        }
+
+        /**
+         * Sign data using a private key (ECDSA)
+         */
+        fun signData(data: ByteArray, privateKey: PrivateKey): ByteArray {
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initSign(privateKey)
+            signature.update(data)
+            return signature.sign()
+        }
+
+        /**
+         * Verify signature using a public key (ECDSA)
+         */
+        fun verifySignature(data: ByteArray, signatureBytes: ByteArray, publicKey: PublicKey): Boolean {
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initVerify(publicKey)
+            signature.update(data)
+            return signature.verify(signatureBytes)
         }
     }
 
@@ -67,6 +88,16 @@ class EncryptionManager {
         val x509KeySpec = X509EncodedKeySpec(otherPublicKeyBytes)
         val otherPublicKey = keyFactory.generatePublic(x509KeySpec)
 
+        // Vulnerability Fix 5: Input Validation on DH Public Keys
+        if (otherPublicKey is javax.crypto.interfaces.DHPublicKey) {
+            val y = otherPublicKey.y
+            val p = otherPublicKey.params.p
+            // Check if y is in the range [2, p-2]
+            if (y <= BigInteger.ONE || y >= p.subtract(BigInteger.ONE)) {
+                throw InvalidKeyException("DH Public Key is out of valid range")
+            }
+        }
+
         keyAgreement.doPhase(otherPublicKey, true)
 
         // Generate shared secret
@@ -77,6 +108,10 @@ class EncryptionManager {
         val keyBytes = messageDigest.digest(sharedSecret).copyOf(AES_KEY_SIZE / 8)
 
         sharedKey = SecretKeySpec(keyBytes, "AES")
+        
+        // Security: Zero out sensitive intermediate data to prevent persistence in RAM/ZRAM (Fix 6)
+        sharedSecret.fill(0)
+        keyBytes.fill(0)
     }
 
     /**
