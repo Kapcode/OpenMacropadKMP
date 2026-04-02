@@ -32,6 +32,12 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 
 ---
 
+## 🤖 AI Assistance & Code Map
+
+If you are using an AI assistant (like Gemini, ChatGPT, or Claude) to work on this project, please refer to the [**CODE_MAP.md**](CODE_MAP.md) file. It provides a detailed overview of the project structure, communication protocols, and core responsibilities, making it easier for AI to find files and understand the system.
+
+---
+
 ## Android Freemium Model
 
 The Android app uses a "token" system to provide a free, ad-supported experience.
