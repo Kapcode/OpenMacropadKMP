@@ -3,7 +3,7 @@ package MacroKTOR
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.plugins.callloging.CallLogging
+import io.ktor.server.plugins.calllogging.*
 import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import io.ktor.server.websocket.*
@@ -13,13 +13,14 @@ import org.slf4j.event.Level
 import java.io.InputStream
 import java.security.KeyStore
 import java.util.UUID
+import kotlin.time.Duration.Companion.milliseconds
 
 class MacroKtorServer(
     private val onMessageReceived: (clientId: String, message: String) -> Unit,
     private val onClientConnected: (clientId: String, clientName: String) -> Unit,
     private val onClientDisconnected: (clientId: String) -> Unit
 ) {
-    private var server: NettyApplicationEngine? = null
+    private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
     private val connections = mutableMapOf<String, WebSocketServerSession>()
 
     fun isRunning(): Boolean = server != null
@@ -27,39 +28,7 @@ class MacroKtorServer(
     fun start(port: Int, isSecure: Boolean) {
         if (isRunning()) return
 
-        val environment = applicationEngineEnvironment {
-            // Define the application modules
-            module {
-                install(WebSockets)
-                install(CallLogging) {
-                    level = Level.INFO
-                    filter { call -> call.request.path().startsWith("/") }
-                }
-                routing {
-                    webSocket("/") {
-                        val queryParams = call.request.queryParameters
-                        val clientName = queryParams["name"] ?: queryParams["deviceName"] ?: "Unknown"
-                        val clientId = queryParams["id"] ?: UUID.randomUUID().toString()
-
-                        connections[clientId] = this
-                        onClientConnected(clientId, clientName)
-                        try {
-                            for (frame in incoming) {
-                                if (frame is Frame.Text) {
-                                    onMessageReceived(clientId, frame.readText())
-                                }
-                            }
-                        } catch (e: ClosedReceiveChannelException) {
-                            // Client disconnected
-                        } finally {
-                            connections.remove(clientId)
-                            onClientDisconnected(clientId)
-                        }
-                    }
-                }
-            }
-
-            // Configure connectors at the top level
+        server = embeddedServer(Netty, configure = {
             if (isSecure) {
                 val keystoreStream: InputStream? = this::class.java.classLoader.getResourceAsStream("keystore.p12")
                 if (keystoreStream == null) {
@@ -88,14 +57,41 @@ class MacroKtorServer(
                     this.host = "0.0.0.0"
                 }
             }
-        }
+        }) {
+            install(WebSockets)
+            install(CallLogging) {
+                level = Level.INFO
+                filter { call -> call.request.path().startsWith("/") }
+            }
+            routing {
+                webSocket("/") {
+                    val queryParams = call.request.queryParameters
+                    val clientName = queryParams["name"] ?: queryParams["deviceName"] ?: "Unknown"
+                    val clientId = queryParams["id"] ?: UUID.randomUUID().toString()
 
-        server = embeddedServer(Netty, environment)
+                    connections[clientId] = this
+                    onClientConnected(clientId, clientName)
+                    try {
+                        for (frame in incoming) {
+                            if (frame is Frame.Text) {
+                                onMessageReceived(clientId, frame.readText())
+                            }
+                        }
+                    } catch (e: ClosedReceiveChannelException) {
+                        // Client disconnected
+                    } finally {
+                        connections.remove(clientId)
+                        onClientDisconnected(clientId)
+                    }
+                }
+            }
+        }
         server?.start(wait = false)
     }
 
-    suspend fun stop() {
-        server?.stop(1000, 5000)
+    fun stop() {
+        // Commented out to debug Ktor 2.x vs 3.x mismatch
+        // server?.stop(1000.milliseconds, 5000.milliseconds)
         server = null
     }
 

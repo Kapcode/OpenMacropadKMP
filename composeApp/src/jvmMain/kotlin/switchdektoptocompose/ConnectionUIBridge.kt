@@ -18,10 +18,12 @@ import java.net.InetAddress
 import java.security.KeyPairGenerator
 import java.security.KeyStore
 import java.security.cert.X509Certificate
-import java.time.Duration
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
 interface ConnectionUIBridge {
     fun startListening(port: Int, encryptionEnabled: Boolean)
@@ -72,7 +74,7 @@ abstract class Wifi : ConnectionUIBridge {
 
 class WifiServer : Wifi() {
 
-    private var server: NettyApplicationEngine? = null
+    private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
     private var discovery: ServerDiscovery? = null
     private var serverJob: Job? = null
     private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -88,15 +90,49 @@ class WifiServer : Wifi() {
 
         currentPort = port
 
-        val environment = if (encryptionEnabled) {
-            createSecureEnvironment(currentPort)
-        } else {
-            createPlainEnvironment(currentPort)
+        server = embeddedServer(Netty, configure = {
+            if (encryptionEnabled) {
+                val keystoreFile = File("keystore.p12")
+                val keystorePassword = "hoopla"
+                val keyAlias = "macropad"
+
+                if (!keystoreFile.exists()) {
+                    try {
+                        generateKeystore(keystoreFile, keyAlias, keystorePassword)
+                        listener?.onError("New keystore generated at: ${keystoreFile.absolutePath}")
+                    } catch (e: Exception) {
+                        listener?.onError("Failed to generate keystore: ${e.message}")
+                        e.printStackTrace()
+                    }
+                }
+
+                try {
+                    val keyStore = KeyStore.getInstance("PKCS12").apply {
+                        load(keystoreFile.inputStream(), keystorePassword.toCharArray())
+                    }
+
+                    sslConnector(
+                        keyStore = keyStore,
+                        keyAlias = keyAlias,
+                        keyStorePassword = { keystorePassword.toCharArray() },
+                        privateKeyPassword = { keystorePassword.toCharArray() }
+                    ) {
+                        this.port = currentPort
+                        this.host = "0.0.0.0"
+                    }
+                } catch (e: Exception) {
+                    listener?.onError("Error loading keystore: ${e.message}")
+                }
+            } else {
+                connector {
+                    this.port = currentPort
+                    this.host = "0.0.0.0"
+                }
+            }
+        }) {
+            moduleWithWebsockets()
         }
 
-        if (environment == null) return
-
-        server = embeddedServer(Netty, environment)
         serverJob = serverScope.launch {
             try {
                 val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
@@ -117,7 +153,8 @@ class WifiServer : Wifi() {
 
     override suspend fun stopListening() {
         serverJob?.cancelAndJoin()
-        server?.stop(1000, 5000)
+        // Commented out to debug Ktor 2.x vs 3.x mismatch
+        // server?.stop(1000.milliseconds, 5000.milliseconds)
         server = null
         sessions.clear()
         connectedClients.clear()
@@ -147,55 +184,6 @@ class WifiServer : Wifi() {
         }
     }
 
-    private fun createPlainEnvironment(port: Int): ApplicationEngineEnvironment {
-        return applicationEngineEnvironment {
-            connector {
-                this.port = port
-                host = "0.0.0.0"
-            }
-            module { moduleWithWebsockets() }
-        }
-    }
-
-    private fun createSecureEnvironment(port: Int): ApplicationEngineEnvironment? {
-        val keystoreFile = File("keystore.p12")
-        val keystorePassword = "hoopla"
-        val keyAlias = "macropad"
-
-        if (!keystoreFile.exists()) {
-            try {
-                generateKeystore(keystoreFile, keyAlias, keystorePassword)
-                listener?.onError("New keystore generated at: ${keystoreFile.absolutePath}")
-            } catch (e: Exception) {
-                listener?.onError("Failed to generate keystore: ${e.message}")
-                e.printStackTrace()
-                return null
-            }
-        }
-
-        return try {
-            val keyStore = KeyStore.getInstance("PKCS12").apply {
-                load(keystoreFile.inputStream(), keystorePassword.toCharArray())
-            }
-
-            applicationEngineEnvironment {
-                sslConnector(
-                    keyStore = keyStore,
-                    keyAlias = keyAlias,
-                    keyStorePassword = { keystorePassword.toCharArray() },
-                    privateKeyPassword = { keystorePassword.toCharArray() }
-                ) {
-                    this.port = port
-                    host = "0.0.0.0"
-                }
-                module { moduleWithWebsockets() }
-            }
-        } catch (e: Exception) {
-            listener?.onError("Error loading keystore: ${e.message}")
-            null
-        }
-    }
-
     @Throws(Exception::class)
     private fun generateKeystore(keystoreFile: File, alias: String, password: String) {
         val keyPairGenerator = KeyPairGenerator.getInstance("RSA")
@@ -204,7 +192,7 @@ class WifiServer : Wifi() {
 
         val owner = X500Name("CN=OpenMacropad")
         val now = Date()
-        val expiry = Date(now.time + Duration.ofDays(3650).toMillis())
+        val expiry = Date(now.time + 3650.days.inWholeMilliseconds)
         val serialNumber = BigInteger(64, Random())
 
         val certBuilder = JcaX509v3CertificateBuilder(
@@ -230,8 +218,8 @@ class WifiServer : Wifi() {
 
     private fun Application.moduleWithWebsockets() {
         install(WebSockets) {
-            pingPeriod = Duration.ofSeconds(15)
-            timeout = Duration.ofSeconds(15)
+            pingPeriod = 15.seconds
+            timeout = 15.seconds
             maxFrameSize = Long.MAX_VALUE
             masking = false
         }

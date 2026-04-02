@@ -1,18 +1,19 @@
 package switchdektoptocompose
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.unit.dp
+import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
+@OptIn(ExperimentalSplitPaneApi::class)
 @Composable
 fun MacroEditingArea(
     macroManagerViewModel: MacroManagerViewModel,
     macroEditorViewModel: MacroEditorViewModel,
     macroTimelineViewModel: MacroTimelineViewModel,
-    onAddEventClicked: () -> Unit, // Added callback
+    onAddEventClicked: () -> Unit,
     onRecordMacroClicked: () -> Unit
 ) {
     val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.7f)
@@ -34,7 +35,7 @@ fun MacroEditingArea(
         second(minSize = 150.dp) {
             MacroTimelineScreen(
                 viewModel = macroTimelineViewModel,
-                onAddEventClicked = onAddEventClicked, // Pass callback down
+                onAddEventClicked = onAddEventClicked,
                 onRecordMacroClicked = onRecordMacroClicked
             )
         }

@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -26,7 +26,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
     Column {
         Text("Theme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Column(Modifier.selectableGroup()) {
-            AppTheme.values().forEach { theme ->
+            AppTheme.entries.forEach { theme ->
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -51,6 +51,6 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                 }
             }
         }
-        Divider(modifier = Modifier.padding(vertical = 16.dp))
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
     }
 }

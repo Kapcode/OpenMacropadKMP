@@ -10,7 +10,7 @@ This document serves as a guide for AI assistants to navigate the project effect
         - `ui/`: Shared UI components (CommonAppBar, ConnectionItem, etc.).
     - **`src/jvmMain/`**: Desktop Server implementation (Compose for Desktop).
         - `switchdektoptocompose/`: Main UI, ViewModels, and Macro logic.
-        - `MacroKTOR/`: Ktor-based WebSocket server implementation.
+        - `MacroKTOR/`: Ktor 3.x-based WebSocket server implementation.
     - **`src/androidMain/`**: Android Client implementation.
         - `MainActivity.kt`: Server discovery and initial setup.
         - `ClientActivity.kt`: Remote control UI and token management.
@@ -19,7 +19,7 @@ This document serves as a guide for AI assistants to navigate the project effect
 
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
-| **Server** | Manages WebSocket connections and macro playback. | `jvmMain/MacroKTOR/` |
+| **Server** | Ktor 3.x WebSocket server. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/` |
 | **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/ClientActivity.kt` |
@@ -38,7 +38,7 @@ The client and server communicate using string-based messages over WebSockets:
 ## 🛠️ Key Technologies
 - **Kotlin Multiplatform (KMP)**
 - **Compose Multiplatform** (Android & Desktop)
-- **Ktor** (WebSocket networking)
+- **Ktor 3.x** (WebSocket networking)
 - **JNativeHook** (Desktop global hotkeys)
 - **java.awt.Robot** (Desktop automation)
 - **AdMob** (Android monetization)

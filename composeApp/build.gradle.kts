@@ -7,7 +7,6 @@ plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
-    alias(libs.plugins.composeHotReload)
     alias(libs.plugins.kotlinSerialization)
 }
 
@@ -20,21 +19,19 @@ kotlin {
         }
     }
 
-    // Rename the jvm target to "desktop"
-    jvm("desktop")
+    // Standardized target name to "jvm" to match folder structure and IDE expectations
+    jvm()
 
     sourceSets {
-        // Map the "desktop" target to the existing "jvmMain" directory
-        val desktopMain by getting {
-            kotlin.srcDirs("src/jvmMain/kotlin")
-            resources.srcDirs("src/jvmMain/resources")
-        }
+        // Standard names: jvmMain and jvmTest
+        val jvmMain by getting
+        val jvmTest by getting
 
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            implementation("io.ktor:ktor-client-okhttp:2.3.8")
-            implementation("com.google.android.gms:play-services-ads:24.7.0")
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.google.play.services.ads)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -47,36 +44,39 @@ kotlin {
             implementation(libs.compose.dnd)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
             implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation("io.ktor:ktor-client-core:2.3.8")
-            implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
-            implementation("io.ktor:ktor-serialization-kotlinx-json:2.3.8")
+            
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.content.negotiation)
+            implementation(libs.ktor.serialization.kotlinx.json)
+            
             implementation(compose.materialIconsExtended)
-            // Moved Bouncy Castle to commonMain to be shared
-            implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
-            implementation("org.bouncycastle:bcprov-jdk18on:1.78.1")
+            implementation(libs.bouncycastle.bcpkix)
+            implementation(libs.bouncycastle.bcprov)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
-        desktopMain.dependencies {
-            // Include native dependencies for all supported platforms to ensure the Uber JAR is cross-platform
+        jvmMain.dependencies {
             implementation(compose.desktop.linux_x64)
             implementation(compose.desktop.windows_x64)
             implementation(compose.desktop.macos_x64)
             implementation(compose.desktop.macos_arm64)
             
             implementation(libs.kotlinx.coroutinesSwing)
-            implementation("io.ktor:ktor-client-okhttp:2.3.8")
-            implementation("io.ktor:ktor-server-core:2.3.8")
-            implementation("io.ktor:ktor-server-netty:2.3.8")
-            implementation("io.ktor:ktor-server-websockets:2.3.8")
-            implementation("io.ktor:ktor-server-call-logging-jvm:2.3.8")
-            implementation("com.github.kwhat:jnativehook:2.2.2")
-            implementation("com.fifesoft:rsyntaxtextarea:3.6.0")
-            implementation("com.formdev:flatlaf:3.4.1")
-            implementation("com.kitfox.svg:svg-salamander:1.0")
-            implementation("org.json:json:20250517")
-            implementation("org.slf4j:slf4j-simple:2.0.13")
+            
+            // Explicit JVM variants for stability in Ktor 3
+            implementation("io.ktor:ktor-client-okhttp-jvm:3.0.3")
+            implementation("io.ktor:ktor-server-core-jvm:3.0.3")
+            implementation("io.ktor:ktor-server-netty-jvm:3.0.3")
+            implementation("io.ktor:ktor-server-websockets-jvm:3.0.3")
+            implementation("io.ktor:ktor-server-call-logging-jvm:3.0.3")
+            
+            implementation(libs.jnativehook)
+            implementation(libs.rsyntaxtextarea)
+            implementation(libs.flatlaf)
+            implementation(libs.svg.salamander)
+            implementation(libs.json)
+            implementation(libs.slf4j.simple)
         }
     }
 }
@@ -88,8 +88,8 @@ android {
         applicationId = "com.kapcode.open.macropad.kmp"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.1.0"
     }
     packaging {
         resources {
@@ -104,6 +104,9 @@ android {
         getByName("release") {
             isMinifyEnabled = false
         }
+        getByName("debug") {
+            isMinifyEnabled = false
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -115,13 +118,23 @@ dependencies {
     debugImplementation(compose.uiTooling)
 }
 
-// Force all configurations to use the same version of coroutines to avoid NoSuchMethodError
 configurations.all {
+    // Nuclear Fix: Exclude legacy module that pollutes old Long-based signatures
+    exclude(group = "io.ktor", module = "ktor-server-host-common")
+
     resolutionStrategy {
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.7.3")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+        // FORCE Ktor 3.0.3 and modern Coroutines globally
+        force("io.ktor:ktor-server-core:3.0.3")
+        force("io.ktor:ktor-server-netty:3.0.3")
+        force("io.ktor:ktor-server-websockets:3.0.3")
+        force("io.ktor:ktor-server-call-logging:3.0.3")
+        force("io.ktor:ktor-client-core:3.0.3")
+        force("io.ktor:ktor-client-okhttp:3.0.3")
+        
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.1")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.1")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
     }
 }
 
@@ -131,13 +144,11 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "OpenMacropadServer"
-            packageVersion = "1.0.0"
+            packageVersion = "1.1.0"
         }
     }
 }
 
-// Custom task to generate a self-signed keystore for development.
-// It generates keystore.p12 in the resources folder with the hardcoded credentials from MacroKtorServer.kt
 tasks.register<Exec>("generateDevKeystore") {
     group = "development"
     description = "Generates a self-signed keystore for WSS encryption"
@@ -172,16 +183,13 @@ tasks.register<Exec>("generateDevKeystore") {
     )
 }
 
-// Custom task to strip signature files from the generated Uber JAR
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
     val uberJarPath = layout.buildDirectory.file("compose/jars/OpenMacropadServer-linux-x64-1.0.0.jar")
     
-    // Define output JAR location
     archiveFileName.set("OpenMacropadServer-linux-x64-1.0.0-unsigned.jar")
     destinationDirectory.set(layout.buildDirectory.dir("compose/jars"))
 
-    // Use the original Uber JAR as input
     from(zipTree(uberJarPath)) {
         exclude("META-INF/*.SF", "META-INF/*.DSA", "META-INF/*.RSA")
     }
@@ -193,7 +201,6 @@ tasks.register<Jar>("stripSignaturesFromUberJar") {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
-// This block will execute after the main packaging task is done.
 tasks.findByName("packageDistributionForCurrentOS")?.let {
     it.doLast {
         val osName = System.getProperty("os.name").lowercase()
@@ -202,7 +209,6 @@ tasks.findByName("packageDistributionForCurrentOS")?.let {
             libDir.get().asFile.listFiles()?.forEach { file ->
                 if (file.name.contains("JNativeHook") && file.name.endsWith(".so")) {
                     println("Making JNativeHook library executable: ${file.name}")
-                    // Using setExecutable(true) is cleaner and avoids deprecated exec lookup
                     file.setExecutable(true)
                 }
             }
