@@ -34,46 +34,49 @@ class ClientDiscovery {
     fun start() {
         if (isDiscovering()) return
         
-        socket = DatagramSocket(null).apply {
-            reuseAddress = true
-            bind(java.net.InetSocketAddress(9998)) // Listen on the well-known discovery port
-        }
-
         discoveryJob = discoveryScope.launch {
-            val buffer = ByteArray(1024)
-            val packet = DatagramPacket(buffer, buffer.size)
+            try {
+                socket = DatagramSocket(null).apply {
+                    reuseAddress = true
+                    bind(java.net.InetSocketAddress(9998)) // Listen on the well-known discovery port
+                }
 
-            while (isActive) {
-                try {
-                    socket?.receive(packet)
-                    val jsonString = String(packet.data, 0, packet.length)
-                    val json = JSONObject(jsonString)
+                val buffer = ByteArray(1024)
+                val packet = DatagramPacket(buffer, buffer.size)
 
-                    val serverName = json.getString("serverName")
-                    val port = json.getInt("port")
-                    val isSecure = json.getBoolean("isSecure")
-                    val hostAddress = packet.address
-                    val serverAddress = "${hostAddress.hostAddress}:$port"
+                while (isActive) {
+                    try {
+                        socket?.receive(packet)
+                        val jsonString = String(packet.data, 0, packet.length)
+                        val json = JSONObject(jsonString)
 
-                    val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure)
+                        val serverName = json.getString("serverName")
+                        val port = json.getInt("port")
+                        val isSecure = json.getBoolean("isSecure")
+                        val hostAddress = packet.address
+                        val serverAddress = "${hostAddress.hostAddress}:$port"
 
-                    // Update the list of found servers
-                    val currentServers = foundServers.value.toMutableList()
-                    val existingServer = currentServers.find { it.host == newServer.host }
-                    if (existingServer == null) {
-                        currentServers.add(newServer)
-                        foundServers.value = currentServers
-                    } else if (existingServer != newServer) {
-                        // Replace existing server if details have changed
-                        val index = currentServers.indexOf(existingServer)
-                        currentServers[index] = newServer
-                        foundServers.value = currentServers
-                    }
-                } catch (e: Exception) {
-                    if (isActive) { // Don't log errors on a planned shutdown
-                        println("Error receiving discovery packet: ${e.message}")
+                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure)
+
+                        // Update the list of found servers
+                        val currentServers = foundServers.value
+                        if (currentServers.none { it.host == newServer.host && it.address == newServer.address && it.name == newServer.name && it.isSecure == newServer.isSecure }) {
+                            val newList = currentServers.filterNot { it.host == newServer.host } + newServer
+                            foundServers.value = newList
+                        }
+                    } catch (e: Exception) {
+                        if (isActive) {
+                            println("Error receiving discovery packet: ${e.message}")
+                        }
                     }
                 }
+            } catch (e: Exception) {
+                if (isActive) {
+                    println("Failed to setup discovery socket: ${e.message}")
+                }
+            } finally {
+                socket?.close()
+                socket = null
             }
         }
     }

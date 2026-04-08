@@ -13,6 +13,10 @@ plugins {
 kotlin {
     jvmToolchain(11)
 
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
+    }
+
     androidTarget {
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
@@ -25,13 +29,16 @@ kotlin {
     sourceSets {
         // Standard names: jvmMain and jvmTest
         val jvmMain by getting
-        val jvmTest by getting
 
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            implementation(libs.androidx.window)
+            implementation(libs.androidx.window.extensions.core)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.google.play.services.ads)
+            implementation(project.dependencies.platform(libs.firebase.bom))
+            implementation(libs.firebase.analytics)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -65,11 +72,11 @@ kotlin {
             implementation(libs.kotlinx.coroutinesSwing)
             
             // Explicit JVM variants for stability in Ktor 3
-            implementation("io.ktor:ktor-client-okhttp-jvm:3.0.3")
-            implementation("io.ktor:ktor-server-core-jvm:3.0.3")
-            implementation("io.ktor:ktor-server-netty-jvm:3.0.3")
-            implementation("io.ktor:ktor-server-websockets-jvm:3.0.3")
-            implementation("io.ktor:ktor-server-call-logging-jvm:3.0.3")
+            implementation(libs.ktor.client.okhttp)
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.netty)
+            implementation(libs.ktor.server.websockets)
+            implementation(libs.ktor.server.call.logging)
             
             implementation(libs.jnativehook)
             implementation(libs.rsyntaxtextarea)

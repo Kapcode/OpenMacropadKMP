@@ -24,7 +24,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.ads.MobileAds
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -45,7 +48,9 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
-        MobileAds.initialize(this) {}
+        lifecycleScope.launch(Dispatchers.IO) {
+            MobileAds.initialize(this@MainActivity) {}
+        }
 
         clientDiscovery = ClientDiscovery()
 
