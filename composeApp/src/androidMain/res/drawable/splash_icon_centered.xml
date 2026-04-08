@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Using inset to ensure the icon is centered and fits within the 108dp mask circle of Android 12+ Splash API -->
-<inset xmlns:android="http://schemas.android.com/apk/res/android"
-    android:drawable="@drawable/splash_icon"
-    android:insetLeft="96dp"
-    android:insetRight="96dp"
-    android:insetTop="96dp"
-    android:insetBottom="96dp" />
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:drawable="@drawable/splash_icon"
+        android:gravity="center"
+        android:width="192dp"
+        android:height="192dp" />
+
+    <item
+        android:width="36dp"
+        android:height="28dp"
+        android:drawable="@drawable/ic_cursor_static"
+        android:top="48dp"
+        android:gravity="center" />
+</layer-list>

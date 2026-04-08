@@ -23,7 +23,9 @@ class MacroApplication : Application() {
         
         // Warm up SharedPreferences on a background thread
         // This makes TokenManager and other pref-based logic "instant" later
-        getSharedPreferences("token_prefs", MODE_PRIVATE)
+        Thread {
+            getSharedPreferences("token_prefs", MODE_PRIVATE)
+        }.start()
 
         val end = System.currentTimeMillis() - appStartTime
         Log.i(TAG, "${end}ms: [Application] onCreate finished")

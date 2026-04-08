@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy fallback for API < 26. Adaptive version is in drawable-v26 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:width="72dp"
+        android:height="72dp"
+        android:gravity="center">
+        <bitmap
+            android:src="@drawable/macropad_icon_splash"
+            android:gravity="center" />
+    </item>
+
+    <item
+        android:width="36dp"
+        android:height="28dp"
+        android:drawable="@drawable/ic_cursor_static"
+        android:top="32dp"
+        android:gravity="center" />
+</layer-list>
