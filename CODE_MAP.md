@@ -14,12 +14,18 @@ This document serves as a guide for AI assistants to navigate the project effect
     - **`src/androidMain/`**: Android Client implementation.
         - `MainActivity.kt`: Server discovery and initial setup.
         - `ClientActivity.kt`: Remote control UI and token management.
+        - `DeviceInfo.kt`: Android-specific device name and unique ID (hashed ANDROID_ID).
+    - **`src/jvmMain/`**: Desktop Server implementation (Compose for Desktop).
+        - `switchdektoptocompose/`: Main UI, ViewModels, and Macro logic.
+        - `MacroKTOR/`: Ktor 3.x-based WebSocket server implementation.
+        - `DeviceInfo.kt`: JVM-specific device name (hostname) and unique ID.
 
 ## 🧩 Core Components & Responsibilities
 
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
 | **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/network/sockets/` |
+| **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/` |
 | **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/ClientActivity.kt` & `commonMain/network/sockets/` |

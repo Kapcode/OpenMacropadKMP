@@ -18,7 +18,7 @@ fun App(
     foundServers: List<ServerInfo>,
     onConnectClick: (serverInfo: ServerInfo, deviceName: String) -> Unit
 ) {
-    var deviceName by remember { mutableStateOf("Android Device") }
+    var deviceName by remember { mutableStateOf("${DeviceInfo.name}-${DeviceInfo.uniqueId}") }
     var manualIpAddress by remember { mutableStateOf("") }
     var isManualSecure by remember { mutableStateOf(true) }
 

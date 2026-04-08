@@ -7,6 +7,8 @@ class MacroApplication : Application() {
     companion object {
         const val TAG = "MacroPerf"
         val appStartTime = System.currentTimeMillis()
+        lateinit var instance: MacroApplication
+            private set
         
         init {
             Log.i(TAG, "0ms: [Application] Static initialization started")
@@ -17,6 +19,7 @@ class MacroApplication : Application() {
         val start = System.currentTimeMillis() - appStartTime
         Log.i(TAG, "${start}ms: [Application] onCreate started")
         super.onCreate()
+        instance = this
         
         // Warm up SharedPreferences on a background thread
         // This makes TokenManager and other pref-based logic "instant" later

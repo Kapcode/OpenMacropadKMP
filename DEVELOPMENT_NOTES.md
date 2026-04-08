@@ -201,10 +201,12 @@ Automated macros could cause loss of system control if they ran too long or went
 
 ### Android Client
 - [ ] **Optimize Dependency Initialization**: Transition from sequential to parallel initialization of Firebase and AdMob to further shave off startup milliseconds.
+- [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to 6.7s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
 - [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
 
 ### Desktop Server
+- [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.

@@ -68,16 +68,20 @@ class MainActivity : ComponentActivity() {
         
         Log.i(MacroApplication.TAG, "${System.currentTimeMillis() - MacroApplication.appStartTime}ms: [Activity] super.onCreate finished")
 
-        // Initialize TokenManager in background
+        // Initialize TokenManager and ClientDiscovery in background
         lifecycleScope.launch(Dispatchers.IO) {
             val tmStart = System.currentTimeMillis() - MacroApplication.appStartTime
             Log.i(MacroApplication.TAG, "${tmStart}ms: [TokenManager] init started (background)")
             TokenManager.getInstance(this@MainActivity)
             val tmEnd = System.currentTimeMillis() - MacroApplication.appStartTime
             Log.i(MacroApplication.TAG, "${tmEnd}ms: [TokenManager] init finished (background)")
+
+            val cdStart = System.currentTimeMillis() - MacroApplication.appStartTime
+            Log.i(MacroApplication.TAG, "${cdStart}ms: [ClientDiscovery] auto-start (background)")
+            clientDiscovery.start()
         }
 
-        Log.i(MacroApplication.TAG, "${System.currentTimeMillis() - MacroApplication.appStartTime}ms: [Activity] clientDiscovery (lazy) - not yet initialized")
+        Log.i(MacroApplication.TAG, "${System.currentTimeMillis() - MacroApplication.appStartTime}ms: [Activity] Background tasks launched")
         
         setContent {
             val setContentStart = System.currentTimeMillis() - MacroApplication.appStartTime
