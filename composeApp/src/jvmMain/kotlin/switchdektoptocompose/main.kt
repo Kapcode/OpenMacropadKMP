@@ -78,6 +78,7 @@ fun main() = application {
     val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val animateToTraySetting by settingsViewModel.animateToTray.collectAsState()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     // Using the higher resolution icon to avoid white fringing artifacts
     val icon = painterResource("macropadIcon512.png")
 
@@ -252,6 +253,7 @@ fun main() = application {
 
     if (showMinimizeToTrayDialog) {
         MinimizeToTrayDialog(
+            selectedTheme = selectedTheme,
             onConfirm = { dontShowAgain ->
                 if (dontShowAgain) {
                     settingsViewModel.setShowMinimizeToTrayDialog(false)
@@ -479,7 +481,12 @@ fun DesktopApp(
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Column {
-                                    Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = if (isServerRunning) Color.Green else Color.Red)
+                                    val statusColor = if (isServerRunning) {
+                                        if (selectedTheme == "Dark Blue") Color.Green else Color(0xFF008000) // Darker green for light theme
+                                    } else {
+                                        Color.Red
+                                    }
+                                    Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor)
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("Address: $serverIpAddress:$currentPort")
                                 }

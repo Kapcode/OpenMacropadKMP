@@ -8,9 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
 @Composable
 fun MinimizeToTrayDialog(
+    selectedTheme: String,
     onConfirm: (dontShowAgain: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -22,41 +24,43 @@ fun MinimizeToTrayDialog(
         title = "Exiting to Tray",
         resizable = false
     ) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "Exiting to system tray.",
-                        style = MaterialTheme.typography.headlineSmall
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        text = "You can change this in settings.",
-                        style = MaterialTheme.typography.bodyLarge
-                    )
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
+        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Checkbox(
-                        checked = dontShowAgain,
-                        onCheckedChange = { dontShowAgain = it }
-                    )
-                    Text("Don't show this again")
-                }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Exiting to system tray.",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = "You can change this in settings.",
+                            style = MaterialTheme.typography.bodyLarge
+                        )
+                    }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Button(onClick = { onConfirm(dontShowAgain) }) {
-                        Text("OK")
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = dontShowAgain,
+                            onCheckedChange = { dontShowAgain = it }
+                        )
+                        Text("Don't show this again")
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(onClick = { onConfirm(dontShowAgain) }) {
+                            Text("OK")
+                        }
                     }
                 }
             }
