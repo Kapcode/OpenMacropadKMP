@@ -117,6 +117,27 @@ Automated macros could cause loss of system control if they ran too long or went
 ./gradlew :composeApp:packageDistributionForCurrentOS
 ```
 
-### Building the Android App
-*   Use Android Studio (Recommended)
-*   CLI: `./gradlew :composeApp:assembleDebug`
+## 11. Security Hardening & KMP Cryptography
+
+### Challenge: Authenticating the Handshake (MitM Protection)
+- **Problem**: The initial Diffie-Hellman exchange was anonymous, making it vulnerable to interception.
+- **Solution**: Implemented an authenticated handshake in `SecureSocket.kt`. 
+    - **Identity**: Migrated from RSA-2048 to **Elliptic Curve (secp256r1)** for faster and more secure signatures.
+    - **Signature**: During the handshake, both parties sign their ephemeral DH public keys. The peer verifies the signature using the other party's long-term public identity key before deriving the shared AES secret.
+
+### Challenge: Platform-Specific Key Storage
+- **Problem**: Storing private keys securely across different platforms.
+- **Solution**: 
+    - **Android**: Integrated with the **Android Keystore System**. Private keys are generated within the hardware-backed TEE (Trusted Execution Environment) or StrongBox, ensuring they cannot be exported even if the device is rooted.
+    - **JVM**: Currently uses a local file storage with future plans for OS-level secret vault integration (e.g., Gnome Keyring, Windows Credential Manager).
+
+### Challenge: Android 7.0 (API 24) Compatibility
+- **Problem**: `java.util.Base64` was introduced in API 26, causing crashes on older Android devices.
+- **Solution**: Created a KMP-safe `Base64Utils` object.
+    - `androidMain` uses `android.util.Base64`.
+    - `jvmMain` uses `java.util.Base64`.
+    - This allows `commonMain` code (like `DataModel`) to remain platform-agnostic while supporting older Android versions.
+
+### Challenge: Memory Security (Fix 6)
+- **Problem**: Sensitive cryptographic keys persisting in RAM.
+- **Solution**: Updated `EncryptionManager.kt` to explicitly call `.fill(0)` on `ByteArray` objects containing keys and IVs immediately after their use in cryptographic operations.

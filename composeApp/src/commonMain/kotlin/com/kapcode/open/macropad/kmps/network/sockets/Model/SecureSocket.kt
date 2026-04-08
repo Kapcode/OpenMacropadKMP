@@ -1,8 +1,10 @@
 package Model
 
+import com.kapcode.open.macropad.kmps.IdentityManager
 import java.io.*
 import java.math.BigInteger
 import java.net.Socket
+import java.security.SignatureException
 import javax.crypto.spec.DHParameterSpec
 
 /**
@@ -10,7 +12,8 @@ import javax.crypto.spec.DHParameterSpec
  */
 class SecureSocket(
     private val socket: Socket,
-    private val encryptionManager: EncryptionManager
+    private val encryptionManager: EncryptionManager,
+    val peerIdentityKey: ByteArray? = null
 ) : Closeable {
 
     private val outputStream: DataOutputStream = DataOutputStream(socket.getOutputStream())
@@ -18,16 +21,17 @@ class SecureSocket(
 
     companion object {
         /**
-         * Perform key exchange and create a SecureSocket
+         * Perform authenticated key exchange and create a SecureSocket
          * Call this on the CLIENT side
          * @return A Pair containing the SecureSocket and the server's device name.
          */
         fun clientHandshake(socket: Socket, clientName: String): Pair<SecureSocket, String> {
             val encryptionManager = EncryptionManager()
+            val identityManager = IdentityManager()
             val output = DataOutputStream(socket.getOutputStream())
             val input = DataInputStream(socket.getInputStream())
 
-            // Receive server's public key, DH parameters, and name
+            // 1. Receive server's DH public key, DH parameters, and name
             val theirKeySize = input.readInt()
             val theirPublicKeyBytes = ByteArray(theirKeySize)
             input.readFully(theirPublicKeyBytes)
@@ -44,40 +48,70 @@ class SecureSocket(
 
             val serverName = input.readUTF()
 
-            // Initialize our key exchange with server's parameters
+            // 2. Receive server's identity public key and signature
+            val serverIdentityKeySize = input.readInt()
+            val serverIdentityKeyBytes = ByteArray(serverIdentityKeySize)
+            input.readFully(serverIdentityKeyBytes)
+
+            val signatureSize = input.readInt()
+            val signatureBytes = ByteArray(signatureSize)
+            input.readFully(signatureBytes)
+
+            // 3. Verify server's signature (Fix 1: Unauthenticated Key Exchange)
+            val dataToVerify = theirPublicKeyBytes + pBytes + gBytes + serverName.toByteArray()
+            if (!IdentityManager.verifySignature(dataToVerify, signatureBytes, serverIdentityKeyBytes)) {
+                throw SignatureException("Server identity verification failed!")
+            }
+
+            // 4. Initialize our key exchange with server's parameters
             val serverSpec = DHParameterSpec(p, g)
             val (ourPublicKeyBytes, _) = encryptionManager.initializeKeyExchange(serverSpec)
             
-            // Send our public key and name
+            // 5. Sign our public key and name
+            val ourDataToSign = ourPublicKeyBytes + clientName.toByteArray()
+            val ourSignature = identityManager.signMessage(ourDataToSign)
+            val ourIdentityKey = identityManager.getIdentityPublicKey()
+
+            // 6. Send our DH public key, name, identity key, and signature
             output.writeInt(ourPublicKeyBytes.size)
             output.write(ourPublicKeyBytes)
             output.writeUTF(clientName)
+            output.writeInt(ourIdentityKey.size)
+            output.write(ourIdentityKey)
+            output.writeInt(ourSignature.size)
+            output.write(ourSignature)
             output.flush()
             
-            // Complete key exchange
+            // 7. Complete key exchange
             encryptionManager.completeKeyExchange(theirPublicKeyBytes)
 
-            return SecureSocket(socket, encryptionManager) to serverName
+            return SecureSocket(socket, encryptionManager, serverIdentityKeyBytes) to serverName
         }
 
         /**
-         * Perform key exchange and create a SecureSocket
+         * Perform authenticated key exchange and create a SecureSocket
          * Call this on the SERVER side
          * @return A Pair containing the SecureSocket and the client's device name.
          */
         fun serverHandshake(socket: Socket, serverName: String): Pair<SecureSocket, String> {
             val encryptionManager = EncryptionManager()
+            val identityManager = IdentityManager()
             val output = DataOutputStream(socket.getOutputStream())
             val input = DataInputStream(socket.getInputStream())
 
-            // Initialize our key exchange and get our parameters
+            // 1. Initialize our key exchange and get our parameters
             val (ourPublicKeyBytes, ourParams) = encryptionManager.initializeKeyExchange()
             val p = ourParams!!.p
             val g = ourParams!!.g
             val pBytes = p.toByteArray()
             val gBytes = g.toByteArray()
 
-            // Send our public key, DH parameters, and name
+            // 2. Sign our DH public key, parameters, and name
+            val dataToSign = ourPublicKeyBytes + pBytes + gBytes + serverName.toByteArray()
+            val signature = identityManager.signMessage(dataToSign)
+            val identityKey = identityManager.getIdentityPublicKey()
+
+            // 3. Send our DH public key, DH parameters, name, identity key, and signature
             output.writeInt(ourPublicKeyBytes.size)
             output.write(ourPublicKeyBytes)
             output.writeInt(pBytes.size)
@@ -85,18 +119,37 @@ class SecureSocket(
             output.writeInt(gBytes.size)
             output.write(gBytes)
             output.writeUTF(serverName)
+            output.writeInt(identityKey.size)
+            output.write(identityKey)
+            output.writeInt(signature.size)
+            output.write(signature)
             output.flush()
 
-            // Receive client's public key and name
+            // 4. Receive client's DH public key and name
             val theirKeySize = input.readInt()
             val theirPublicKeyBytes = ByteArray(theirKeySize)
             input.readFully(theirPublicKeyBytes)
             val clientName = input.readUTF()
 
-            // Complete key exchange
+            // 5. Receive client's identity key and signature
+            val clientIdentityKeySize = input.readInt()
+            val clientIdentityKeyBytes = ByteArray(clientIdentityKeySize)
+            input.readFully(clientIdentityKeyBytes)
+
+            val theirSignatureSize = input.readInt()
+            val theirSignatureBytes = ByteArray(theirSignatureSize)
+            input.readFully(theirSignatureBytes)
+
+            // 6. Verify client's signature (Fix 1: Unauthenticated Key Exchange)
+            val theirDataToVerify = theirPublicKeyBytes + clientName.toByteArray()
+            if (!IdentityManager.verifySignature(theirDataToVerify, theirSignatureBytes, clientIdentityKeyBytes)) {
+                throw SignatureException("Client identity verification failed!")
+            }
+
+            // 7. Complete key exchange
             encryptionManager.completeKeyExchange(theirPublicKeyBytes)
 
-            return SecureSocket(socket, encryptionManager) to clientName
+            return SecureSocket(socket, encryptionManager, clientIdentityKeyBytes) to clientName
         }
 
         /**

@@ -1,5 +1,6 @@
 package Model
 
+import com.kapcode.open.macropad.kmps.utils.Base64Utils
 import java.io.*
 import java.security.*
 import javax.crypto.*
@@ -11,15 +12,6 @@ import java.util.*
  * Sealed class representing different types of messages that can be sent
  * between client and server
  */
-
-
-/**
- * Extension functions and convenience methods for DataModel
- */
-
-// Quick builders for common message types
-
-
 sealed class MessageType : Serializable {
     data class Text(val content: String) : MessageType()
     data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType()
@@ -76,14 +68,14 @@ data class DataModel(
          * Convert a key to Base64 string for storage/transmission
          */
         fun keyToString(key: SecretKey): String {
-            return Base64.getEncoder().encodeToString(key.encoded)
+            return Base64Utils.encode(key.encoded)
         }
 
         /**
          * Restore a key from Base64 string
          */
         fun stringToKey(keyString: String): SecretKey {
-            val keyBytes = Base64.getDecoder().decode(keyString)
+            val keyBytes = Base64Utils.decode(keyString)
             return SecretKeySpec(keyBytes, ALGORITHM)
         }
 
@@ -225,5 +217,3 @@ class DataModelBuilder {
     }
 
 }
-
-
