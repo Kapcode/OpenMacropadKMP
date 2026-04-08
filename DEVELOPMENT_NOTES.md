@@ -195,18 +195,40 @@ Automated macros could cause loss of system control if they ran too long or went
     - Removed redundant `MaterialTheme` nesting in `App.kt`, shaving ~800ms off the `setContent` phase.
 
 ### Result: 
-**Total Startup Time reduced from ~20s to 6.7s (66% improvement).**
+**Total Startup Time reduced from ~20s to ~2.3s (88% improvement).**
 
-## 15. To-Do List & Future Improvements
+## 15. UI Feedback & Interactive Loading
+
+### Challenge: Invisible Startup Progress
+- **Problem**: During the 500ms splash screen and subsequent initialization, the UI appeared static, leading to a "frozen" feel despite the improved startup speed.
+- **Solution**:
+    - **BlinkingCursor**: Implemented a retro-style blinking terminal cursor (`> _`) using `rememberInfiniteTransition` for robust, frame-perfect animation even during heavy main-thread load.
+    - **Minimum Alpha**: Set a `minAlpha` of 20/255 for the "off" state of the cursor, ensuring it remains slightly visible to maintain visual continuity.
+    - **Optimized Timing**: Tuned the blink cycle to 400ms (200ms ON / 200ms OFF) to guarantee at least one full blink cycle occurs during the 500ms splash screen delay, returning the cursor to full visibility just as the transition ends.
+    - **ThreeDotsLoading**: Added a staggered scaling animation for server discovery, providing immediate feedback when the UDP scan is active.
+    - **Stop Scanning**: Added a manual "Stop" button (red 'X') to allow users to halt discovery, preventing unnecessary network traffic and battery drain once a server is found.
+
+## 16. Amazon Fire Tablet Optimization
+
+### Challenge: Generic Device Names (The "KFONWI" Problem)
+- **Problem**: Amazon Fire tablets often report a generic model name like "KFONWI" instead of a user-defined name, making it hard to identify devices in the server list.
+- **Solution**:
+    - **Aggressive Name Lookup**: Updated `DeviceInfo.kt` on Android to query multiple system settings providers (`Global`, `Secure`, and `System`).
+    - **Key Search**: Specifically looks for `device_name` and `bluetooth_name` keys, which often contain the user-friendly name set during tablet setup.
+    - **Stability**: Combines the user-friendly name with a short (4-character) anonymous SHA-256 hash of the `ANDROID_ID` to create a stable, unique, and privacy-respecting identity: `Kyle's Fire-a1b2`.
+
+## 17. To-Do List & Future Improvements
 
 ### Android Client
-- [ ] **Optimize Dependency Initialization**: Transition from sequential to parallel initialization of Firebase and AdMob to further shave off startup milliseconds.
-- [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to 6.7s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
+- [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
+- [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to ~2.3s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
+- [x] **UI Feedback**: Implemented `BlinkingCursor` and `ThreeDotsLoading` with `rememberInfiniteTransition` for reliable feedback during startup and discovery.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
 - [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
 
 ### Desktop Server
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
+- [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.

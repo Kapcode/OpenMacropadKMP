@@ -5,6 +5,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -26,6 +27,8 @@ class ClientDiscovery {
     private var socket: DatagramSocket? = null
 
     val foundServers = MutableStateFlow<List<DiscoveredServer>>(emptyList())
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning = _isScanning.asStateFlow()
 
     fun isDiscovering(): Boolean {
         return discoveryJob?.isActive == true
@@ -34,6 +37,7 @@ class ClientDiscovery {
     fun start() {
         if (isDiscovering()) return
         
+        _isScanning.value = true
         discoveryJob = discoveryScope.launch {
             try {
                 socket = DatagramSocket(null).apply {
@@ -75,6 +79,7 @@ class ClientDiscovery {
                     println("Failed to setup discovery socket: ${e.message}")
                 }
             } finally {
+                _isScanning.value = false
                 socket?.close()
                 socket = null
             }
@@ -83,6 +88,7 @@ class ClientDiscovery {
 
     fun stop() {
         discoveryJob?.cancel()
+        _isScanning.value = false
         socket?.close()
         socket = null
         discoveryJob = null

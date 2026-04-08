@@ -6,7 +6,39 @@ import java.security.MessageDigest
 
 actual object DeviceInfo {
     actual val name: String
-        get() = Build.MODEL
+        get() {
+            val resolver = MacroApplication.instance.contentResolver
+            
+            // Comprehensive list of settings keys that might contain a user-defined device name.
+            // "device_name" is common on modern Android and Amazon Fire tablets.
+            // "bluetooth_name" is a very reliable fallback as users often name their device for BT.
+            val keys = listOf(
+                "device_name" to "global",
+                "device_name" to "secure",
+                "device_name" to "system",
+                "bluetooth_name" to "secure",
+                "bluetooth_name" to "system"
+            )
+
+            for ((key, type) in keys) {
+                try {
+                    val value = when (type) {
+                        "global" -> Settings.Global.getString(resolver, key)
+                        "secure" -> Settings.Secure.getString(resolver, key)
+                        "system" -> Settings.System.getString(resolver, key)
+                        else -> null
+                    }
+                    if (!value.isNullOrBlank() && value != Build.MODEL) {
+                        return value
+                    }
+                } catch (e: Exception) {
+                    // Ignore and try next key
+                }
+            }
+
+            // Fallback to Model (e.g., "Pixel 9")
+            return Build.MODEL
+        }
 
     actual val uniqueId: String
         get() {

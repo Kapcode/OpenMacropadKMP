@@ -3,19 +3,25 @@ package com.kapcode.open.macropad.kmps
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
+import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
+import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun App(
     modifier: Modifier = Modifier,
     scanServers: () -> Unit,
+    stopScanning: () -> Unit,
     foundServers: List<ServerInfo>,
+    isScanning: Boolean = false,
     onConnectClick: (serverInfo: ServerInfo, deviceName: String) -> Unit
 ) {
     var deviceName by remember { mutableStateOf("${DeviceInfo.name}-${DeviceInfo.uniqueId}") }
@@ -39,8 +45,28 @@ fun App(
         Spacer(modifier = Modifier.height(16.dp))
 
         // --- Server Discovery ---
-        Button(onClick = scanServers) {
-            Text("Scan for Servers")
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Button(onClick = scanServers, enabled = !isScanning) {
+                Text(if (isScanning) "Scanning..." else "Scan for Servers")
+            }
+            if (isScanning) {
+                Spacer(modifier = Modifier.width(16.dp))
+                ThreeDotsLoading()
+                Spacer(modifier = Modifier.width(8.dp))
+                IconButton(
+                    onClick = stopScanning,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Stop Scanning",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
         }
         Spacer(modifier = Modifier.height(8.dp))
         foundServers.forEach { server ->
@@ -88,6 +114,7 @@ fun AppPreview() {
     )
     App(
         scanServers = {},
+        stopScanning = {},
         foundServers = sampleServers,
         onConnectClick = { _, _ -> }
     )
