@@ -195,7 +195,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - Removed redundant `MaterialTheme` nesting in `App.kt`, shaving ~800ms off the `setContent` phase.
 
 ### Result: 
-**Total Startup Time reduced from ~20s to ~1.2s (94% improvement).**
+**Total Startup Time reduced from ~20s to ~1.2s - 2.2s on modern hardware (e.g., Pixel 7, Pixel 9a), and ~8s on budget/older hardware like the Amazon Fire HD 8 (10th Gen).**
 
 ## 15. UI Feedback & Interactive Loading
 
