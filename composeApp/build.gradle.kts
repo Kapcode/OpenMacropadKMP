@@ -58,8 +58,6 @@ kotlin {
             implementation(libs.ktor.serialization.kotlinx.json)
             
             implementation(compose.materialIconsExtended)
-            implementation(libs.bouncycastle.bcpkix)
-            implementation(libs.bouncycastle.bcprov)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
@@ -85,6 +83,9 @@ kotlin {
             implementation(libs.svg.salamander)
             implementation(libs.json)
             implementation(libs.slf4j.simple)
+            
+            implementation(libs.bouncycastle.bcpkix)
+            implementation(libs.bouncycastle.bcprov)
         }
     }
 }
@@ -110,10 +111,15 @@ android {
     }
     buildTypes {
         getByName("release") {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         getByName("debug") {
-            isMinifyEnabled = false
+            // Enable minimal shrinking to remove heavy Ktor-Server classes from the APK
+            // This drastically reduces ART verification time at startup.
+            isMinifyEnabled = true
+            isShrinkResources = false
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
     compileOptions {
@@ -131,18 +137,18 @@ configurations.all {
     exclude(group = "io.ktor", module = "ktor-server-host-common")
 
     resolutionStrategy {
-        // FORCE Ktor 3.0.3 and modern Coroutines globally
-        force("io.ktor:ktor-server-core:3.0.3")
-        force("io.ktor:ktor-server-netty:3.0.3")
-        force("io.ktor:ktor-server-websockets:3.0.3")
-        force("io.ktor:ktor-server-call-logging:3.0.3")
-        force("io.ktor:ktor-client-core:3.0.3")
-        force("io.ktor:ktor-client-okhttp:3.0.3")
+        // FORCE Ktor 3.4.2 and modern Coroutines globally
+        force("io.ktor:ktor-server-core:3.4.2")
+        force("io.ktor:ktor-server-netty:3.4.2")
+        force("io.ktor:ktor-server-websockets:3.4.2")
+        force("io.ktor:ktor-server-call-logging:3.4.2")
+        force("io.ktor:ktor-client-core:3.4.2")
+        force("io.ktor:ktor-client-okhttp:3.4.2")
         
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.1")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.1")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.1")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.2")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
+        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     }
 }
 

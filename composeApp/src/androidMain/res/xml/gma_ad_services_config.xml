@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ad-services-config>
+    <attestation-config>
+        <consent-manager enabled="true" />
+    </attestation-config>
+</ad-services-config>

@@ -32,14 +32,22 @@ class NewEventViewModel {
     val autoDelayText = MutableStateFlow("50")
 
     val validationState: StateFlow<Pair<Boolean, String>> = combine(
-        isTriggerEvent, allowedClientsText,
-        useKeys, keysText,
-        useMouseButtons, mouseButtonsText,
-        useMouseScroll, mouseScrollText,
-        useMouseLocation, mouseX, mouseY,
-        useDelay, delayText,
-        useAutoDelay, autoDelayText
-    ) { args ->
+        isTriggerEvent,
+        allowedClientsText,
+        useKeys,
+        keysText,
+        useMouseButtons,
+        mouseButtonsText,
+        useMouseScroll,
+        mouseScrollText,
+        useMouseLocation,
+        mouseX,
+        mouseY,
+        useDelay,
+        delayText,
+        useAutoDelay,
+        autoDelayText
+    ) { _: Array<Any?> ->
         validate()
     }.stateIn(viewModelScope, SharingStarted.Lazily, Pair(false, "Initializing..."))
 

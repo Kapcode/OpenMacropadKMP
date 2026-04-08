@@ -3,6 +3,7 @@ package com.kapcode.open.macropad.kmps
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.ads.MobileAds
+import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
@@ -53,21 +55,65 @@ const val TAG = "MainActivity"
 @OptIn(ExperimentalMaterial3Api::class)
 class MainActivity : ComponentActivity() {
 
-    private lateinit var clientDiscovery: ClientDiscovery
-    private val settingsViewModel = SettingsViewModel()
+    private val clientDiscovery by lazy { ClientDiscovery() }
+    private val settingsViewModel by lazy { SettingsViewModel() }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val activityCreateStart = System.currentTimeMillis() - MacroApplication.appStartTime
+        Log.i(MacroApplication.TAG, "${activityCreateStart}ms: [Activity] onCreate started")
+        
         val splashScreen = installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        
+        Log.i(MacroApplication.TAG, "${System.currentTimeMillis() - MacroApplication.appStartTime}ms: [Activity] super.onCreate finished")
 
+        // Initialize TokenManager in background
         lifecycleScope.launch(Dispatchers.IO) {
-            MobileAds.initialize(this@MainActivity) {}
+            val tmStart = System.currentTimeMillis() - MacroApplication.appStartTime
+            Log.i(MacroApplication.TAG, "${tmStart}ms: [TokenManager] init started (background)")
+            TokenManager.getInstance(this@MainActivity)
+            val tmEnd = System.currentTimeMillis() - MacroApplication.appStartTime
+            Log.i(MacroApplication.TAG, "${tmEnd}ms: [TokenManager] init finished (background)")
         }
 
-        clientDiscovery = ClientDiscovery()
-
+        Log.i(MacroApplication.TAG, "${System.currentTimeMillis() - MacroApplication.appStartTime}ms: [Activity] clientDiscovery (lazy) - not yet initialized")
+        
         setContent {
+            val setContentStart = System.currentTimeMillis() - MacroApplication.appStartTime
+            Log.i(MacroApplication.TAG, "${setContentStart}ms: [Activity] setContent started")
+            
+            val splashScreenVisible = remember { mutableStateOf(true) }
+            
+            LaunchedEffect(Unit) {
+                val effectStart = System.currentTimeMillis() - MacroApplication.appStartTime
+                Log.i(MacroApplication.TAG, "${effectStart}ms: [Activity] LaunchedEffect started (UI Ready)")
+                
+                // Initialize MobileAds and Firebase here, AFTER the splash is gone and UI is ready
+                launch(Dispatchers.IO) {
+                    val fbStart = System.currentTimeMillis() - MacroApplication.appStartTime
+                    Log.i(MacroApplication.TAG, "${fbStart}ms: [Firebase] init started (background)")
+                    FirebaseApp.initializeApp(this@MainActivity)
+                    val fbEnd = System.currentTimeMillis() - MacroApplication.appStartTime
+                    Log.i(MacroApplication.TAG, "${fbEnd}ms: [Firebase] init finished (background)")
+                    
+                    val adsStart = System.currentTimeMillis() - MacroApplication.appStartTime
+                    Log.i(MacroApplication.TAG, "${adsStart}ms: [MobileAds] init started (background)")
+                    MobileAds.initialize(this@MainActivity) {
+                        val adsEnd = System.currentTimeMillis() - MacroApplication.appStartTime
+                        Log.i(MacroApplication.TAG, "${adsEnd}ms: [MobileAds] callback received")
+                    }
+                }
+
+                delay(500)
+                splashScreenVisible.value = false
+                val totalTime = System.currentTimeMillis() - MacroApplication.appStartTime
+                Log.i(MacroApplication.TAG, "${totalTime}ms: [Activity] Splash screen hidden. Total startup: ${totalTime}ms")
+                Toast.makeText(this@MainActivity, "Total Startup: $totalTime ms", Toast.LENGTH_LONG).show()
+            }
+
+            splashScreen.setKeepOnScreenCondition { splashScreenVisible.value }
+
             MainContent()
         }
     }
@@ -144,23 +190,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::clientDiscovery.isInitialized && !clientDiscovery.isDiscovering()) {
-            clientDiscovery.start()
-        }
+        // Removed eager discovery start to save resources until user clicks "Scan"
     }
 
     override fun onPause() {
         super.onPause()
-        if (::clientDiscovery.isInitialized) {
-            clientDiscovery.stop()
-        }
+        // clientDiscovery is lazy, only stop if it was initialized
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (::clientDiscovery.isInitialized) {
-            clientDiscovery.stop()
-        }
+        // clientDiscovery is lazy, only stop if it was initialized
     }
 }
 

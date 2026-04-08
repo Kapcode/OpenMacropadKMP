@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
+        android:name=".MacroApplication"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher_cutsom_round"
         android:label="@string/app_name"
@@ -13,6 +14,28 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Starting"
         android:usesCleartextTraffic="true">
+
+        <!-- Disable automatic Firebase initialization to speed up startup -->
+        <provider
+            android:name="com.google.firebase.provider.FirebaseInitProvider"
+            android:authorities="${applicationId}.firebaseinitprovider"
+            android:exported="false"
+            tools:node="remove" />
+
+        <!-- Disable automatic AdMob/GMS initialization -->
+        <provider
+            android:name="com.google.android.gms.ads.MobileAdsInitProvider"
+            android:authorities="${applicationId}.mobileadsinitprovider"
+            android:exported="false"
+            tools:node="remove" />
+
+        <!-- Disable Jetpack Startup to reclaim "pre-code" time -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="remove" />
+
         <!-- android:usesCleartextTraffic="true" is added for development ease. -->
         <!-- For production, it's better to use a network security config file -->
         <!-- to only allow cleartext for specific domains if needed. -->

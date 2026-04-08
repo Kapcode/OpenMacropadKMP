@@ -22,61 +22,59 @@ fun App(
     var manualIpAddress by remember { mutableStateOf("") }
     var isManualSecure by remember { mutableStateOf(true) }
 
-    MaterialTheme {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()), // Make the column scrollable
-            horizontalAlignment = Alignment.CenterHorizontally,
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState()), // Make the column scrollable
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        // --- Device Name ---
+        TextField(
+            value = deviceName,
+            onValueChange = { deviceName = it },
+            label = { Text("Device Name") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Server Discovery ---
+        Button(onClick = scanServers) {
+            Text("Scan for Servers")
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        foundServers.forEach { server ->
+            ConnectionItem(
+                name = server.name,
+                ipAddressPort = server.address,
+                onClick = { onConnectClick(server, deviceName) }
+            )
+        }
+        
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        // --- Manual Connection ---
+        Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
+        TextField(
+            value = manualIpAddress,
+            onValueChange = { manualIpAddress = it },
+            label = { Text("Server IP:Port") },
+            modifier = Modifier.fillMaxWidth()
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = isManualSecure, onCheckedChange = { isManualSecure = it })
+            Text("Use Secure Connection (WSS)")
+        }
+        Button(
+            onClick = {
+                if (manualIpAddress.isNotBlank()) {
+                    val manualServer = ServerInfo("Manual", manualIpAddress, isManualSecure)
+                    onConnectClick(manualServer, deviceName)
+                }
+            },
+            enabled = manualIpAddress.isNotBlank()
         ) {
-            // --- Device Name ---
-            TextField(
-                value = deviceName,
-                onValueChange = { deviceName = it },
-                label = { Text("Device Name") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // --- Server Discovery ---
-            Button(onClick = scanServers) {
-                Text("Scan for Servers")
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            foundServers.forEach { server ->
-                ConnectionItem(
-                    name = server.name,
-                    ipAddressPort = server.address,
-                    onClick = { onConnectClick(server, deviceName) }
-                )
-            }
-            
-            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-            // --- Manual Connection ---
-            Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
-            TextField(
-                value = manualIpAddress,
-                onValueChange = { manualIpAddress = it },
-                label = { Text("Server IP:Port") },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = isManualSecure, onCheckedChange = { isManualSecure = it })
-                Text("Use Secure Connection (WSS)")
-            }
-            Button(
-                onClick = {
-                    if (manualIpAddress.isNotBlank()) {
-                        val manualServer = ServerInfo("Manual", manualIpAddress, isManualSecure)
-                        onConnectClick(manualServer, deviceName)
-                    }
-                },
-                enabled = manualIpAddress.isNotBlank()
-            ) {
-                Text("Connect Manually")
-            }
+            Text("Connect Manually")
         }
     }
 }
