@@ -228,11 +228,21 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Pre-Downsized Assets**: Switched to a pre-scaled 192px PNG (`splash_icon_downsized.png`) for the system splash to avoid real-time interpolation shimmer.
     - **Visual Continuity**: Synchronized the Compose `SplashUI` to use the exact same `192dp` centering and icon-to-cursor spacing. This creates a seamless "hand-off" where the system icon remains perfectly still as the Compose UI takes over and begins the cursor blink animation.
 
-## 18. To-Do List & Future Improvements
+## 18. Desktop Taskbar & System Tray Integration
+
+### Challenge: Unreliable "Minimize to Tray" Behavior
+- **Problem**: The current implementation for iconifying the application to the system tray (taskbar) is unstable across different OS environments (Linux/Windows/macOS). Issues include phantom windows, lack of proper "Restore" behavior, and inconsistent icon scaling.
+- **Goal**: Achieve a seamless "background-only" mode where the server runs quietly in the tray without a persistent taskbar entry.
+- **Potential Solutions**:
+    - **Native Integration**: Better utilization of `java.awt.SystemTray` with a robust fallback for environments that don't support it.
+    - **Window Management**: Refining `WindowEvent` listeners to ensure the Compose window is properly hidden/shown and that its lifecycle doesn't interfere with the Ktor server or JNativeHook listeners.
+    - **Context Menu**: Implementing a functional right-click menu for the tray icon (e.g., "Toggle Server", "View Logs", "Exit").
+
+## 19. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
-- [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to ~2.3s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
+- [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to ~1.2s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
 - [x] **UI Feedback**: Implemented `BlinkingCursor` and `ThreeDotsLoading` with `rememberInfiniteTransition` for reliable feedback during startup and discovery.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
 - [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
@@ -240,6 +250,7 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Desktop Server
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
+- [ ] **Taskbar/Tray Polish**: Overhaul the system tray implementation to support stable minimize-to-tray behavior across Linux, Windows, and macOS.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
