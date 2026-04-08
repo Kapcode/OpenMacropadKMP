@@ -16,6 +16,8 @@ object AppSettings {
     private const val ESTOP_KEY_KEY = "eStopKey"
     private const val MINIMIZE_TO_TRAY_KEY = "minimizeToTray"
     private const val SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY = "showMinimizeToTrayDialog"
+    private const val CLICK_TRAY_TO_TOGGLE_KEY = "clickTrayToToggle"
+    private const val ANIMATE_TO_TRAY_KEY = "animateToTray"
     private const val HARD_ESTOP_KEY = "hardEstop"
 
     init {
@@ -77,6 +79,20 @@ object AppSettings {
         get() = properties.getProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, value.toString())
+            save()
+        }
+
+    var clickTrayToToggle: Boolean
+        get() = properties.getProperty(CLICK_TRAY_TO_TOGGLE_KEY, "false").toBoolean()
+        set(value) {
+            properties.setProperty(CLICK_TRAY_TO_TOGGLE_KEY, value.toString())
+            save()
+        }
+
+    var animateToTray: Boolean
+        get() = properties.getProperty(ANIMATE_TO_TRAY_KEY, "false").toBoolean()
+        set(value) {
+            properties.setProperty(ANIMATE_TO_TRAY_KEY, value.toString())
             save()
         }
 

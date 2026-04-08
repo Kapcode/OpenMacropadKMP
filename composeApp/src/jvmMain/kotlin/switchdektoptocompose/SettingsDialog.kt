@@ -33,9 +33,11 @@ fun SettingsDialog(
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
     val showMinimizeToTrayDialog by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
+    val animateToTraySetting by settingsViewModel.animateToTray.collectAsState()
+    val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val hardEstop by settingsViewModel.hardEstop.collectAsState()
 
-    val dialogState = rememberDialogState(width = 600.dp, height = 550.dp) // Increased height
+    val dialogState = rememberDialogState(width = 600.dp, height = 600.dp) // Increased height
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
@@ -88,7 +90,7 @@ fun SettingsDialog(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Minimize to System Tray", modifier = Modifier.weight(1f))
+                        Text("Exit to tray", modifier = Modifier.weight(1f))
                         Checkbox(
                             checked = minimizeToTray,
                             onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
@@ -105,6 +107,26 @@ fun SettingsDialog(
                                 onCheckedChange = { settingsViewModel.setShowMinimizeToTrayDialog(it) }
                             )
                         }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+                        ) {
+                            Text("Animate to tray", modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = animateToTraySetting,
+                                onCheckedChange = { settingsViewModel.setAnimateToTray(it) }
+                            )
+                        }
+                    }
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
+                        Checkbox(
+                            checked = clickTrayToToggle,
+                            onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
+                        )
                     }
                      Row(
                         verticalAlignment = Alignment.CenterVertically,

@@ -25,6 +25,12 @@ class SettingsViewModel {
     private val _showMinimizeToTrayDialog = MutableStateFlow(AppSettings.showMinimizeToTrayDialog)
     val showMinimizeToTrayDialog = _showMinimizeToTrayDialog.asStateFlow()
 
+    private val _clickTrayToToggle = MutableStateFlow(AppSettings.clickTrayToToggle)
+    val clickTrayToToggle = _clickTrayToToggle.asStateFlow()
+
+    private val _animateToTray = MutableStateFlow(AppSettings.animateToTray)
+    val animateToTray = _animateToTray.asStateFlow()
+
     private val _hardEstop = MutableStateFlow(AppSettings.hardEstop)
     val hardEstop = _hardEstop.asStateFlow()
 
@@ -78,6 +84,16 @@ class SettingsViewModel {
     fun setShowMinimizeToTrayDialog(enabled: Boolean) {
         _showMinimizeToTrayDialog.value = enabled
         AppSettings.showMinimizeToTrayDialog = enabled
+    }
+
+    fun setClickTrayToToggle(enabled: Boolean) {
+        _clickTrayToToggle.value = enabled
+        AppSettings.clickTrayToToggle = enabled
+    }
+
+    fun setAnimateToTray(enabled: Boolean) {
+        _animateToTray.value = enabled
+        AppSettings.animateToTray = enabled
     }
 
     fun setHardEstop(enabled: Boolean) {

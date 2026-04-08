@@ -1,6 +1,6 @@
 package switchdektoptocompose
 
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
@@ -76,60 +76,63 @@ fun main() = application {
     var showMinimizeToTrayDialog by remember { mutableStateOf(false) }
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
     val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
+    val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
+    val animateToTraySetting by settingsViewModel.animateToTray.collectAsState()
     // Using the higher resolution icon to avoid white fringing artifacts
     val icon = painterResource("macropadIcon512.png")
 
     val animateToTray = {
         if (!isTransitioning && isWindowVisible) {
-            isTransitioning = true
-            animationJob = scope.launch {
-                try {
+            if (!animateToTraySetting) {
+                isWindowVisible = false
+            } else {
+                isTransitioning = true
+                animationJob = scope.launch {
                     val initialPlacement = windowState.placement
                     val initialSize = windowState.size
                     val initialPosition = windowState.position
+                    try {
+                        if (windowState.placement == WindowPlacement.Maximized) {
+                            windowState.placement = WindowPlacement.Floating
+                            delay(100)
+                        }
 
-                    if (windowState.placement == WindowPlacement.Maximized) {
-                        windowState.placement = WindowPlacement.Floating
-                        delay(100)
-                    }
-
-                    val startSize = windowState.size
-                    val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
-                    
-                    val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-                    val targetSize = DpSize(200.dp, 100.dp)
-                    val targetX = (screen.width - 250).dp
-                    val targetY = (screen.height - 150).dp
-
-                    val steps = 20
-                    for (i in 1..steps) {
-                        val t = i.toFloat() / steps
-                        val eased = t * t // quadratic ease-in
+                        val startSize = windowState.size
+                        val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
                         
-                        windowState.size = DpSize(
-                            startSize.width + (targetSize.width - startSize.width) * eased,
-                            startSize.height + (targetSize.height - startSize.height) * eased
-                        )
+                        val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+                        val targetSize = DpSize(200.dp, 100.dp)
+                        val targetX = (screen.width - 250).dp
+                        val targetY = (screen.height - 150).dp
+
+                        val steps = 20
+                        for (i in 1..steps) {
+                            val t = i.toFloat() / steps
+                            val eased = t * t // quadratic ease-in
+                            
+                            windowState.size = DpSize(
+                                startSize.width + (targetSize.width - startSize.width) * eased,
+                                startSize.height + (targetSize.height - startSize.height) * eased
+                            )
+                            
+                            windowState.position = WindowPosition(
+                                startPos.x + (targetX - startPos.x) * eased,
+                                startPos.y + (targetY - startPos.y) * eased
+                            )
+                            delay(16)
+                        }
                         
-                        windowState.position = WindowPosition(
-                            startPos.x + (targetX - startPos.x) * eased,
-                            startPos.y + (targetY - startPos.y) * eased
-                        )
-                        delay(16)
+                        isWindowVisible = false
+                        delay(50)
+                    } finally {
+                        withContext(NonCancellable) {
+                            windowState.placement = initialPlacement
+                            windowState.size = initialSize
+                            windowState.position = initialPosition
+                            isTransitioning = false
+                            animationJob = null
+                        }
                     }
-                    
-                    isWindowVisible = false
-                    delay(50) // Short delay to ensure it's hidden
-                    
-                    // Restore state so it's ready for when it's shown again
-                    withContext(NonCancellable) {
-                        windowState.placement = initialPlacement
-                        windowState.size = initialSize
-                        windowState.position = initialPosition
-                    }
-                } finally {
-                    isTransitioning = false
-                    animationJob = null
                 }
             }
         }
@@ -139,8 +142,66 @@ fun main() = application {
         if (isTransitioning) {
             animationJob?.cancel()
         }
-        isWindowVisible = true
-        windowState.isMinimized = false
+        
+        if (!animateToTraySetting) {
+            isWindowVisible = true
+            windowState.isMinimized = false
+            isTransitioning = false
+            animationJob = null
+        } else {
+            isTransitioning = true
+            animationJob = scope.launch {
+                try {
+                    val targetSize = windowState.size
+                    val targetPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
+                    val targetPlacement = windowState.placement
+
+                    val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+                    val traySize = DpSize(200.dp, 100.dp)
+                    val trayX = (screen.width - 250).dp
+                    val trayY = (screen.height - 150).dp
+
+                    if (!isWindowVisible) {
+                        // Starting from fully hidden, set to tray position first
+                        windowState.placement = WindowPlacement.Floating
+                        windowState.size = traySize
+                        windowState.position = WindowPosition(trayX, trayY)
+                        isWindowVisible = true
+                    }
+                    
+                    windowState.isMinimized = false
+
+                    val startSize = windowState.size
+                    val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
+
+                    val steps = 20
+                    for (i in 1..steps) {
+                        val t = i.toFloat() / steps
+                        val eased = 1f - (1f - t) * (1f - t) // quadratic ease-out
+                        
+                        windowState.size = DpSize(
+                            startSize.width + (targetSize.width - startSize.width) * eased,
+                            startSize.height + (targetSize.height - startSize.height) * eased
+                        )
+                        
+                        windowState.position = WindowPosition(
+                            startPos.x + (targetPos.x - startPos.x) * eased,
+                            startPos.y + (targetPos.y - startPos.y) * eased
+                        )
+                        delay(16)
+                    }
+                    
+                    windowState.placement = targetPlacement
+                } finally {
+                    withContext(NonCancellable) {
+                        isWindowVisible = true
+                        windowState.isMinimized = false
+                        isTransitioning = false
+                        animationJob = null
+                    }
+                }
+            }
+        }
     }
 
 
@@ -167,13 +228,15 @@ fun main() = application {
     
     Tray(
         icon = icon,
-        tooltip = "Open Macropad Server",
+        tooltip = "Open Macropad Server (Right-click for menu)",
         onAction = { 
-            val isMinimized = windowState.isMinimized
-            if (isWindowVisible && !isMinimized && !isTransitioning) {
-                animateToTray()
-            } else {
-                showWindow()
+            if (clickTrayToToggle) {
+                val isMinimized = windowState.isMinimized
+                if (isWindowVisible && !isMinimized && !isTransitioning) {
+                    animateToTray()
+                } else {
+                    showWindow()
+                }
             }
         },
         menu = {

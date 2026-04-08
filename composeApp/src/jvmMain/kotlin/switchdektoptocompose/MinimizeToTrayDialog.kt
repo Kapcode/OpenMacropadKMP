@@ -19,7 +19,7 @@ fun MinimizeToTrayDialog(
     DialogWindow(
         onCloseRequest = onDismiss,
         state = rememberDialogState(width = 400.dp, height = 250.dp),
-        title = "Minimizing to Tray",
+        title = "Exiting to Tray",
         resizable = false
     ) {
         Surface(modifier = Modifier.fillMaxSize()) {
