@@ -75,7 +75,7 @@ fun NewEventDialog(
                                 enabled = isTrigger
                             )
                         }
-                        Divider()
+                        HorizontalDivider()
                         
                         ActionDropdown(selectedAction, viewModel)
                         
@@ -100,7 +100,7 @@ fun NewEventDialog(
                             Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
                         }
                         
-                        Divider()
+                        HorizontalDivider()
                         
                         Column {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -161,7 +161,7 @@ private fun ActionDropdown(selectedAction: MacroAction, viewModel: NewEventViewM
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor()
+                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 viewModel.actionOptions.forEach { action ->

@@ -141,3 +141,20 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Challenge: Memory Security (Fix 6)
 - **Problem**: Sensitive cryptographic keys persisting in RAM.
 - **Solution**: Updated `EncryptionManager.kt` to explicitly call `.fill(0)` on `ByteArray` objects containing keys and IVs immediately after their use in cryptographic operations.
+
+## 12. UI Modernization & Code Standards
+
+### Challenge: Material 3 Component Migrations
+- **Problem**: Compiler warnings from deprecated Material 3 components and experimental APIs.
+- **Solution**:
+    - **Dividers**: Replaced `Divider` with `HorizontalDivider`.
+    - **Dropdown Menus**: Updated `menuAnchor()` to `menuAnchor(MenuAnchorType.PrimaryNotEditable)` for read-only fields to comply with the latest M3 API.
+    - **Icons**: Switched to `AutoMirrored` variants for directional icons (e.g., `Icons.AutoMirrored.Filled.ArrowBack`) to support RTL layouts automatically.
+
+### Challenge: Package Naming Conventions
+- **Problem**: Non-standard uppercase package names (`Model`, `Client`, `Server`) in the `network.sockets` module.
+- **Solution**: Refactored the entire `sockets` hierarchy to use lowercase package names: `com.kapcode.open.macropad.kmps.network.sockets.[model|client|server]`. This aligns with Kotlin's official naming conventions and improves project consistency.
+
+### Challenge: Experimental API Management
+- **Problem**: Use of `ExperimentalSplitPaneApi` in the JVM target required repeated `@OptIn` annotations.
+- **Solution**: Standardized the use of `@OptIn(ExperimentalSplitPaneApi::class)` where necessary to maintain build stability and clear intent for experimental component usage.

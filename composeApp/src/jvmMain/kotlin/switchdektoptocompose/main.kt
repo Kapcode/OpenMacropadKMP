@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +21,7 @@ import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLightLaf
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
@@ -135,7 +137,7 @@ fun main() = application {
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSplitPaneApi::class)
 @Composable
 @Preview
 fun DesktopApp(
@@ -269,10 +271,10 @@ fun DesktopApp(
                                     enabled = isServerRunning,
                                     leadingIcon = { Icon(Icons.Default.Stop, null) }
                                 )
-                                Divider()
+                                HorizontalDivider()
                                 DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
-                                Divider()
-                                DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.Default.ExitToApp, null) })
+                                HorizontalDivider()
+                                DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) })
                             }
                             
                             Spacer(Modifier.width(16.dp))

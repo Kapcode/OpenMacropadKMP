@@ -79,7 +79,7 @@ fun SettingsDialog(
                         }
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     
                     // --- Behavior Settings ---
                      Text("Behavior", style = MaterialTheme.typography.titleMedium)
@@ -104,7 +104,7 @@ fun SettingsDialog(
                         )
                     }
 
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                     // --- Server Ports ---
                     Text("Network", style = MaterialTheme.typography.titleMedium)

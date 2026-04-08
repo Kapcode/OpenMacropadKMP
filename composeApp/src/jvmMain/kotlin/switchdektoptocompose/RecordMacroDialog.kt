@@ -57,7 +57,7 @@ fun RecordMacroDialog(
                         CheckboxWithLabel("Mouse Scroll", recordMouseScroll, { viewModel.recordMouseScroll.value = it })
                     }
                     
-                    Divider()
+                    HorizontalDivider()
                     
                     // Delay options
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -73,7 +73,7 @@ fun RecordMacroDialog(
                         )
                     }
 
-                    Divider()
+                    HorizontalDivider()
                     
                     // Macro Name
                     OutlinedTextField(
@@ -147,7 +147,7 @@ private fun StopKeyDropdown(viewModel: RecordMacroViewModel) {
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor()
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
         )
         ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             viewModel.availableStopKeys.forEach { key ->

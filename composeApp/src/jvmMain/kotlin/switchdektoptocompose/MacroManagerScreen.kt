@@ -73,7 +73,7 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
                     onRename = { viewModel.onRenameMacro(macroState) },
                     onDelete = { viewModel.onDeleteMacro(macroState) }
                 )
-                Divider()
+                HorizontalDivider()
             }
         }
     }

@@ -52,7 +52,7 @@ fun App(
                 )
             }
             
-            Divider(modifier = Modifier.padding(vertical = 16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
             // --- Manual Connection ---
             Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
