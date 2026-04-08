@@ -25,7 +25,10 @@ fun MacroEditingArea(
         first(minSize = 200.dp) {
             HorizontalSplitPane(splitPaneState = horizontalSplitter) {
                 first(minSize = 200.dp) {
-                    MacroManagerScreen(viewModel = macroManagerViewModel)
+                    MacroManagerScreen(
+                        viewModel = macroManagerViewModel,
+                        onNewMacroClicked = onRecordMacroClicked
+                    )
                 }
                 second(minSize = 300.dp) {
                     MacroEditorScreen(viewModel = macroEditorViewModel, settingsViewModel = settingsViewModel)

@@ -2,6 +2,9 @@ package switchdektoptocompose
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.io.File
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 class ConsoleViewModel {
     private val _logMessages = MutableStateFlow<List<String>>(emptyList())
@@ -10,23 +13,76 @@ class ConsoleViewModel {
     private val _logLevel = MutableStateFlow(LogLevel.Info)
     val logLevel = _logLevel.asStateFlow()
 
-    private val allLogs = mutableListOf<Pair<LogLevel, String>>()
+    private val _isAutoScrollEnabled = MutableStateFlow(true)
+    val isAutoScrollEnabled = _isAutoScrollEnabled.asStateFlow()
+
+    private val _isLoggingToFile = MutableStateFlow(false)
+    val isLoggingToFile = _isLoggingToFile.asStateFlow()
+
+    private val _showLoggingWarning = MutableStateFlow(false)
+    val showLoggingWarning = _showLoggingWarning.asStateFlow()
+
+    private val allLogs = mutableListOf<Triple<LogLevel, String, String>>() // Level, Message, Timestamp
+    private val timestampFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
+    private var logFile: File? = null
 
     fun setLogLevel(level: LogLevel) {
         _logLevel.value = level
         filterLogs()
     }
 
+    fun setAutoScroll(enabled: Boolean) {
+        _isAutoScrollEnabled.value = enabled
+    }
+
+    fun toggleLoggingToFile() {
+        if (!_isLoggingToFile.value) {
+            _showLoggingWarning.value = true
+        } else {
+            stopLoggingToFile()
+        }
+    }
+
+    fun confirmLoggingToFile() {
+        _showLoggingWarning.value = false
+        startLoggingToFile()
+    }
+
+    fun dismissLoggingWarning() {
+        _showLoggingWarning.value = false
+    }
+
+    private fun startLoggingToFile() {
+        val fileName = "macropad_log_${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"))}.txt"
+        logFile = File(fileName)
+        _isLoggingToFile.value = true
+        addLog(LogLevel.Info, "Started logging to file: ${logFile?.absolutePath}")
+    }
+
+    private fun stopLoggingToFile() {
+        addLog(LogLevel.Info, "Stopped logging to file.")
+        _isLoggingToFile.value = false
+        logFile = null
+    }
+
     fun addLog(level: LogLevel, message: String) {
-        allLogs.add(level to message)
+        val timestamp = LocalDateTime.now().format(timestampFormatter)
+        allLogs.add(Triple(level, message, timestamp))
+        
+        val formattedLog = "[$timestamp] [$level] $message"
+        
         if (level.ordinal >= _logLevel.value.ordinal) {
-            _logMessages.value = _logMessages.value + "[$level] $message"
+            _logMessages.value = _logMessages.value + formattedLog
+        }
+
+        if (_isLoggingToFile.value) {
+            logFile?.appendText("$formattedLog\n")
         }
     }
 
     private fun filterLogs() {
-        _logMessages.value = allLogs.filter { (level, _) ->
+        _logMessages.value = allLogs.filter { (level, _, _) ->
             level.ordinal >= _logLevel.value.ordinal
-        }.map { (level, message) -> "[$level] $message" }
+        }.map { (level, message, timestamp) -> "[$timestamp] [$level] $message" }
     }
 }

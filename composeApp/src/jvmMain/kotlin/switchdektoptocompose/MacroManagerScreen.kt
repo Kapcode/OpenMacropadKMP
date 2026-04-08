@@ -18,7 +18,10 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
+fun MacroManagerScreen(
+    viewModel: MacroManagerViewModel,
+    onNewMacroClicked: () -> Unit
+) {
     val macroFiles by viewModel.macroFiles.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val macroBeingRenamed by viewModel.macroBeingRenamed.collectAsState()
@@ -36,7 +39,7 @@ fun MacroManagerScreen(viewModel: MacroManagerViewModel) {
             title = { Text("Macro Manager") },
             actions = {
                 TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                    IconButton(onClick = { /* TODO: Implement New Macro Action */ }) {
+                    IconButton(onClick = onNewMacroClicked) {
                         Icon(Icons.Default.Add, contentDescription = "New Macro")
                     }
                 }

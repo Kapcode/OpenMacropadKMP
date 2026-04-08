@@ -18,7 +18,7 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.
-*   **Console:** Real-time logging of macro execution and client connections.
+*   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging.
 
 ### Android Client
 *   **Remote Triggering:** Interface to execute desktop macros from a mobile device.

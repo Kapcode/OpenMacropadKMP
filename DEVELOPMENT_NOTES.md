@@ -251,7 +251,22 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Persistent Scrollbars**: Added thick (`8.dp`), high-visibility `VerticalScrollbar` components to all major dialogs (Settings, New Event, Record Macro). This ensures users can clearly see scrollable areas, especially on touchscreens or with hidden system scrollbars.
     - **Tooltip Optimization**: Removed the tooltip from the `SettingsDialog` close button to prevent it from obstructing the button itself during quick interactions.
 
-## 21. To-Do List & Future Improvements
+## 21. Console Enhancements & Security
+
+### Challenge: Debugging Macro Execution and Client Interaction
+- **Problem**: The standard console log was hard to read due to lack of timing information and often scrolled past important events too quickly.
+- **Solution**:
+    - **Timestamps**: Added millisecond-precision timestamps (`HH:mm:ss.SSS`) to all log entries.
+    - **Auto-scroll Control**: Implemented a toggle to enable/disable automatic scrolling to the latest log, allowing users to inspect older logs without being "snapped" back to the bottom.
+    - **Log to File**: Added the ability to persist logs to a session-specific text file on disk for long-term debugging.
+
+### Challenge: Privacy and Hardware Safety with Persistence
+- **Problem**: Logging every macro event (including key/mouse events) to disk introduces security risks (plain-text passwords) and potential SSD wear.
+- **Solution**:
+    - **Informed Consent**: Implemented a mandatory security warning dialog that users must acknowledge before "Log to File" can be enabled.
+    - **Temporary Nature**: The UI emphasizes that file logging should only be used temporarily for debugging and not left on during normal operation.
+
+## 22. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
