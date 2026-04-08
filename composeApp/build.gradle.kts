@@ -35,6 +35,7 @@ kotlin {
             implementation(libs.androidx.activity.compose)
             implementation(libs.androidx.window)
             implementation(libs.androidx.window.extensions.core)
+            implementation(libs.androidx.core.splashscreen)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.google.play.services.ads)
             implementation(project.dependencies.platform(libs.firebase.bom))

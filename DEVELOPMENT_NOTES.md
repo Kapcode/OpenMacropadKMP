@@ -158,3 +158,29 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Challenge: Experimental API Management
 - **Problem**: Use of `ExperimentalSplitPaneApi` in the JVM target required repeated `@OptIn` annotations.
 - **Solution**: Standardized the use of `@OptIn(ExperimentalSplitPaneApi::class)` where necessary to maintain build stability and clear intent for experimental component usage.
+
+## 13. Android Startup Performance
+
+### Challenge: Excessive Cold Start Latency (18s+ Black Screen)
+- **Problem**: The app experienced a massive delay before the first frame was drawn, resulting in a long black screen.
+- **Solution**:
+    - **Modern Splash Screen API**: Integrated `androidx.core:core-splashscreen` to provide an immediate system-level splash screen (black background with a high-res, centered app icon).
+    - **Theme Hand-off**: Created a custom `Theme.App.Starting` theme that handles the transition from the OS splash to the app's internal theme seamlessly.
+    - **Removed Artificial Delays**: Eliminated legacy code that introduced a 2-second `delay()` and a manual splash screen state in `MainActivity`, allowing the Compose UI to begin rendering as early as possible.
+    - **High-Resolution Assets**: Used a `layer-list` XML drawable (`splash_icon_centered.xml`) to wrap the 512px PNG icon, ensuring it remains sharp and perfectly centered across all device densities without blurriness.
+
+## 14. To-Do List & Future Improvements
+
+### Android Client
+- [ ] **Optimize Dependency Initialization**: Transition from sequential to parallel initialization of Firebase and AdMob to further shave off startup milliseconds.
+- [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
+- [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
+
+### Desktop Server
+- [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
+- [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
+- [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
+
+### Cross-Platform / Common
+- [ ] **UDP Discovery Polish**: Improve the reliability of server discovery on complex local network topologies (e.g., multiple subnets).
+- [ ] **End-to-End Testing**: Implement automated integration tests for the cryptographic handshake process.

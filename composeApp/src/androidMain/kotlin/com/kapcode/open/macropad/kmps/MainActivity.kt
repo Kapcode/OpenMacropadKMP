@@ -7,10 +7,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -22,7 +29,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.google.android.gms.ads.MobileAds
@@ -32,9 +42,11 @@ import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
-import com.kapcode.open.macropad.kmps.ui.components.SplashScreen
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import kotlinx.coroutines.delay
+import openmacropadkmp.composeapp.generated.resources.Res
+import openmacropadkmp.composeapp.generated.resources.macropadIcon512
+import org.jetbrains.compose.resources.painterResource
 
 const val TAG = "MainActivity"
 
@@ -45,6 +57,7 @@ class MainActivity : ComponentActivity() {
     private val settingsViewModel = SettingsViewModel()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
@@ -55,18 +68,7 @@ class MainActivity : ComponentActivity() {
         clientDiscovery = ClientDiscovery()
 
         setContent {
-            var isLoading by remember { mutableStateOf(true) }
-
-            LaunchedEffect(Unit) {
-                delay(2000) // Simulate loading
-                isLoading = false
-            }
-
-            if (isLoading) {
-                SplashScreen()
-            } else {
-                MainContent()
-            }
+            MainContent()
         }
     }
 
