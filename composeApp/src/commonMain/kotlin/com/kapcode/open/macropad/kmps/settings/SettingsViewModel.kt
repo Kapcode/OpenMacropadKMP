@@ -17,7 +17,14 @@ class SettingsViewModel {
     private val _theme = MutableStateFlow(AppTheme.DarkBlue) // Default to Dark Blue
     val theme = _theme.asStateFlow()
 
+    private val _analyticsEnabled = MutableStateFlow(false) // Default to Opt-in
+    val analyticsEnabled = _analyticsEnabled.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
+    }
+
+    fun setAnalyticsEnabled(enabled: Boolean) {
+        _analyticsEnabled.value = enabled
     }
 }
