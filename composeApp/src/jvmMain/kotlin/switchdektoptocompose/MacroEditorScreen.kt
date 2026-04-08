@@ -18,9 +18,11 @@ import androidx.compose.ui.unit.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun MacroEditorScreen(viewModel: MacroEditorViewModel) {
+fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: SettingsViewModel) {
     val tabs by viewModel.tabs.collectAsState()
     val selectedTabIndex by viewModel.selectedTabIndex.collectAsState()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val isDark = selectedTheme == "Dark Blue"
 
     Column {
         // --- Toolbar ---
@@ -79,6 +81,7 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel) {
                 onTextChange = { newContent ->
                     viewModel.updateSelectedTabContent(newContent)
                 },
+                isDark = isDark,
                 modifier = Modifier.fillMaxSize()
             )
         } else {

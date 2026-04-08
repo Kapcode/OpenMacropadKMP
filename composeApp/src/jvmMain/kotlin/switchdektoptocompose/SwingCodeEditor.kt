@@ -13,6 +13,7 @@ import javax.swing.event.DocumentListener
 fun SwingCodeEditor(
     text: String,
     onTextChange: (String) -> Unit,
+    isDark: Boolean,
     modifier: Modifier = Modifier
 ) {
     SwingPanel(
@@ -21,14 +22,6 @@ fun SwingCodeEditor(
             val textArea = RSyntaxTextArea().apply {
                 syntaxEditingStyle = SyntaxConstants.SYNTAX_STYLE_JSON
                 isCodeFoldingEnabled = true
-                try {
-                    val theme = org.fife.ui.rsyntaxtextarea.Theme.load(
-                        javaClass.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/dark.xml")
-                    )
-                    theme.apply(this)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                }
             }
 
             val documentListener = object : DocumentListener {
@@ -45,6 +38,22 @@ fun SwingCodeEditor(
         },
         update = { scrollPane ->
             val textArea = scrollPane.textArea as RSyntaxTextArea
+            
+            // Update theme if it changed
+            val currentThemeIsDark = scrollPane.getClientProperty("isDark") as? Boolean
+            if (currentThemeIsDark != isDark) {
+                val themePath = if (isDark) "dark.xml" else "idea.xml"
+                try {
+                    val theme = org.fife.ui.rsyntaxtextarea.Theme.load(
+                        RSyntaxTextArea::class.java.getResourceAsStream("/org/fife/ui/rsyntaxtextarea/themes/$themePath")
+                    )
+                    theme.apply(textArea)
+                    scrollPane.putClientProperty("isDark", isDark)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
+
             if (textArea.text != text) {
                 val listener = scrollPane.getClientProperty("documentListener") as? DocumentListener
                 listener?.let { textArea.document.removeDocumentListener(it) }

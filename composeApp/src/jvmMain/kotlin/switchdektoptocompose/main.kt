@@ -557,6 +557,7 @@ fun DesktopApp(
                                     macroManagerViewModel = macroManagerViewModel,
                                     macroEditorViewModel = macroEditorViewModel,
                                     macroTimelineViewModel = macroTimelineViewModel,
+                                    settingsViewModel = settingsViewModel,
                                     onAddEventClicked = {
                                         newEventViewModel.reset()
                                         showNewEventDialog = true
