@@ -18,29 +18,35 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
 @Composable
-fun LoadingIndicator(modifier: Modifier = Modifier) {
+fun LoadingIndicator(
+    modifier: Modifier = Modifier,
+    isBlinking: Boolean = true,
+    showText: Boolean = true
+) {
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        BlinkingCursor()
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "INITIALIZING",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            letterSpacing = 4.sp,
-            fontWeight = FontWeight.Bold
-        )
+        BlinkingCursor(isBlinking = isBlinking)
+        if (showText) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "INITIALIZING",
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+                letterSpacing = 4.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
     }
 }
 
 @Composable
-fun BlinkingCursor() {
+fun BlinkingCursor(isBlinking: Boolean = true) {
     val minAlpha = 20f / 255f
     val infiniteTransition = rememberInfiniteTransition(label = "cursor")
-    val alpha by infiniteTransition.animateFloat(
+    val animatedAlpha by infiniteTransition.animateFloat(
         initialValue = 1f,
         targetValue = minAlpha,
         animationSpec = infiniteRepeatable(
@@ -49,6 +55,8 @@ fun BlinkingCursor() {
         ),
         label = "cursorAlpha"
     )
+
+    val alpha = if (isBlinking) animatedAlpha else 1f
 
     Row(
         verticalAlignment = Alignment.CenterVertically,

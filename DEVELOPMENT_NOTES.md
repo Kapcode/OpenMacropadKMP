@@ -195,7 +195,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - Removed redundant `MaterialTheme` nesting in `App.kt`, shaving ~800ms off the `setContent` phase.
 
 ### Result: 
-**Total Startup Time reduced from ~20s to ~2.3s (88% improvement).**
+**Total Startup Time reduced from ~20s to ~1.2s (94% improvement).**
 
 ## 15. UI Feedback & Interactive Loading
 
@@ -217,7 +217,18 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Key Search**: Specifically looks for `device_name` and `bluetooth_name` keys, which often contain the user-friendly name set during tablet setup.
     - **Stability**: Combines the user-friendly name with a short (4-character) anonymous SHA-256 hash of the `ANDROID_ID` to create a stable, unique, and privacy-respecting identity: `Kyle's Fire-a1b2`.
 
-## 17. To-Do List & Future Improvements
+## 17. Android Splash Screen Perfection (The "Zero-Ring" Transition)
+
+### Challenge: Android 12+ Splash Screen "Black Ring" Artifact
+- **Problem**: On Android 12 and above, the system automatically applies a circular mask to splash icons. If the icon has transparency or an inconsistent background, the OS adds a high-contrast "black ring" around it. Additionally, large high-res icons (512px) often suffered from downsampling artifacts during the early boot phase.
+- **Solution**:
+    - **True Adaptive Icon**: Created a proper `<adaptive-icon>` in `drawable-v26` with separate foreground and background layers.
+    - **Safe-Zone Scaling**: Wrapped the icon in a `layer-list` with an explicit `192dp` container. This ensures the 512px source image fits perfectly within the "safe circle" (roughly 72dp of actual content) enforced by the OS, preventing clipping.
+    - **Transparency Fix**: Set `windowSplashScreenIconBackgroundColor` to `@android:color/transparent` in `themes.xml`. This explicitly tells the Android OS not to generate a background "ring" for contrast.
+    - **Pre-Downsized Assets**: Switched to a pre-scaled 192px PNG (`splash_icon_downsized.png`) for the system splash to avoid real-time interpolation shimmer.
+    - **Visual Continuity**: Synchronized the Compose `SplashUI` to use the exact same `192dp` centering and icon-to-cursor spacing. This creates a seamless "hand-off" where the system icon remains perfectly still as the Compose UI takes over and begins the cursor blink animation.
+
+## 18. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
