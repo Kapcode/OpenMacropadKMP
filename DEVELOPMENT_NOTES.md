@@ -95,7 +95,7 @@ Automated macros could cause loss of system control if they ran too long or went
 
 ## Architecture Overview
 
-*   **UI Layer:** Jetpack Compose Multiplatform (Material 3).
+*   **UI Layer:** Jetpack Compose Multiplatform (Material 3). See [DESIGN_LANGUAGE.md](DESIGN_LANGUAGE.md) for detailed UI principles.
 *   **State Management:** `ViewModel` pattern using `StateFlow`.
 *   **Input Handling:** `JNativeHook` for global keyboard listening.
 *   **Automation:** `java.awt.Robot` for input simulation.
