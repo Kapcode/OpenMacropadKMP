@@ -1,5 +1,6 @@
 package switchdektoptocompose
 
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,84 +44,104 @@ fun RecordMacroDialog(
             val validationMessage = validationState.second
 
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    Text("What are we recording?", style = MaterialTheme.typography.headlineSmall)
-                    
-                    // Recording options
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        CheckboxWithLabel("Keys", recordKeys, { viewModel.recordKeys.value = it })
-                        CheckboxWithLabel("Mouse Buttons", recordMouseButtons, { viewModel.recordMouseButtons.value = it })
-                        CheckboxWithLabel("Mouse Moves", recordMouseMoves, { viewModel.recordMouseMoves.value = it })
-                        CheckboxWithLabel("Mouse Scroll", recordMouseScroll, { viewModel.recordMouseScroll.value = it })
-                    }
-                    
-                    HorizontalDivider()
-                    
-                    // Delay options
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        CheckboxWithLabel("Record Delays", recordDelays, { viewModel.recordDelays.value = it })
-                        Spacer(Modifier.width(24.dp))
-                        Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
-                        OutlinedTextField(
-                            value = autoDelayMs,
-                            onValueChange = { viewModel.autoDelayMs.value = it },
-                            label = { Text("Auto Delay (ms)") },
-                            modifier = Modifier.width(120.dp),
-                            enabled = useAutoDelay
-                        )
-                    }
-
-                    HorizontalDivider()
-                    
-                    // Macro Name
-                    OutlinedTextField(
-                        value = macroName,
-                        onValueChange = { viewModel.macroName.value = it },
-                        label = { Text("Macro Name") },
-                        modifier = Modifier.fillMaxWidth(),
-                        isError = !isValid
-                    )
-                    
-                    // Recording Stop Condition
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Checkbox(checked = useRecordingDuration, onCheckedChange = { viewModel.useRecordingDuration.value = it })
-                        OutlinedTextField(
-                            value = recordingDurationMs,
-                            onValueChange = { viewModel.recordingDurationMs.value = it },
-                            label = { Text("Recording Duration (timeout)") },
-                            modifier = Modifier.width(200.dp),
-                            enabled = useRecordingDuration
-                        )
-                        Spacer(Modifier.weight(1f))
-                        StopKeyDropdown(viewModel)
-                    }
-                    
-                    Spacer(Modifier.weight(1f)) // Push buttons to bottom
-                    
-                    // Action buttons
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                val scrollState = rememberScrollState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(end = 12.dp) // Space for scrollbar
+                            .padding(16.dp)
+                            .verticalScroll(scrollState),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                         if (!isValid) {
-                            Text(
-                                text = validationMessage,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.weight(1f)
+                        Text("What are we recording?", style = MaterialTheme.typography.headlineSmall)
+                        
+                        // Recording options
+                        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            CheckboxWithLabel("Keys", recordKeys, { viewModel.recordKeys.value = it })
+                            CheckboxWithLabel("Mouse Buttons", recordMouseButtons, { viewModel.recordMouseButtons.value = it })
+                            CheckboxWithLabel("Mouse Moves", recordMouseMoves, { viewModel.recordMouseMoves.value = it })
+                            CheckboxWithLabel("Mouse Scroll", recordMouseScroll, { viewModel.recordMouseScroll.value = it })
+                        }
+                        
+                        HorizontalDivider()
+                        
+                        // Delay options
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            CheckboxWithLabel("Record Delays", recordDelays, { viewModel.recordDelays.value = it })
+                            Spacer(Modifier.width(24.dp))
+                            Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
+                            OutlinedTextField(
+                                value = autoDelayMs,
+                                onValueChange = { viewModel.autoDelayMs.value = it },
+                                label = { Text("Auto Delay (ms)") },
+                                modifier = Modifier.width(120.dp),
+                                enabled = useAutoDelay
                             )
                         }
-                        Button(onClick = onDismissRequest) {
-                            Text("Cancel")
+
+                        HorizontalDivider()
+                        
+                        // Macro Name
+                        OutlinedTextField(
+                            value = macroName,
+                            onValueChange = { viewModel.macroName.value = it },
+                            label = { Text("Macro Name") },
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = !isValid
+                        )
+                        
+                        // Recording Stop Condition
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Checkbox(checked = useRecordingDuration, onCheckedChange = { viewModel.useRecordingDuration.value = it })
+                            OutlinedTextField(
+                                value = recordingDurationMs,
+                                onValueChange = { viewModel.recordingDurationMs.value = it },
+                                label = { Text("Recording Duration (timeout)") },
+                                modifier = Modifier.width(200.dp),
+                                enabled = useRecordingDuration
+                            )
+                            Spacer(Modifier.weight(1f))
+                            StopKeyDropdown(viewModel)
                         }
-                        Spacer(Modifier.width(16.dp))
-                        Button(onClick = { if (isValid) onStartRecording() }, enabled = isValid) {
-                            Text("Start Recording")
+                        
+                        Spacer(Modifier.weight(1f)) // Push buttons to bottom
+                        
+                        // Action buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                             if (!isValid) {
+                                Text(
+                                    text = validationMessage,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                            Button(onClick = onDismissRequest) {
+                                Text("Cancel")
+                            }
+                            Spacer(Modifier.width(16.dp))
+                            Button(onClick = { if (isValid) onStartRecording() }, enabled = isValid) {
+                                Text("Start Recording")
+                            }
                         }
                     }
+
+                    VerticalScrollbar(
+                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                        adapter = rememberScrollbarAdapter(scrollState),
+                        style = ScrollbarStyle(
+                            minimalHeight = 16.dp,
+                            thickness = 8.dp,
+                            shape = MaterialTheme.shapes.small,
+                            hoverDurationMillis = 300,
+                            unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
+                        )
+                    )
                 }
             }
         }

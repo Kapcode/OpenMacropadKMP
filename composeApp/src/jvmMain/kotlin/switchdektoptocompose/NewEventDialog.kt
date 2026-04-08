@@ -1,10 +1,8 @@
 package switchdektoptocompose
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
@@ -56,65 +54,84 @@ fun NewEventDialog(
             val validationMessage = validationState.second
 
             Surface(modifier = Modifier.fillMaxSize()) {
+                val scrollState = rememberScrollState()
                 Column(
                     modifier = Modifier.fillMaxSize().padding(16.dp),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Column(
-                        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Checkbox(checked = isTrigger, onCheckedChange = { viewModel.isTriggerEvent.value = it })
-                            Text("Is Trigger Event")
-                            OutlinedTextField(
-                                value = allowedClients,
-                                onValueChange = { viewModel.allowedClientsText.value = it },
-                                label = { Text("Allowed Clients") },
-                                modifier = Modifier.weight(1f),
-                                enabled = isTrigger
-                            )
-                        }
-                        HorizontalDivider()
-                        
-                        ActionDropdown(selectedAction, viewModel)
-                        
-                        CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
-                        CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
-                        CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
-                        
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
-                            Text("Mouse Location")
-                            Spacer(Modifier.weight(1f))
-                            Text("Animate")
-                            Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
-                            OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
-                            OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                    Box(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(end = 12.dp) // Space for scrollbar
+                                .verticalScroll(scrollState),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Checkbox(checked = isTrigger, onCheckedChange = { viewModel.isTriggerEvent.value = it })
+                                Text("Is Trigger Event")
+                                OutlinedTextField(
+                                    value = allowedClients,
+                                    onValueChange = { viewModel.allowedClientsText.value = it },
+                                    label = { Text("Allowed Clients") },
+                                    modifier = Modifier.weight(1f),
+                                    enabled = isTrigger
+                                )
+                            }
+                            HorizontalDivider()
+                            
+                            ActionDropdown(selectedAction, viewModel)
+                            
+                            CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
+                            CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
+                            CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
+                            
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
+                                Text("Mouse Location")
+                                Spacer(Modifier.weight(1f))
+                                Text("Animate")
+                                Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
+                                OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                                OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
+                                OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
+                                Spacer(Modifier.width(8.dp))
+                                Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
+                            }
+                            
+                            HorizontalDivider()
+                            
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
+                                    Text("Auto Delay Declaration")
+                                }
+                                OutlinedTextField(
+                                    value = autoDelayText,
+                                    onValueChange = { viewModel.autoDelayText.value = it },
+                                    label = { Text("Auto Delay Value (ms)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    enabled = useAutoDelay
+                                )
+                            }
                         }
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
-                            OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
-                            Spacer(Modifier.width(8.dp))
-                            Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
-                        }
-                        
-                        HorizontalDivider()
-                        
-                        Column {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
-                                Text("Auto Delay Declaration")
-                            }
-                            OutlinedTextField(
-                                value = autoDelayText,
-                                onValueChange = { viewModel.autoDelayText.value = it },
-                                label = { Text("Auto Delay Value (ms)") },
-                                modifier = Modifier.fillMaxWidth(),
-                                enabled = useAutoDelay
+                        VerticalScrollbar(
+                            modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                            adapter = rememberScrollbarAdapter(scrollState),
+                            style = ScrollbarStyle(
+                                minimalHeight = 16.dp,
+                                thickness = 8.dp,
+                                shape = MaterialTheme.shapes.small,
+                                hoverDurationMillis = 300,
+                                unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                                hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
                             )
-                        }
+                        )
                     }
 
                     Column(modifier = Modifier.fillMaxWidth()) {

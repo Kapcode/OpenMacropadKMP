@@ -1,7 +1,6 @@
 package switchdektoptocompose
 
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -47,157 +46,171 @@ fun SettingsDialog(
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp)
-                        .verticalScroll(rememberScrollState()) // Make content scrollable
-                ) {
-                    // --- Theme Selection ---
-                    Text("Theme", style = MaterialTheme.typography.titleMedium)
-                    Column(Modifier.selectableGroup()) {
-                        settingsViewModel.availableThemes.forEach { theme ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .selectable(
+                val scrollState = rememberScrollState()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(end = 12.dp) // Space for scrollbar
+                            .padding(16.dp)
+                            .verticalScroll(scrollState) // Make content scrollable
+                    ) {
+                        // --- Theme Selection ---
+                        Text("Theme", style = MaterialTheme.typography.titleMedium)
+                        Column(Modifier.selectableGroup()) {
+                            settingsViewModel.availableThemes.forEach { theme ->
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .height(56.dp)
+                                        .selectable(
+                                            selected = (theme == selectedTheme),
+                                            onClick = { settingsViewModel.selectTheme(theme) },
+                                            role = Role.RadioButton
+                                        )
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    RadioButton(
                                         selected = (theme == selectedTheme),
-                                        onClick = { settingsViewModel.selectTheme(theme) },
-                                        role = Role.RadioButton
+                                        onClick = null // null recommended for accessibility with screenreaders
                                     )
-                                    .padding(horizontal = 16.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    Text(
+                                        text = theme,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        modifier = Modifier.padding(start = 16.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        
+                        // --- Behavior Settings ---
+                         Text("Behavior", style = MaterialTheme.typography.titleMedium)
+                         Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Exit to tray", modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = minimizeToTray,
+                                onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
+                            )
+                        }
+                        if (minimizeToTray) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
                             ) {
-                                RadioButton(
-                                    selected = (theme == selectedTheme),
-                                    onClick = null // null recommended for accessibility with screenreaders
+                                Text("Show notification when minimizing", modifier = Modifier.weight(1f))
+                                Checkbox(
+                                    checked = showMinimizeToTrayDialog,
+                                    onCheckedChange = { settingsViewModel.setShowMinimizeToTrayDialog(it) }
                                 )
-                                Text(
-                                    text = theme,
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    modifier = Modifier.padding(start = 16.dp)
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+                            ) {
+                                Text("Animate to tray", modifier = Modifier.weight(1f))
+                                Checkbox(
+                                    checked = animateToTraySetting,
+                                    onCheckedChange = { settingsViewModel.setAnimateToTray(it) }
                                 )
                             }
                         }
-                    }
-
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    
-                    // --- Behavior Settings ---
-                     Text("Behavior", style = MaterialTheme.typography.titleMedium)
-                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Exit to tray", modifier = Modifier.weight(1f))
-                        Checkbox(
-                            checked = minimizeToTray,
-                            onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
-                        )
-                    }
-                    if (minimizeToTray) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Show notification when minimizing", modifier = Modifier.weight(1f))
+                            Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
                             Checkbox(
-                                checked = showMinimizeToTrayDialog,
-                                onCheckedChange = { settingsViewModel.setShowMinimizeToTrayDialog(it) }
+                                checked = clickTrayToToggle,
+                                onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
                             )
                         }
+                         Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Hard E-Stop", modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = hardEstop,
+                                onCheckedChange = { settingsViewModel.setHardEstop(it) }
+                            )
+                        }
+
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        // --- Server Ports ---
+                        Text("Network", style = MaterialTheme.typography.titleMedium)
+                        Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Animate to tray", modifier = Modifier.weight(1f))
-                            Checkbox(
-                                checked = animateToTraySetting,
-                                onCheckedChange = { settingsViewModel.setAnimateToTray(it) }
+                            OutlinedTextField(
+                                value = serverPort.toString(),
+                                onValueChange = { settingsViewModel.onServerPortChange(it) },
+                                label = { Text("Server Port (WS)") },
+                                modifier = Modifier.weight(1f),
+                                enabled = !isServerRunning
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            OutlinedTextField(
+                                value = secureServerPort.toString(),
+                                onValueChange = { settingsViewModel.onSecureServerPortChange(it) },
+                                label = { Text("Secure Server Port (WSS)") },
+                                modifier = Modifier.weight(1f),
+                                enabled = !isServerRunning
                             )
                         }
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
-                        Checkbox(
-                            checked = clickTrayToToggle,
-                            onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
-                        )
-                    }
-                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Hard E-Stop", modifier = Modifier.weight(1f))
-                        Checkbox(
-                            checked = hardEstop,
-                            onCheckedChange = { settingsViewModel.setHardEstop(it) }
-                        )
-                    }
+                        Spacer(modifier = Modifier.height(16.dp))
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                    // --- Server Ports ---
-                    Text("Network", style = MaterialTheme.typography.titleMedium)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        OutlinedTextField(
-                            value = serverPort.toString(),
-                            onValueChange = { settingsViewModel.onServerPortChange(it) },
-                            label = { Text("Server Port (WS)") },
-                            modifier = Modifier.weight(1f),
-                            enabled = !isServerRunning
-                        )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        OutlinedTextField(
-                            value = secureServerPort.toString(),
-                            onValueChange = { settingsViewModel.onSecureServerPortChange(it) },
-                            label = { Text("Secure Server Port (WSS)") },
-                            modifier = Modifier.weight(1f),
-                            enabled = !isServerRunning
-                        )
-                    }
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // --- Encryption Setting ---
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
-                        Checkbox(
-                            checked = encryptionEnabled,
-                            onCheckedChange = { desktopViewModel.setEncryption(it) },
-                            enabled = !isServerRunning
-                        )
-                    }
-                    Text(
-                        text = "Requires a restart of the server to apply.",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-
-                    Spacer(Modifier.weight(1f)) // Pushes the close button to the bottom
-
-                    // --- Close Button ---
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        TooltipArea(
-                            tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Close", modifier = Modifier.padding(4.dp)) } },
-                            modifier = Modifier.align(Alignment.BottomEnd),
-                            delayMillis = 0
+                        // --- Encryption Setting ---
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            IconButton(onClick = onDismissRequest) {
+                            Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = encryptionEnabled,
+                                onCheckedChange = { desktopViewModel.setEncryption(it) },
+                                enabled = !isServerRunning
+                            )
+                        }
+                        Text(
+                            text = "Requires a restart of the server to apply.",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.padding(start = 8.dp)
+                        )
+
+                        Spacer(Modifier.weight(1f)) // Pushes the close button to the bottom
+
+                        // --- Close Button ---
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            IconButton(
+                                onClick = onDismissRequest,
+                                modifier = Modifier.align(Alignment.BottomEnd)
+                            ) {
                                 Icon(Icons.Default.Close, contentDescription = "Close")
                             }
                         }
                     }
+
+                    VerticalScrollbar(
+                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                        adapter = rememberScrollbarAdapter(scrollState),
+                        style = ScrollbarStyle(
+                            minimalHeight = 16.dp,
+                            thickness = 8.dp,
+                            shape = MaterialTheme.shapes.small,
+                            hoverDurationMillis = 300,
+                            unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                            hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
+                        )
+                    )
                 }
             }
         }

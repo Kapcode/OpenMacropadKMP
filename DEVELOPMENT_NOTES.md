@@ -237,10 +237,21 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Smooth Transitions**: Implemented a quadratic ease-in animation that scales and moves the window toward the system tray area during minimize.
     - **Dynamic Menu Items**: Implemented a state-aware context menu that changes its labels (e.g., "Show Main Window" vs. "Hide to Tray") based on the current window visibility and minimized state.
     - **Robust Toggling**: Optimized the `onAction` handler to handle quick clicks, window restoration from a minimized taskbar state, and immediate cancellation of active hide animations if the user "catches" the window.
+    - **Stability**: Set `animateToTray` to `false` by default in `AppSettings` to provide a more predictable out-of-the-box experience while remaining configurable.
     - **User Notification**: Created a dedicated `MinimizeToTrayDialog` with high-visibility Material 3 typography to inform the user when the application is continuing to run in the background. Included a "Don't show again" option that persists in `AppSettings`.
     - **High-Quality Assets**: Switched to a 512px icon to eliminate white fringing artifacts on dark system taskbars.
 
-## 19. To-Do List & Future Improvements
+## 20. Comprehensive UI Theming & Accessibility
+
+### Challenge: Inconsistent Component Theming (Swing + Compose)
+- **Problem**: The JSON code editor (based on `RSyntaxTextArea`) did not follow the Compose application's theme, and dialogs often lacked proper visual affordances for scrolling.
+- **Solution**:
+    - **Dynamic JSON Theming**: Implemented a bridge between `SettingsViewModel` and `SwingCodeEditor`. The editor now dynamically loads `dark.xml` or `idea.xml` theme files whenever the user switches between "Dark Blue" and "Light Blue" themes.
+    - **Accessibility Contrast**: Adjusted the "Running" status text color to a darker green (`0xFF008000`) in the Light Blue theme to ensure it meets contrast requirements against the Surface Variant background.
+    - **Persistent Scrollbars**: Added thick (`8.dp`), high-visibility `VerticalScrollbar` components to all major dialogs (Settings, New Event, Record Macro). This ensures users can clearly see scrollable areas, especially on touchscreens or with hidden system scrollbars.
+    - **Tooltip Optimization**: Removed the tooltip from the `SettingsDialog` close button to prevent it from obstructing the button itself during quick interactions.
+
+## 21. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
