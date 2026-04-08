@@ -169,7 +169,35 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Removed Artificial Delays**: Eliminated legacy code that introduced a 2-second `delay()` and a manual splash screen state in `MainActivity`, allowing the Compose UI to begin rendering as early as possible.
     - **High-Resolution Assets**: Used a `layer-list` XML drawable (`splash_icon_centered.xml`) to wrap the 512px PNG icon, ensuring it remains sharp and perfectly centered across all device densities without blurriness.
 
-## 14. To-Do List & Future Improvements
+## 14. Extreme Android Startup Optimization (The "Nuclear" Fix)
+
+### Challenge: 20-Second "Silent" Cold Start Delay
+- **Problem**: Even with basic splash screen optimization, the app suffered a ~15-20 second delay on cold start (13.5s in logs, plus silent OS overhead).
+- **Diagnosis**: 
+    1.  **DEX Verification**: The Android Runtime (ART) was spending ~8 seconds verifying thousands of unused classes from **Ktor Server/Netty** bundled into the Android APK.
+    2.  **Synchronous Init**: Firebase, AdMob, and Jetpack Startup providers were blocking the main process start before `Application.onCreate`.
+    3.  **UI Thread Blocking**: Eager initialization of `ClientDiscovery` and `SettingsViewModel` blocked the initial Compose `setContent` call.
+
+### Solution: Multi-Layered Optimization
+- **R8 Minification (The Breakthrough)**: 
+    - Enabled `isMinifyEnabled = true` for **debug** builds. 
+    - Added specific `proguard-rules.pro` to strip out the massive Ktor-Server/Netty dependencies from the Android APK. 
+    - This reduced the "Pre-Code" verification gap from **8.4s to 3.2s**.
+- **Content Provider Removal**:
+    - Used `tools:node="remove"` in `AndroidManifest.xml` to disable `FirebaseInitProvider`, `MobileAdsInitProvider`, and `androidx.startup.InitializationProvider`.
+    - Manually initialized Firebase and AdMob on a background thread (`Dispatchers.IO`) only *after* the UI was visible.
+- **Lazy Initialization**:
+    - Converted `ClientDiscovery` and `SettingsViewModel` into `lazy` properties in `MainActivity`.
+    - Delayed networking class loading until the user explicitly clicks "Scan".
+- **SharedPreferences Warming**:
+    - Triggered a dummy `getSharedPreferences` call in `MacroApplication.onCreate` to warm up the disk-to-memory cache for `TokenManager`.
+- **UI Optimization**:
+    - Removed redundant `MaterialTheme` nesting in `App.kt`, shaving ~800ms off the `setContent` phase.
+
+### Result: 
+**Total Startup Time reduced from ~20s to 6.7s (66% improvement).**
+
+## 15. To-Do List & Future Improvements
 
 ### Android Client
 - [ ] **Optimize Dependency Initialization**: Transition from sequential to parallel initialization of Firebase and AdMob to further shave off startup milliseconds.
