@@ -66,7 +66,9 @@ fun main() = application {
     desktopViewModel.macroManagerViewModel = macroManagerViewModel
     
     var isWindowVisible by remember { mutableStateOf(true) }
+    var showMinimizeToTrayDialog by remember { mutableStateOf(false) }
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
+    val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val icon = painterResource("macropadIcon64.png")
 
 
@@ -94,18 +96,40 @@ fun main() = application {
     Tray(
         icon = icon,
         tooltip = "Open Macropad Server",
+        onAction = { isWindowVisible = !isWindowVisible },
         menu = {
-            Item("Show", onClick = { isWindowVisible = true })
+            if (isWindowVisible) {
+                Item("Hide to Tray", onClick = { isWindowVisible = false })
+            } else {
+                Item("Show Main Window", onClick = { isWindowVisible = true })
+            }
             Separator()
             Item("Exit", onClick = ::exitApplication)
         }
     )
 
+    if (showMinimizeToTrayDialog) {
+        MinimizeToTrayDialog(
+            onConfirm = { dontShowAgain ->
+                if (dontShowAgain) {
+                    settingsViewModel.setShowMinimizeToTrayDialog(false)
+                }
+                showMinimizeToTrayDialog = false
+                isWindowVisible = false
+            },
+            onDismiss = { showMinimizeToTrayDialog = false }
+        )
+    }
+
     if (isWindowVisible) {
         Window(
             onCloseRequest = {
                 if (minimizeToTray) {
-                    isWindowVisible = false
+                    if (showMinimizeToTrayDialogSetting) {
+                        showMinimizeToTrayDialog = true
+                    } else {
+                        isWindowVisible = false
+                    }
                 } else {
                     exitApplication()
                 }

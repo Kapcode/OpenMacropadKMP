@@ -15,6 +15,7 @@ object AppSettings {
     private const val SECURE_SERVER_PORT_KEY = "secureServerPort"
     private const val ESTOP_KEY_KEY = "eStopKey"
     private const val MINIMIZE_TO_TRAY_KEY = "minimizeToTray"
+    private const val SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY = "showMinimizeToTrayDialog"
     private const val HARD_ESTOP_KEY = "hardEstop"
 
     init {
@@ -69,6 +70,13 @@ object AppSettings {
         get() = properties.getProperty(MINIMIZE_TO_TRAY_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(MINIMIZE_TO_TRAY_KEY, value.toString())
+            save()
+        }
+
+    var showMinimizeToTrayDialog: Boolean
+        get() = properties.getProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, value.toString())
             save()
         }
 

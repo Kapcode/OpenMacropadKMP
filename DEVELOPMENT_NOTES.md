@@ -231,12 +231,13 @@ Automated macros could cause loss of system control if they ran too long or went
 ## 18. Desktop Taskbar & System Tray Integration
 
 ### Challenge: Unreliable "Minimize to Tray" Behavior
-- **Problem**: The current implementation for iconifying the application to the system tray (taskbar) is unstable across different OS environments (Linux/Windows/macOS). Issues include phantom windows, lack of proper "Restore" behavior, and inconsistent icon scaling.
-- **Goal**: Achieve a seamless "background-only" mode where the server runs quietly in the tray without a persistent taskbar entry.
-- **Potential Solutions**:
-    - **Native Integration**: Better utilization of `java.awt.SystemTray` with a robust fallback for environments that don't support it.
-    - **Window Management**: Refining `WindowEvent` listeners to ensure the Compose window is properly hidden/shown and that its lifecycle doesn't interfere with the Ktor server or JNativeHook listeners.
-    - **Context Menu**: Implementing a functional right-click menu for the tray icon (e.g., "Toggle Server", "View Logs", "Exit").
+- **Problem**: The initial implementation for iconifying the application to the system tray was unstable across different OS environments, lacking proper "Restore" behavior and clear user feedback.
+- **Solution**:
+    - **Native Tray Integration**: Leveraged Compose for Desktop's `Tray` API to provide a stable, OS-native icon and context menu.
+    - **Dynamic Menu Items**: Implemented a state-aware context menu that changes its labels (e.g., "Show Main Window" vs. "Hide to Tray") based on the current window visibility.
+    - **Primary Action Support**: Added an `onAction` handler (primary/left-click) to toggle the window state instantly, providing a familiar and snappy user experience.
+    - **User Notification**: Created a dedicated `MinimizeToTrayDialog` with high-visibility Material 3 typography to inform the user when the application is continuing to run in the background. Included a "Don't show again" option that persists in `AppSettings`.
+    - **Settings Toggle**: Added a "Minimize to System Tray" checkbox in the main Settings dialog, allowing users to choose between full exit and background mode on window close.
 
 ## 19. To-Do List & Future Improvements
 
@@ -250,7 +251,7 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Desktop Server
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
-- [ ] **Taskbar/Tray Polish**: Overhaul the system tray implementation to support stable minimize-to-tray behavior across Linux, Windows, and macOS.
+- [x] **Taskbar/Tray Polish**: Overhauled the system tray implementation with dynamic context menus, primary click toggling, and a user notification dialog on first minimize.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.

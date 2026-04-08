@@ -32,6 +32,7 @@ fun SettingsDialog(
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
+    val showMinimizeToTrayDialog by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val hardEstop by settingsViewModel.hardEstop.collectAsState()
 
     val dialogState = rememberDialogState(width = 600.dp, height = 550.dp) // Increased height
@@ -92,6 +93,18 @@ fun SettingsDialog(
                             checked = minimizeToTray,
                             onCheckedChange = { settingsViewModel.setMinimizeToTray(it) }
                         )
+                    }
+                    if (minimizeToTray) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+                        ) {
+                            Text("Show notification when minimizing", modifier = Modifier.weight(1f))
+                            Checkbox(
+                                checked = showMinimizeToTrayDialog,
+                                onCheckedChange = { settingsViewModel.setShowMinimizeToTrayDialog(it) }
+                            )
+                        }
                     }
                      Row(
                         verticalAlignment = Alignment.CenterVertically,

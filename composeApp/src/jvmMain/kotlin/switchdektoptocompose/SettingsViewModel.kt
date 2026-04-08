@@ -22,6 +22,9 @@ class SettingsViewModel {
     private val _minimizeToTray = MutableStateFlow(AppSettings.minimizeToTray)
     val minimizeToTray = _minimizeToTray.asStateFlow()
 
+    private val _showMinimizeToTrayDialog = MutableStateFlow(AppSettings.showMinimizeToTrayDialog)
+    val showMinimizeToTrayDialog = _showMinimizeToTrayDialog.asStateFlow()
+
     private val _hardEstop = MutableStateFlow(AppSettings.hardEstop)
     val hardEstop = _hardEstop.asStateFlow()
 
@@ -70,6 +73,11 @@ class SettingsViewModel {
     fun setMinimizeToTray(enabled: Boolean) {
         _minimizeToTray.value = enabled
         AppSettings.minimizeToTray = enabled
+    }
+
+    fun setShowMinimizeToTrayDialog(enabled: Boolean) {
+        _showMinimizeToTrayDialog.value = enabled
+        AppSettings.showMinimizeToTrayDialog = enabled
     }
 
     fun setHardEstop(enabled: Boolean) {
