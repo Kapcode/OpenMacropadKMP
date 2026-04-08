@@ -283,6 +283,10 @@ Automated macros could cause loss of system control if they ran too long or went
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 
+
 ### Cross-Platform / Common
 - [ ] **UDP Discovery Polish**: Improve the reliability of server discovery on complex local network topologies (e.g., multiple subnets).
 - [ ] **End-to-End Testing**: Implement automated integration tests for the cryptographic handshake process.
+
+### Ideas
+- **Cursor Hotbar**: I have a prompt for this, but the general idea is to have a hotbar of cursor locations that you can scroll through, making UI navigation faster. It would be JSON backed, use the Macro Manager UI as well as use the Editor.
