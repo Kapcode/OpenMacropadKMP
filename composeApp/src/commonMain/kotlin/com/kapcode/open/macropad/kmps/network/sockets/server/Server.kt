@@ -195,7 +195,7 @@ class Server(
                     log("$clientId sent data: $key (${value.size} bytes)")
                     send(message.createResponse(true, "Data received"))
                 },
-                onHeartbeat = { timestamp ->
+                onHeartbeat = { _ ->
                     send(heartbeatMessage())
                 },
                 onResponse = { _, _, _ -> }
