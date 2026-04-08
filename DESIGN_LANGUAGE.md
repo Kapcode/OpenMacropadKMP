@@ -24,14 +24,23 @@ The application supports two primary themes: **Dark Blue** (default) and **Light
 - **Directional Icons**: Use `AutoMirrored` variants (e.g., `ArrowBack`, `ExitToApp`) to support RTL layouts automatically.
 - **Brand Icon**: A high-resolution 512px icon is used for desktop taskbars and Android splash screens to ensure crispness across all DPI levels.
 
-## 2. Interaction & Feedback
+## 2. Shared Interaction & Feedback
 
-### Visual Feedback
-- **Terminal Aesthetics**: For startup and discovery phases, a retro-style blinking cursor (`> _`) is used.
+### Terminal-Inspired Aesthetics (Cross-Platform)
+To create a unified "tech-forward" feel, both platforms use terminal-inspired animations for background processes:
+- **Blinking Cursor (`> _`)**: Used during initialization or as a "heartbeat" indicator.
+  - **Component**: `BlinkingCursor` (Common).
   - **Animation**: 400ms cycle (200ms ON / 200ms OFF).
-  - **Persistence**: Minimum alpha of 20/255 during "OFF" state to maintain visual anchor.
-- **Status Indicators**: Use bold, color-coded text for critical states (Running/Stopped).
-- **Snackbars**: Provide immediate confirmation for macro completion, cancellation, or E-Stop triggers.
+  - **Color**: `MaterialTheme.colorScheme.primary`.
+- **Three-Dot Progress**: Used specifically for active network scanning or discovery.
+  - **Component**: `ThreeDotsLoading` (Common).
+  - **Animation**: Staggered scaling (600ms per dot).
+
+### Status Feedback
+- **Color Logic**:
+    - **Success/Active**: Standard Green in Dark Theme, High-Contrast Green (`#008000`) in Light Theme.
+    - **Error/Stopped**: Material 3 Error color (`#BA1A1A`).
+- **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
 
 ### Desktop Motion
 - **Minimize to Tray**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area.
