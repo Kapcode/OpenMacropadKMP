@@ -14,8 +14,9 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Macro Editor:** A visual timeline editor for creating macros.
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
-*   **System Tray Integration:** Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
-*   **Safety Mechanisms:** Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
+*   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
+*   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
+*   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.
 *   **Console:** Real-time logging of macro execution and client connections.
 

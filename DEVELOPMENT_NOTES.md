@@ -234,10 +234,11 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: The initial implementation for iconifying the application to the system tray was unstable across different OS environments, lacking proper "Restore" behavior and clear user feedback.
 - **Solution**:
     - **Native Tray Integration**: Leveraged Compose for Desktop's `Tray` API to provide a stable, OS-native icon and context menu.
-    - **Dynamic Menu Items**: Implemented a state-aware context menu that changes its labels (e.g., "Show Main Window" vs. "Hide to Tray") based on the current window visibility.
-    - **Primary Action Support**: Added an `onAction` handler (primary/left-click) to toggle the window state instantly, providing a familiar and snappy user experience.
+    - **Smooth Transitions**: Implemented a quadratic ease-in animation that scales and moves the window toward the system tray area during minimize.
+    - **Dynamic Menu Items**: Implemented a state-aware context menu that changes its labels (e.g., "Show Main Window" vs. "Hide to Tray") based on the current window visibility and minimized state.
+    - **Robust Toggling**: Optimized the `onAction` handler to handle quick clicks, window restoration from a minimized taskbar state, and immediate cancellation of active hide animations if the user "catches" the window.
     - **User Notification**: Created a dedicated `MinimizeToTrayDialog` with high-visibility Material 3 typography to inform the user when the application is continuing to run in the background. Included a "Don't show again" option that persists in `AppSettings`.
-    - **Settings Toggle**: Added a "Minimize to System Tray" checkbox in the main Settings dialog, allowing users to choose between full exit and background mode on window close.
+    - **High-Quality Assets**: Switched to a 512px icon to eliminate white fringing artifacts on dark system taskbars.
 
 ## 19. To-Do List & Future Improvements
 

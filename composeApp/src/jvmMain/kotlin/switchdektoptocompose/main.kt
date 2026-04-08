@@ -1,6 +1,6 @@
 package switchdektoptocompose
 
-import androidx.compose.desktop.ui.tooling.preview.Preview
+import org.jetbrains.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
@@ -25,6 +26,8 @@ import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
 import org.jetbrains.compose.splitpane.HorizontalSplitPane
 import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
+import java.awt.GraphicsEnvironment
+import kotlinx.coroutines.*
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
 
@@ -66,10 +69,79 @@ fun main() = application {
     desktopViewModel.macroManagerViewModel = macroManagerViewModel
     
     var isWindowVisible by remember { mutableStateOf(true) }
+    var isTransitioning by remember { mutableStateOf(false) }
+    var animationJob by remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
+    
     var showMinimizeToTrayDialog by remember { mutableStateOf(false) }
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
     val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
-    val icon = painterResource("macropadIcon64.png")
+    // Using the higher resolution icon to avoid white fringing artifacts
+    val icon = painterResource("macropadIcon512.png")
+
+    val animateToTray = {
+        if (!isTransitioning && isWindowVisible) {
+            isTransitioning = true
+            animationJob = scope.launch {
+                try {
+                    val initialPlacement = windowState.placement
+                    val initialSize = windowState.size
+                    val initialPosition = windowState.position
+
+                    if (windowState.placement == WindowPlacement.Maximized) {
+                        windowState.placement = WindowPlacement.Floating
+                        delay(100)
+                    }
+
+                    val startSize = windowState.size
+                    val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
+                    
+                    val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
+                    val targetSize = DpSize(200.dp, 100.dp)
+                    val targetX = (screen.width - 250).dp
+                    val targetY = (screen.height - 150).dp
+
+                    val steps = 20
+                    for (i in 1..steps) {
+                        val t = i.toFloat() / steps
+                        val eased = t * t // quadratic ease-in
+                        
+                        windowState.size = DpSize(
+                            startSize.width + (targetSize.width - startSize.width) * eased,
+                            startSize.height + (targetSize.height - startSize.height) * eased
+                        )
+                        
+                        windowState.position = WindowPosition(
+                            startPos.x + (targetX - startPos.x) * eased,
+                            startPos.y + (targetY - startPos.y) * eased
+                        )
+                        delay(16)
+                    }
+                    
+                    isWindowVisible = false
+                    delay(50) // Short delay to ensure it's hidden
+                    
+                    // Restore state so it's ready for when it's shown again
+                    withContext(NonCancellable) {
+                        windowState.placement = initialPlacement
+                        windowState.size = initialSize
+                        windowState.position = initialPosition
+                    }
+                } finally {
+                    isTransitioning = false
+                    animationJob = null
+                }
+            }
+        }
+    }
+
+    val showWindow = {
+        if (isTransitioning) {
+            animationJob?.cancel()
+        }
+        isWindowVisible = true
+        windowState.isMinimized = false
+    }
 
 
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
@@ -96,12 +168,19 @@ fun main() = application {
     Tray(
         icon = icon,
         tooltip = "Open Macropad Server",
-        onAction = { isWindowVisible = !isWindowVisible },
-        menu = {
-            if (isWindowVisible) {
-                Item("Hide to Tray", onClick = { isWindowVisible = false })
+        onAction = { 
+            val isMinimized = windowState.isMinimized
+            if (isWindowVisible && !isMinimized && !isTransitioning) {
+                animateToTray()
             } else {
-                Item("Show Main Window", onClick = { isWindowVisible = true })
+                showWindow()
+            }
+        },
+        menu = {
+            if (isWindowVisible && !windowState.isMinimized) {
+                Item("Hide to Tray", onClick = { animateToTray() })
+            } else {
+                Item("Show Main Window", onClick = { showWindow() })
             }
             Separator()
             Item("Exit", onClick = ::exitApplication)
@@ -115,29 +194,29 @@ fun main() = application {
                     settingsViewModel.setShowMinimizeToTrayDialog(false)
                 }
                 showMinimizeToTrayDialog = false
-                isWindowVisible = false
+                animateToTray()
             },
             onDismiss = { showMinimizeToTrayDialog = false }
         )
     }
 
-    if (isWindowVisible) {
-        Window(
-            onCloseRequest = {
-                if (minimizeToTray) {
-                    if (showMinimizeToTrayDialogSetting) {
-                        showMinimizeToTrayDialog = true
-                    } else {
-                        isWindowVisible = false
-                    }
+    Window(
+        visible = isWindowVisible,
+        onCloseRequest = {
+            if (minimizeToTray) {
+                if (showMinimizeToTrayDialogSetting) {
+                    showMinimizeToTrayDialog = true
                 } else {
-                    exitApplication()
+                    animateToTray()
                 }
-            },
-            state = windowState,
-            title = "Open Macropad (Compose)",
-            icon = icon
-        ) {
+            } else {
+                exitApplication()
+            }
+        },
+        state = windowState,
+        title = "Open Macropad (Compose)",
+        icon = icon
+    ) {
             val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
             val eStopKey by settingsViewModel.eStopKey.collectAsState()
 
@@ -159,11 +238,42 @@ fun main() = application {
             )
         }
     }
+
+@Preview
+@Composable
+fun DesktopAppPreview() {
+    val settingsViewModel = remember { SettingsViewModel() }
+    val consoleViewModel = remember { ConsoleViewModel() }
+    val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
+    val macroManagerViewModel = remember {
+        MacroManagerViewModel(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            onEditMacroRequested = { },
+            onMacrosUpdated = { }
+        )
+    }
+    val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
+    val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel) { } }
+    val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+    val newEventViewModel = remember { NewEventViewModel() }
+
+    DesktopApp(
+        desktopViewModel = desktopViewModel,
+        consoleViewModel = consoleViewModel,
+        inspectorViewModel = inspectorViewModel,
+        recordMacroViewModel = recordMacroViewModel,
+        macroEditorViewModel = macroEditorViewModel,
+        macroManagerViewModel = macroManagerViewModel,
+        settingsViewModel = settingsViewModel,
+        macroTimelineViewModel = macroTimelineViewModel,
+        newEventViewModel = newEventViewModel
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalSplitPaneApi::class)
 @Composable
-@Preview
 fun DesktopApp(
     desktopViewModel: DesktopViewModel,
     consoleViewModel: ConsoleViewModel,
@@ -178,7 +288,6 @@ fun DesktopApp(
 ) {
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    val scope = rememberCoroutineScope()
 
     LaunchedEffect(selectedTheme) {
         val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name
@@ -210,7 +319,6 @@ fun DesktopApp(
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
-    val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
