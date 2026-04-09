@@ -266,7 +266,22 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Informed Consent**: Implemented a mandatory security warning dialog that users must acknowledge before "Log to File" can be enabled.
     - **Temporary Nature**: The UI emphasizes that file logging should only be used temporarily for debugging and not left on during normal operation.
 
-## 22. To-Do List & Future Improvements
+## 22. Desktop Architectural Refactoring
+
+### Challenge: Maintainability and Dependency Sprawl
+- **Problem**: As the desktop application grew, `ui/DesktopApp.kt` and `viewmodel/` were becoming cluttered with tightly coupled logic and duplicate declarations (e.g., `DesktopViewModels`).
+- **Solution**: 
+    1.  **Package Organization**: Refactored the `jvmMain` source into a clean, package-based structure:
+        - `di/`: Centralized dependency management via `ViewModelFactory`.
+        - `logic/`: Isolated business logic (Macro execution, settings persistence, server discovery).
+        - `model/`: Shared data classes and state representations.
+        - `ui/`: Pure Compose UI components and themes.
+        - `viewmodel/`: Specialized ViewModels for state management.
+    2.  **Centralized DI**: Implemented a `ViewModelFactory` that handles the instantiation and cross-wiring of all ViewModels, ensuring that circular dependencies (like `MacroManager` vs `MacroEditor`) are handled correctly using `remember` and late initialization.
+    3.  **Refined Visibility**: Moved models like `ClientInfo` and `MacroFileState` to a common `model` package to resolve visibility issues across UI and ViewModel layers.
+    4.  **Compose Optimization**: Cleaned up imports and property delegates across 20+ files to ensure consistent use of `by` and `collectAsState()`.
+
+## 23. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
@@ -276,6 +291,8 @@ Automated macros could cause loss of system control if they ran too long or went
 - [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
 
 ### Desktop Server
+- [x] **Architectural Refactoring**: Cleaned up the `jvmMain` package structure, separating UI, ViewModels, Models, Logic, and DI.
+- [x] **Centralized DI**: Implemented `ViewModelFactory` to manage complex ViewModel dependencies and circular references.
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
 - [x] **Taskbar/Tray Polish**: Overhauled the system tray implementation with dynamic context menus, primary click toggling, and a user notification dialog on first minimize.

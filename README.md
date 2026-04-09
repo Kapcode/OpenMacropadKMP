@@ -11,7 +11,9 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 ## Features
 
 ### Desktop Server
-*   **Macro Editor:** A visual timeline editor for creating macros.
+*   **Macro Editor:** A visual timeline editor for creating macros with a dedicated `MacroTimelineViewModel`.
+*   **Architectural Excellence:** Refactored into a robust, package-organized structure (UI, ViewModels, Logic, Models, DI) for maximum maintainability.
+*   **Centralized DI:** Uses a `ViewModelFactory` to manage ViewModel lifecycles and complex dependencies.
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
@@ -54,7 +56,7 @@ To use global hotkeys on Linux, the user must be part of the `input` group:
 
 This project uses Kotlin Multiplatform (KMP) to share code between platforms:
 *   **commonMain**: Shared business logic, models, and UI themes.
-*   **jvmMain**: Desktop server implementation using Compose for Desktop, Ktor 3.x, JNativeHook, and Java AWT Robot.
+*   **jvmMain**: Desktop server implementation using Compose for Desktop, Ktor 3.x, JNativeHook, and Java AWT Robot. Organized into a clean, multi-layered package structure (`ui`, `viewmodel`, `model`, `logic`, `di`).
 *   **androidMain**: Android client implementation using standard Android components and AdMob.
 
 ## Developer Documentation

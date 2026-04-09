@@ -1,0 +1,2 @@
+[21:49:16.798] [Info] Started logging to file: /home/kyle/StudioProjects/OpenMacropadKMP/composeApp/macropad_log_20260408_214916.txt
+[21:49:17.723] [Info] Stopped logging to file.
