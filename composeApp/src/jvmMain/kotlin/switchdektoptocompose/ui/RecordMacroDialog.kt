@@ -25,7 +25,8 @@ fun RecordMacroDialog(
     DialogWindow(
         onCloseRequest = onDismissRequest,
         state = dialogState,
-        title = "Record a New Macro"
+        title = "Record a New Macro",
+        alwaysOnTop = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             val recordKeys by viewModel.recordKeys.collectAsState()

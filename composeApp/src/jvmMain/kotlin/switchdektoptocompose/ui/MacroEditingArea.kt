@@ -15,6 +15,7 @@ fun MacroEditingArea(
     macroEditorViewModel: MacroEditorViewModel,
     macroTimelineViewModel: MacroTimelineViewModel,
     settingsViewModel: SettingsViewModel,
+    selectedTheme: String,
     onAddEventClicked: () -> Unit,
     onRecordMacroClicked: () -> Unit
 ) {
@@ -28,6 +29,7 @@ fun MacroEditingArea(
                 first(minSize = 200.dp) {
                     MacroManagerScreen(
                         viewModel = macroManagerViewModel,
+                        selectedTheme = selectedTheme,
                         onNewMacroClicked = onRecordMacroClicked
                     )
                 }

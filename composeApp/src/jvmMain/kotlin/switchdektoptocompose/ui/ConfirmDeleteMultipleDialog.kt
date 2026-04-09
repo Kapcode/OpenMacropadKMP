@@ -14,11 +14,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import java.io.File
 
 @Composable
 fun ConfirmDeleteMultipleDialog(
     files: List<File>,
+    selectedTheme: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -26,41 +28,43 @@ fun ConfirmDeleteMultipleDialog(
         onCloseRequest = onDismiss,
         state = rememberDialogState(width = 450.dp, height = 300.dp),
         title = "Confirm Deletion",
-        resizable = false
+        resizable = false,
+        alwaysOnTop = true
     ) {
-        Surface(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier.fillMaxSize().padding(16.dp),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                // The inner Column was removed to fix the layout
-                Text(
-                    text = "Are you sure you want to delete the following files?",
-                    style = MaterialTheme.typography.bodyLarge
-                )
-                Spacer(Modifier.height(8.dp))
-                LazyColumn(
-                    modifier = Modifier.weight(1f).padding(start = 8.dp)
+        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
-                    items(files) { file ->
-                        Text("- ${file.name}")
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Button(
-                        onClick = onConfirm,
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    Text(
+                        text = "Are you sure you want to delete the following files?",
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).padding(start = 8.dp)
                     ) {
-                        Text("Delete All")
+                        items(files) { file ->
+                            Text("- ${file.name}")
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Button(onClick = onDismiss) {
+                            Text("Cancel")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = onConfirm,
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Delete All")
+                        }
                     }
                 }
             }

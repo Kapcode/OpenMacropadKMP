@@ -20,7 +20,8 @@ fun LoggingToFileWarningDialog(
         onCloseRequest = onDismiss,
         state = rememberDialogState(width = 500.dp, height = 400.dp),
         title = "Security and Performance Warning",
-        resizable = false
+        resizable = false,
+        alwaysOnTop = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {

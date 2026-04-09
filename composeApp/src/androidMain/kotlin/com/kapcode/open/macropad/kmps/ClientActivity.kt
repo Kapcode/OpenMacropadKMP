@@ -142,7 +142,16 @@ class ClientActivity : ComponentActivity() {
                         }
 
                         Log.d("ClientActivity", "Received from server: $receivedText")
-                        if (receivedText.startsWith("macros:")) {
+                        if (receivedText == "pairing_pending") {
+                            onUpdate("Pending Approval", null)
+                        } else if (receivedText == "pairing_approved") {
+                            onUpdate("Connected", ipAddress)
+                            tempClient.send("getMacros")
+                        } else if (receivedText == "pairing_rejected") {
+                            onUpdate("Pairing Denied", null)
+                            this@launch.cancel()
+                        } else if (receivedText.startsWith("macros:")) {
+                            onUpdate("Connected", ipAddress)
                             val macroNames = receivedText.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                             macros.clear()
                             macros.addAll(macroNames)
@@ -295,12 +304,18 @@ fun ClientScreen(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text("Connected to:")
-                            Text(
-                                serverName ?: "N/A",
-                                style = MaterialTheme.typography.headlineMedium
-                            )
-                            Text("Status: $connectionStatus")
+                            if (connectionStatus == "Pending Approval") {
+                                CircularProgressIndicator()
+                                Spacer(Modifier.height(16.dp))
+                                Text("Please approve this device on your Desktop.")
+                            } else {
+                                Text("Connected to:")
+                                Text(
+                                    serverName ?: "N/A",
+                                    style = MaterialTheme.typography.headlineMedium
+                                )
+                                Text("Status: $connectionStatus")
+                            }
                         }
                     }
                 }

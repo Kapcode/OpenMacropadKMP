@@ -106,6 +106,7 @@ fun DesktopApp(
 
 
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
+    val pendingPairingRequests by desktopViewModel.pendingPairingRequests.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
     val serverError by desktopViewModel.serverError.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
@@ -142,10 +143,20 @@ fun DesktopApp(
 
 
     filePendingDeletion?.let { file ->
-        ConfirmDeleteDialog(file = file, onConfirm = { macroManagerViewModel.confirmDeletion() }, onDismiss = { macroManagerViewModel.cancelDeletion() })
+        ConfirmDeleteDialog(
+            file = file,
+            selectedTheme = selectedTheme,
+            onConfirm = { macroManagerViewModel.confirmDeletion() },
+            onDismiss = { macroManagerViewModel.cancelDeletion() }
+        )
     }
     filesPendingDeletion?.let { files ->
-        ConfirmDeleteMultipleDialog(files = files, onConfirm = { macroManagerViewModel.confirmMultipleDeletion() }, onDismiss = { macroManagerViewModel.cancelMultipleDeletion() })
+        ConfirmDeleteMultipleDialog(
+            files = files,
+            selectedTheme = selectedTheme,
+            onConfirm = { macroManagerViewModel.confirmMultipleDeletion() },
+            onDismiss = { macroManagerViewModel.cancelMultipleDeletion() }
+        )
     }
     if (showNewEventDialog) {
         NewEventDialog(
@@ -179,24 +190,25 @@ fun DesktopApp(
         )
     }
 
+    if (pendingPairingRequests.isNotEmpty()) {
+        val request = pendingPairingRequests.first()
+        PairingRequestDialog(
+            request = request,
+            selectedTheme = selectedTheme,
+            onApprove = { desktopViewModel.approveDevice(request.id, request.name) },
+            onDeny = { desktopViewModel.rejectDevice(request.id) }
+        )
+    }
+
     serverError?.let { error ->
-        AlertDialog(
-            onDismissRequest = { desktopViewModel.clearServerError() },
-            title = { Text("Server Identity Error") },
-            text = { Text(error) },
-            confirmButton = {
-                TextButton(onClick = {
-                    desktopViewModel.clearServerError()
-                    desktopViewModel.startServer(forceRecreateKeystore = true)
-                }) {
-                    Text("Reset Identity")
-                }
+        ServerErrorDialog(
+            error = error,
+            selectedTheme = selectedTheme,
+            onResetIdentity = {
+                desktopViewModel.clearServerError()
+                desktopViewModel.startServer(forceRecreateKeystore = true)
             },
-            dismissButton = {
-                TextButton(onClick = { desktopViewModel.clearServerError() }) {
-                    Text("Cancel")
-                }
-            }
+            onDismiss = { desktopViewModel.clearServerError() }
         )
     }
 
@@ -326,6 +338,7 @@ fun DesktopApp(
                                     macroEditorViewModel = macroEditorViewModel,
                                     macroTimelineViewModel = macroTimelineViewModel,
                                     settingsViewModel = settingsViewModel,
+                                    selectedTheme = selectedTheme,
                                     onAddEventClicked = {
                                         newEventViewModel.reset()
                                         showNewEventDialog = true

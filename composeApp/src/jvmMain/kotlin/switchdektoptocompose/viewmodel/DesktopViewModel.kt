@@ -34,6 +34,9 @@ class DesktopViewModel(
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
     val connectedDevices: StateFlow<List<ClientInfo>> = _connectedDevices.asStateFlow()
 
+    private val _pendingPairingRequests = MutableStateFlow<List<ClientInfo>>(emptyList())
+    val pendingPairingRequests: StateFlow<List<ClientInfo>> = _pendingPairingRequests.asStateFlow()
+
     private val _isServerRunning = MutableStateFlow(false)
     val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
 
@@ -46,7 +49,8 @@ class DesktopViewModel(
     private val server = MacroKtorServer(
         onMessageReceived = ::onDataReceived,
         onClientConnected = ::onClientConnected,
-        onClientDisconnected = ::onClientDisconnected
+        onClientDisconnected = ::onClientDisconnected,
+        onPairingRequest = ::onPairingRequest
     )
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
 
@@ -170,7 +174,39 @@ class DesktopViewModel(
         _connectedDevices.update { currentList ->
             currentList.filterNot { it.id == clientId }
         }
+        _pendingPairingRequests.update { currentList ->
+            currentList.filterNot { it.id == clientId }
+        }
         consoleViewModel.addLog(LogLevel.Info, "Client disconnected: ${client?.name ?: clientId}")
+    }
+
+    private fun onPairingRequest(clientId: String, clientName: String) {
+        _pendingPairingRequests.update { currentList ->
+            if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
+        }
+        consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId)")
+    }
+
+    fun approveDevice(clientId: String, clientName: String) {
+        switchdektoptocompose.logic.TrustedDeviceManager.addTrustedDevice(clientId, clientName)
+        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
+        onClientConnected(clientId, clientName)
+        viewModelScope.launch {
+            server.sendToClient(clientId, "pairing_approved")
+            // Also send the macro list immediately upon approval
+            val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+            val macroListString = "macros:${macroNames.joinToString(",")}"
+            server.sendToClient(clientId, macroListString)
+        }
+        consoleViewModel.addLog(LogLevel.Info, "Approved device: $clientName ($clientId)")
+    }
+
+    fun rejectDevice(clientId: String) {
+        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
+        viewModelScope.launch {
+            server.sendToClient(clientId, "pairing_rejected")
+        }
+        consoleViewModel.addLog(LogLevel.Info, "Rejected device: $clientId")
     }
 
     private fun onDataReceived(clientId: String, message: String) {

@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MacroManagerScreen(
     viewModel: MacroManagerViewModel,
+    selectedTheme: String,
     onNewMacroClicked: () -> Unit
 ) {
     val macroFiles by viewModel.macroFiles.collectAsState()
@@ -31,6 +32,7 @@ fun MacroManagerScreen(
     macroBeingRenamed?.let { macro ->
         RenameMacroDialog(
             currentName = macro.name,
+            selectedTheme = selectedTheme,
             onDismissRequest = { viewModel.cancelRename() },
             onRename = { newName -> viewModel.confirmRename(newName) }
         )

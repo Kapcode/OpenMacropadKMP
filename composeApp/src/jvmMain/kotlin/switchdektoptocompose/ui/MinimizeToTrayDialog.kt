@@ -22,7 +22,8 @@ fun MinimizeToTrayDialog(
         onCloseRequest = onDismiss,
         state = rememberDialogState(width = 400.dp, height = 250.dp),
         title = "Exiting to Tray",
-        resizable = false
+        resizable = false,
+        alwaysOnTop = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {

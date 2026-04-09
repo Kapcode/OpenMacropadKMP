@@ -30,7 +30,8 @@ fun NewEventDialog(
     DialogWindow(
         onCloseRequest = onDismissRequest,
         state = dialogState,
-        title = "Add New Macro Event"
+        title = "Add New Macro Event",
+        alwaysOnTop = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             val isTrigger by viewModel.isTriggerEvent.collectAsState()

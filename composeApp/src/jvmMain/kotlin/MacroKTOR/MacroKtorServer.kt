@@ -20,7 +20,8 @@ import kotlin.time.Duration.Companion.milliseconds
 class MacroKtorServer(
     private val onMessageReceived: (clientId: String, message: String) -> Unit,
     private val onClientConnected: (clientId: String, clientName: String) -> Unit,
-    private val onClientDisconnected: (clientId: String) -> Unit
+    private val onClientDisconnected: (clientId: String) -> Unit,
+    private val onPairingRequest: (clientId: String, clientName: String) -> Unit
 ) {
     private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
     private val connections = mutableMapOf<String, WebSocketServerSession>()
@@ -67,11 +68,23 @@ class MacroKtorServer(
                     val clientId = queryParams["id"] ?: UUID.randomUUID().toString()
 
                     connections[clientId] = this
-                    onClientConnected(clientId, clientName)
+
+                    if (switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)) {
+                        onClientConnected(clientId, clientName)
+                    } else {
+                        send(Frame.Text("pairing_pending"))
+                        onPairingRequest(clientId, clientName)
+                    }
+
                     try {
                         for (frame in incoming) {
                             if (frame is Frame.Text) {
-                                onMessageReceived(clientId, frame.readText())
+                                if (switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)) {
+                                    onMessageReceived(clientId, frame.readText())
+                                } else {
+                                    // Drop messages from untrusted devices
+                                    send(Frame.Text("pairing_pending"))
+                                }
                             }
                         }
                     } catch (e: ClosedReceiveChannelException) {

@@ -29,13 +29,17 @@ class MacroKtorClient(
      * @throws Exception if the connection fails.
      */
     suspend fun connect(deviceName: String) {
+        val identityManager = com.kapcode.open.macropad.kmps.IdentityManager()
+        val publicKey = identityManager.getIdentityPublicKey()
+        val fingerprint = com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey)
+
         // This function now suspends until the WebSocket session is created.
         session = client.webSocketSession {
             url(
                 scheme = if (isSecure) "wss" else "ws",
                 host = this@MacroKtorClient.host,
                 port = this@MacroKtorClient.port,
-                path = "/?name=$deviceName&deviceName=$deviceName"
+                path = "/?name=$deviceName&deviceName=$deviceName&id=$fingerprint"
             )
         }
 

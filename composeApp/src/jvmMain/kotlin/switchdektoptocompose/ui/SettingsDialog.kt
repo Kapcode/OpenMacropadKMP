@@ -43,7 +43,8 @@ fun SettingsDialog(
         onCloseRequest = onDismissRequest,
         state = dialogState,
         title = "Settings",
-        resizable = false
+        resizable = false,
+        alwaysOnTop = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {
