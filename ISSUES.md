@@ -27,17 +27,25 @@ This document tracks identified security risks that have not yet been fully miti
 - **Description**: The Console text area lacks sufficient bottom padding, making it difficult to read the latest logs or interact with the UI on vertical monitor setups or when using auto-hiding taskbars.
 - **Requested Fix**: Add significant bottom padding (e.g., `100.dp` or a large spacer) to the end of the console scrollable area to ensure the last log line is never obstructed by OS UI elements.
 
-### 5. Trust On First Use (TOFU) Gap
+### 5. Macro Currency Deduction Timing
+- **Description**: Currently, currency might be deducted when a macro is requested, but if the macro is dropped due to queue buildup mitigation (e.g., `executionMutex` is locked), the user loses currency without the macro executing.
+- **Requirement**: Currency must only be deducted *after* the macro has successfully finished execution, or at least after it has successfully started and cleared the queue mitigation check.
+
+### 6. Inspector Screenshot Limit
+- **Description**: The Inspector can take multiple screenshots, but there is no limit on how many can be "active" or stored in the session/temp directory.
+- **Requirement**: Limit the amount of screenshots that can be active in the inspector to a maximum of 5 to prevent memory/disk bloat during long debug sessions.
+
+### 7. Trust On First Use (TOFU) Gap
 - **Description**: During the initial pairing of a new device, the client must "trust" the server's identity certificate without prior verification.
 - **Abuse Scenario**: A sophisticated Man-in-the-Middle (MitM) attacker could spoof the server's identity during the *very first* connection attempt before the identity is pinned.
 - **Mitigation Strategy**: Optional out-of-band verification (e.g., displaying a 6-digit hash/QR code on the desktop that the user verifies on the mobile device).
 
-### 6. Local Denial of Service (Keystore Corruption)
+### 8. Local Denial of Service (Keystore Corruption)
 - **Description**: Although we have implemented "Self-Healing" with backups, a malicious local process can repeatedly delete or corrupt the `server_keystore.p12` file.
 - **Abuse Scenario**: The user is forced into a loop of resetting their identity and re-pairing devices, rendering the application unusable.
 - **Mitigation Strategy**: This is largely an OS-level permissions issue, but can be further mitigated by strengthening the "Reset" confirmation logic.
 
-### 7. Keystore Password Brute Force
+### 9. Keystore Password Brute Force
 - **Description**: If the `server_keystore.p12` file is stolen, it can be subjected to offline brute-force or dictionary attacks.
 - **Abuse Scenario**: An attacker guesses the password stored in `local.properties` or a weak user-defined password.
 - **Mitigation Strategy**: Enforce minimum password complexity and use memory-hard key derivation functions (e.g., Argon2) if the format allows.
