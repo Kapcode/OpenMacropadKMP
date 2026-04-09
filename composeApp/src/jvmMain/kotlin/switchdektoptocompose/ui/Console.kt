@@ -107,6 +107,11 @@ fun Console(
                         color = color
                     )
                 }
+
+                item {
+                    // Extra padding at the end of the console for better visibility on all monitors
+                    Spacer(modifier = Modifier.height(100.dp))
+                }
             }
         }
     }

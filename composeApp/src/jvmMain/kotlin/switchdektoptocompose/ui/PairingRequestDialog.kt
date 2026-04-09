@@ -15,11 +15,12 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 fun PairingRequestDialog(
     request: ClientInfo,
     selectedTheme: String,
+    isAlwaysAllowAvailable: Boolean = true,
     onApprove: (Boolean) -> Unit,
     onDeny: () -> Unit,
     onBan: () -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 400.dp, height = 300.dp)
+    val dialogState = rememberDialogState(width = 550.dp, height = 300.dp)
 
     DialogWindow(
         onCloseRequest = { /* Must act on the dialog */ },
@@ -66,9 +67,13 @@ fun PairingRequestDialog(
                         OutlinedButton(onClick = { onApprove(false) }) {
                             Text("Allow Once")
                         }
-                        Spacer(Modifier.width(8.dp))
-                        Button(onClick = { onApprove(true) }) {
-                            Text("Always Allow")
+                        if (isAlwaysAllowAvailable) {
+                            Spacer(Modifier.width(8.dp))
+                            Button(onClick = { onApprove(true) }) {
+                                Text("Always Allow")
+                            }
+                        } else {
+                            // Optionally add a note why Always Allow is missing
                         }
                     }
                 }

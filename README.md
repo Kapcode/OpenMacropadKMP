@@ -19,7 +19,7 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
-*   **Security & Device Management**: Features a Physical Consent Pairing system, persistent whitelisting/banning, and an "Allow new connections" lockdown mode to prevent unauthorized access.
+*   **Security & Device Management**: Features a Physical Consent Pairing system, persistent whitelisting/banning, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
 *   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.

@@ -311,7 +311,7 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
 - [x] **Taskbar/Tray Polish**: Overhauled the system tray implementation with dynamic context menus, primary click toggling, and a user notification dialog on first minimize.
-- [x] **Physical Consent & Banning**: Implemented a "Physical Consent Pairing" security feature. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with a "Allow new connections" global toggle in settings.
+- [x] **Physical Consent & Banning**: Implemented a "Physical Consent Pairing" security feature. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.

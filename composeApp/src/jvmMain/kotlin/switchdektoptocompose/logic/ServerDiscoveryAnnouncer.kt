@@ -30,14 +30,16 @@ class ServerDiscoveryAnnouncer {
                 val packet = DatagramPacket(message, message.size, broadcastAddress, 9998)
 
                 while (isActive) {
-                    try {
-                        socket?.send(packet)
-                        delay(5000) // Announce every 5 seconds
-                    } catch (e: Exception) {
-                        if (isActive) {
-                            System.err.println("Error sending discovery packet: ${e.message}")
+                    if (AppSettings.allowNewConnections) {
+                        try {
+                            socket?.send(packet)
+                        } catch (e: Exception) {
+                            if (isActive) {
+                                System.err.println("Error sending discovery packet: ${e.message}")
+                            }
                         }
                     }
+                    delay(5000) // Check every 5 seconds
                 }
             } catch (e: Exception) {
                 System.err.println("Failed to start discovery announcer: ${e.message}")

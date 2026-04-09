@@ -44,7 +44,7 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
 | **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
-| **Discovery** | UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
+| **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
 
 ## 📡 Communication Protocol (WebSocket)
 

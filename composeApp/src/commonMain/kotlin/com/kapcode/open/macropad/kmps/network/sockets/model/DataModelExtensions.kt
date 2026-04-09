@@ -70,6 +70,38 @@ fun controlMessage(
         .build()
 }
 
+// Macro specialized builders
+fun macroListMessage(macros: List<String>): DataModel =
+    textMessage("macros:${macros.joinToString(",")}")
+
+fun playMacroMessage(macroName: String): DataModel =
+    commandMessage("play:$macroName")
+
+fun getMacrosRequest(): DataModel =
+    textMessage("getMacros")
+
+// Security & Pairing specialized builders
+fun pairingRequestMessage(deviceName: String, deviceId: String): DataModel =
+    controlMessage(
+        ControlCommand.PAIRING_REQUEST,
+        parameters = mapOf("name" to deviceName, "id" to deviceId)
+    )
+
+fun pairingApprovedMessage(): DataModel =
+    controlMessage(ControlCommand.PAIRING_APPROVED)
+
+fun pairingRejectedMessage(reason: String? = null): DataModel =
+    controlMessage(
+        ControlCommand.PAIRING_REJECTED,
+        parameters = reason?.let { mapOf("reason" to it) } ?: emptyMap()
+    )
+
+fun disconnectMessage(reason: String? = null): DataModel =
+    controlMessage(
+        ControlCommand.DISCONNECT,
+        parameters = reason?.let { mapOf("reason" to it) } ?: emptyMap()
+    )
+
 // Added errorMessage function
 fun errorMessage(message: String, context: String = "general", throwable: Throwable? = null): DataModel {
     val metadata = mutableMapOf("context" to context)
@@ -98,5 +130,26 @@ inline fun DataModel.handle(
         is MessageType.Response -> onResponse(msg.success, msg.message, msg.data)
         is MessageType.Control -> onControl(msg.command, msg.parameters)
         is MessageType.Heartbeat -> onHeartbeat(msg.timestamp)
+    }
+}
+
+/**
+ * Enhanced handler that provides the full DataModel for metadata access
+ */
+inline fun DataModel.process(
+    onText: (String, DataModel) -> Unit = { _, _ -> },
+    onCommand: (String, Map<String, String>, DataModel) -> Unit = { _, _, _ -> },
+    onData: (String, ByteArray, DataModel) -> Unit = { _, _, _ -> },
+    onResponse: (Boolean, String, Any?, DataModel) -> Unit = { _, _, _, _ -> },
+    onControl: (ControlCommand, Map<String, String>, DataModel) -> Unit = { _, _, _ -> },
+    onHeartbeat: (Long, DataModel) -> Unit = { _, _ -> }
+) {
+    when (val msg = this.messageType) {
+        is MessageType.Text -> onText(msg.content, this)
+        is MessageType.Command -> onCommand(msg.command, msg.parameters, this)
+        is MessageType.Data -> onData(msg.key, msg.value, this)
+        is MessageType.Response -> onResponse(msg.success, msg.message, msg.data, this)
+        is MessageType.Control -> onControl(msg.command, msg.parameters, this)
+        is MessageType.Heartbeat -> onHeartbeat(msg.timestamp, this)
     }
 }

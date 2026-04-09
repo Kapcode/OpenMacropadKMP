@@ -14,6 +14,8 @@ import switchdektoptocompose.viewmodel.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
@@ -25,7 +27,8 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 fun SettingsDialog(
     desktopViewModel: DesktopViewModel,
     settingsViewModel: SettingsViewModel,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    initialScrollToSecurity: Boolean = false
 ) {
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
@@ -42,7 +45,17 @@ fun SettingsDialog(
     val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
     val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
 
-    val dialogState = rememberDialogState(width = 600.dp, height = 700.dp) // Increased height
+    val dialogState = rememberDialogState(width = 600.dp, height = 700.dp)
+
+    // Scroll state management
+    val scrollState = rememberScrollState()
+    var securitySectionOffset by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(initialScrollToSecurity, securitySectionOffset) {
+        if (initialScrollToSecurity && securitySectionOffset > 0) {
+            scrollState.animateScrollTo(securitySectionOffset.toInt())
+        }
+    }
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
@@ -53,14 +66,13 @@ fun SettingsDialog(
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {
-                val scrollState = rememberScrollState()
                 Box(modifier = Modifier.fillMaxSize()) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(end = 12.dp) // Space for scrollbar
+                            .padding(end = 12.dp)
                             .padding(16.dp)
-                            .verticalScroll(scrollState) // Make content scrollable
+                            .verticalScroll(scrollState)
                     ) {
                         // --- Theme Selection ---
                         Text("Theme", style = MaterialTheme.typography.titleMedium)
@@ -151,26 +163,66 @@ fun SettingsDialog(
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
                         // --- Network/Security Settings ---
-                        Text("Security", style = MaterialTheme.typography.titleMedium)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                        Text(
+                            "Security & Privacy",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.onGloballyPositioned { coordinates ->
+                                securitySectionOffset = coordinates.positionInParent().y
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "When enabled, new devices can find this server and request to pair.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
                         ) {
-                            Text("Allow new connections (untrusted)", modifier = Modifier.weight(1f))
-                            Switch(
-                                checked = allowNewConnections,
-                                onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Device Discovery", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = allowNewConnections,
+                                    onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
+                                )
+                            }
                         }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                        Spacer(modifier = Modifier.height(12.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
                         ) {
-                            Text("Allow Once Only (Privacy Mode)", modifier = Modifier.weight(1f))
-                            Switch(
-                                checked = allowOnceOnly,
-                                onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Ask Every Time (One-Time Approvals) ONLY", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = allowOnceOnly,
+                                    onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
+                                )
+                            }
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(

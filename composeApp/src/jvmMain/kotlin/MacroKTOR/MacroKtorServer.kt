@@ -179,7 +179,15 @@ class MacroKtorServer(
 
     fun stop() {
         heartbeatJob?.cancel()
-        // server?.stop(1000.milliseconds, 5000.milliseconds)
+        val currentConnections = connections.toMap()
+        runBlocking {
+            currentConnections.forEach { (id, _) ->
+                try {
+                    disconnectClient(id)
+                } catch (e: Exception) {}
+            }
+        }
+        server?.stop(500, 1000)
         server = null
     }
 
@@ -187,10 +195,10 @@ class MacroKtorServer(
         connections[clientId]?.send(Frame.Binary(true, dataModel.toBytes()))
     }
 
-    suspend fun disconnectClient(clientId: String) {
+    suspend fun disconnectClient(clientId: String, reason: String = "Disconnected by server") {
         try {
-            sendToClient(clientId, controlMessage(ControlCommand.DISCONNECT))
-            connections[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, "Disconnected by server"))
+            sendToClient(clientId, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)))
+            connections[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, reason))
         } catch (e: Exception) {
             // Already gone
         }

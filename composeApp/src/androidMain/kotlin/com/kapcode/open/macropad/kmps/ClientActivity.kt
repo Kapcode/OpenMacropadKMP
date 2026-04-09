@@ -71,21 +71,25 @@ class ClientActivity : ComponentActivity() {
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
                 var connectionStatus by remember { mutableStateOf("Connecting...") }
                 var serverName by remember { mutableStateOf<String?>(null) }
+                var disconnectReason by remember { mutableStateOf<String?>(null) }
 
                 LaunchedEffect(Unit) {
-                    connectToServer(ipAddress, port, deviceName, isSecure) { status, name ->
+                    connectToServer(ipAddress, port, deviceName, isSecure) { status, name, reason ->
                         connectionStatus = status
                         serverName = name
+                        disconnectReason = reason
                     }
                 }
 
                 ClientScreen(
                     connectionStatus = connectionStatus,
                     serverName = serverName ?: serverAddressFull,
+                    disconnectReason = disconnectReason,
                     macros = macros,
                     settingsViewModel = settingsViewModel,
                     onGetMacros = { activityScope.launch { client?.send("getMacros") } },
-                    onMacroClick = ::sendMacro
+                    onMacroClick = ::sendMacro,
+                    onBackToMain = { finish() }
                 )
             }
         }
@@ -107,7 +111,7 @@ class ClientActivity : ComponentActivity() {
         port: Int,
         deviceName: String,
         isSecure: Boolean,
-        onUpdate: (status: String, serverName: String?) -> Unit
+        onUpdate: (status: String, serverName: String?, reason: String?) -> Unit
     ) {
         clientJob = activityScope.launch {
             var backoffMillis = 1000L
@@ -125,41 +129,60 @@ class ClientActivity : ComponentActivity() {
                     tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
                     this@ClientActivity.client = tempClient
 
-                    onUpdate("Connecting...", ipAddress)
+                    onUpdate("Connecting...", ipAddress, null)
                     withContext(Dispatchers.IO) {
                         tempClient.connect(deviceName)
                     }
 
-                    onUpdate("Connected", ipAddress)
+                    onUpdate("Connected", ipAddress, null)
                     backoffMillis = 1000L // Reset backoff on success
                     retryCount = 0
+                    var lastHeartbeat = System.currentTimeMillis()
                     tempClient.send(textMessage("getMacros").toBytes()) // Request macros on successful connection
+
+                    val watchdogJob = activityScope.launch {
+                        while (isActive) {
+                            delay(5000)
+                            if (System.currentTimeMillis() - lastHeartbeat > 20000) {
+                                Log.w("ClientActivity", "Heartbeat timeout! Reconnecting...")
+                                this@launch.cancel()
+                                tempClient?.close()
+                            }
+                        }
+                    }
 
                     tempClient.incomingMessages.receiveAsFlow().collect { frame ->
                         if (frame is Frame.Binary) {
                             try {
+                                lastHeartbeat = System.currentTimeMillis()
                                 val dataModel = DataModel.fromBytes(frame.readBytes())
                                 dataModel.handle(
                                     onControl = { command, params ->
                                         when (command) {
-                                            ControlCommand.PAIRING_PENDING -> onUpdate("Pending Approval", null)
+                                            ControlCommand.PAIRING_PENDING -> {
+                                                macros.clear()
+                                                onUpdate("Pending Approval", null, null)
+                                            }
                                             ControlCommand.PAIRING_APPROVED -> {
-                                                onUpdate("Connected", ipAddress)
+                                                onUpdate("Connected", ipAddress, null)
                                                 activityScope.launch {
                                                     tempClient.send(textMessage("getMacros").toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
-                                                onUpdate("Pairing Denied", null)
+                                                macros.clear()
+                                                onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.")
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.BANNED -> {
+                                                macros.clear()
                                                 val reason = params["reason"] ?: "Device is banned"
-                                                onUpdate("Banned: $reason", null)
+                                                onUpdate("Banned", null, reason)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.DISCONNECT -> {
-                                                onUpdate("Disconnected by Server", null)
+                                                macros.clear()
+                                                onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.")
                                                 this@launch.cancel()
                                             }
                                             else -> {}
@@ -167,46 +190,41 @@ class ClientActivity : ComponentActivity() {
                                     },
                                     onText = { text ->
                                         if (text.startsWith("macros:")) {
-                                            onUpdate("Connected", ipAddress)
+                                            onUpdate("Connected", ipAddress, null)
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                                             macros.clear()
                                             macros.addAll(macroNames)
                                         }
                                     },
                                     onHeartbeat = {
-                                        // Update last seen timestamp if needed
+                                        lastHeartbeat = System.currentTimeMillis()
                                     }
                                 )
                             } catch (e: Exception) {
                                 Log.e("ClientActivity", "Error parsing DataModel", e)
                             }
                         } else if (frame is Frame.Text) {
+                            lastHeartbeat = System.currentTimeMillis()
                             val receivedText = frame.readText()
                             Log.d("ClientActivity", "Received legacy text from server: $receivedText")
-                            // Fallback for legacy messages if any
                         }
                     }
+                    watchdogJob.cancel()
 
                 } catch (e: Exception) {
                     if (e is CancellationException) {
-                        onUpdate("Disconnected", null)
-                        throw e // Exit the loop if the job is cancelled
+                        // onUpdate("Disconnected", null, null) // Don't overwrite explicit reason
+                        throw e 
                     }
                     retryCount++
                     if (retryCount > MAX_RETRIES) {
                         Log.e("ClientActivity", "Max retries reached. Finishing activity.")
-                        withContext(Dispatchers.Main) {
-                            Toast.makeText(
-                                this@ClientActivity,
-                                "Connection failed. Max retries reached.",
-                                Toast.LENGTH_LONG
-                            ).show()
-                        }
-                        finish()
+                        onUpdate("Failed", null, "Max retries reached. Please check your connection.")
+                        this@launch.cancel()
                         return@launch
                     }
                     val errorMsg = e.message ?: "Unknown error"
-                    onUpdate("Connection Lost: Retrying ($retryCount/$MAX_RETRIES)...", null)
+                    onUpdate("Connecting...", null, "Retrying ($retryCount/$MAX_RETRIES)...")
                     Log.w("ClientActivity", "Connection failed ($errorMsg), retrying in ${backoffMillis / 1000}s")
                 } finally {
                     tempClient?.close()
@@ -256,10 +274,12 @@ class ClientActivity : ComponentActivity() {
 fun ClientScreen(
     connectionStatus: String,
     serverName: String?,
+    disconnectReason: String?,
     macros: List<String>,
     settingsViewModel: SettingsViewModel,
     onGetMacros: () -> Unit,
-    onMacroClick: (String) -> Unit
+    onMacroClick: (String) -> Unit,
+    onBackToMain: () -> Unit
 ) {
     var showSettings by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -329,7 +349,7 @@ fun ClientScreen(
                         MacroButtonsScreen(macros = macros, onMacroClick = onMacroClick)
                     } else {
                         Column(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
@@ -337,7 +357,24 @@ fun ClientScreen(
                                 CircularProgressIndicator()
                                 Spacer(Modifier.height(16.dp))
                                 Text("Please approve this device on your Desktop.")
+                            } else if (disconnectReason != null) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.ArrowBack, 
+                                    contentDescription = null, 
+                                    modifier = Modifier.size(64.dp),
+                                    tint = MaterialTheme.colorScheme.error
+                                )
+                                Spacer(Modifier.height(16.dp))
+                                Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                Spacer(Modifier.height(8.dp))
+                                Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
+                                Spacer(Modifier.height(32.dp))
+                                Button(onClick = onBackToMain) {
+                                    Text("Back to Server List")
+                                }
                             } else {
+                                CircularProgressIndicator()
+                                Spacer(Modifier.height(16.dp))
                                 Text("Connected to:")
                                 Text(
                                     serverName ?: "N/A",

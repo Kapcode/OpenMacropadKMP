@@ -43,12 +43,15 @@ fun ConnectedDevicesScreen(
             items(devices, key = { it.id }) { device ->
                 ContextMenuArea(
                     items = {
-                        listOf(
-                            ContextMenuItem("Disconnect") { onDisconnect(device.id) },
-                            ContextMenuItem("Unpair") { onUnpair(device.id) },
-                            ContextMenuItem("Ban Device") { onBan(device) },
-                            ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(device.id)) }
+                        val items = mutableListOf(
+                            ContextMenuItem("Disconnect") { onDisconnect(device.id) }
                         )
+                        if (device.isTrusted) {
+                            items.add(ContextMenuItem("Unpair") { onUnpair(device.id) })
+                        }
+                        items.add(ContextMenuItem("Ban Device") { onBan(device) })
+                        items.add(ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(device.id)) })
+                        items
                     }
                 ) {
                     ConnectionItem(

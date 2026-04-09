@@ -137,21 +137,6 @@ dependencies {
 configurations.all {
     // Nuclear Fix: Exclude legacy module that pollutes old Long-based signatures
     exclude(group = "io.ktor", module = "ktor-server-host-common")
-
-    resolutionStrategy {
-        // FORCE Ktor 3.4.2 and modern Coroutines globally
-        force("io.ktor:ktor-server-core:3.4.2")
-        force("io.ktor:ktor-server-netty:3.4.2")
-        force("io.ktor:ktor-server-websockets:3.4.2")
-        force("io.ktor:ktor-server-call-logging:3.4.2")
-        force("io.ktor:ktor-client-core:3.4.2")
-        force("io.ktor:ktor-client-okhttp:3.4.2")
-        
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.2")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-swing:1.10.2")
-        force("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
-    }
 }
 
 compose.desktop {
@@ -178,9 +163,9 @@ compose.desktop {
 
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
-    val uberJarPath = layout.buildDirectory.file("compose/jars/OpenMacropadServer-linux-x64-1.0.0.jar")
+    val uberJarPath = layout.buildDirectory.file("compose/jars/OpenMacropadServer-linux-x64-1.1.0.jar")
     
-    archiveFileName.set("OpenMacropadServer-linux-x64-1.0.0-unsigned.jar")
+    archiveFileName.set("OpenMacropadServer-linux-x64-1.1.0-unsigned.jar")
     destinationDirectory.set(layout.buildDirectory.dir("compose/jars"))
 
     from(zipTree(uberJarPath)) {

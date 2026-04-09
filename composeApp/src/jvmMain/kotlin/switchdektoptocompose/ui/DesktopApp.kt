@@ -3,6 +3,7 @@ package switchdektoptocompose.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -84,6 +85,8 @@ fun DesktopApp(
     val newEventViewModel = viewModels.newEventViewModel
 
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
+    val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(selectedTheme) {
@@ -121,6 +124,7 @@ fun DesktopApp(
     val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var showSettingsToSecurity by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
     var showRecordDialog by remember { mutableStateOf(false) }
 
@@ -128,7 +132,11 @@ fun DesktopApp(
         SettingsDialog(
             desktopViewModel = desktopViewModel,
             settingsViewModel = settingsViewModel,
-            onDismissRequest = { showSettingsDialog = false }
+            onDismissRequest = { 
+                showSettingsDialog = false
+                showSettingsToSecurity = false 
+            },
+            initialScrollToSecurity = showSettingsToSecurity
         )
     }
 
@@ -195,6 +203,7 @@ fun DesktopApp(
         PairingRequestDialog(
             request = request,
             selectedTheme = selectedTheme,
+            isAlwaysAllowAvailable = !allowOnceOnly,
             onApprove = { persistent -> desktopViewModel.approveDevice(request.id, request.name, persistent) },
             onDeny = { desktopViewModel.rejectDevice(request.id) },
             onBan = { desktopViewModel.banDevice(request.id, request.name) }
@@ -263,13 +272,78 @@ fun DesktopApp(
                             ) {
                                 Column {
                                     val statusColor = if (isServerRunning) {
-                                        if (selectedTheme == "Dark Blue") Color.Green else Color(0xFF008000) // Darker green for light theme
+                                        if (selectedTheme == "Dark Blue") Color.Green else Color(0xFF008000)
                                     } else {
                                         Color.Red
                                     }
-                                    Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor)
+                                    
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor)
+                                        Spacer(Modifier.width(12.dp))
+                                        Text("Connected: ${connectedDevices.size}", style = MaterialTheme.typography.bodySmall)
+                                        Spacer(Modifier.width(12.dp))
+                                        Text(
+                                            "Macros: ${if (isMacroExecutionEnabled) "Enabled" else "Disabled"}", 
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (isMacroExecutionEnabled) Color.Unspecified else Color.Red
+                                        )
+                                    }
+                                    
                                     Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Address: $serverIpAddress:$currentPort")
+                                    
+                                    TooltipArea(
+                                        tooltip = {
+                                            Surface(
+                                                modifier = Modifier.padding(4.dp),
+                                                shape = MaterialTheme.shapes.small,
+                                                shadowElevation = 4.dp
+                                            ) {
+                                                Text("Security Status (Click to edit)", modifier = Modifier.padding(4.dp))
+                                            }
+                                        },
+                                        delayMillis = 500
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.small)
+                                                .clickable {
+                                                    showSettingsToSecurity = true
+                                                    showSettingsDialog = true
+                                                }
+                                                .padding(4.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    if (encryptionEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp),
+                                                    tint = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
+                                                )
+                                                Spacer(Modifier.width(4.dp))
+                                                Text(
+                                                    "Security: ${if (encryptionEnabled) "Encrypted (WSS)" else "Unencrypted (WS)"}",
+                                                    style = MaterialTheme.typography.bodySmall,
+                                                    color = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                            Row {
+                                                Text(
+                                                    "One-Time Approvals ONLY: ${if (allowOnceOnly) "Yes" else "No"}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (allowOnceOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    "Discovery: ${if (allowNewConnections) "On" else "Off"}",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = if (allowNewConnections) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                                                )
+                                            }
+                                        }
+                                    }
+                                    
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("Address: $serverIpAddress:$currentPort", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             

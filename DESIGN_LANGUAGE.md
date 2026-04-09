@@ -56,6 +56,9 @@ To assist users on touchscreens or with hidden system scrollbars, all major scro
 ### Contrast Requirements
 - In the **Light Blue** theme, success/running indicators use a darkened green (`#008000`) instead of bright green to ensure readability against the light surface variant.
 
+### Progressive Disclosure (Tooltips)
+- **Settings**: Descriptions for complex security toggles (e.g., Device Discovery, One-Time Approvals ONLY) are moved into `TooltipArea` components. This reduces visual noise and "mental load" in the settings screen while keeping information available on-demand.
+
 ## 4. Platform-Specific Design
 
 ### Android

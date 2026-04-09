@@ -165,15 +165,19 @@ class DesktopViewModel(
     fun sendMacroListToAllClients() {
         viewModelScope.launch {
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-            val macroListString = "macros:${macroNames.joinToString(",")}"
-            server.sendToAll(com.kapcode.open.macropad.kmps.network.sockets.model.textMessage(macroListString))
+            server.sendToAll(macroListMessage(macroNames))
             consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to all clients")
         }
     }
 
     private fun onClientConnected(clientId: String, clientName: String) {
+        val isTrusted = switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)
         _connectedDevices.update { currentList ->
-            if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
+            if (currentList.any { it.id == clientId }) {
+                currentList.map { if (it.id == clientId) it.copy(isTrusted = isTrusted) else it }
+            } else {
+                currentList + ClientInfo(id = clientId, name = clientName, isTrusted = isTrusted)
+            }
         }
         consoleViewModel.addLog(LogLevel.Info, "Client connected: $clientName ($clientId)")
     }
@@ -207,12 +211,16 @@ class DesktopViewModel(
         
         _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
         onClientConnected(clientId, clientName)
+        
+        // Update connected devices status
+        _connectedDevices.update { currentList ->
+            currentList.map { if (it.id == clientId) it.copy(isTrusted = finalPersistent) else it }
+        }
         viewModelScope.launch {
-            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_APPROVED))
+            server.sendToClient(clientId, pairingApprovedMessage())
             // Also send the macro list immediately upon approval
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-            val macroListString = "macros:${macroNames.joinToString(",")}"
-            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.textMessage(macroListString))
+            server.sendToClient(clientId, macroListMessage(macroNames))
         }
         consoleViewModel.addLog(LogLevel.Info, "${if (persistent) "Permanently approved" else "Temporarily approved"} device: $clientName ($clientId)")
     }
@@ -220,7 +228,7 @@ class DesktopViewModel(
     fun rejectDevice(clientId: String) {
         _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
         viewModelScope.launch {
-            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_REJECTED))
+            server.sendToClient(clientId, pairingRejectedMessage("Pairing rejected by user"))
         }
         consoleViewModel.addLog(LogLevel.Info, "Rejected device: $clientId")
     }
@@ -234,8 +242,7 @@ class DesktopViewModel(
         
         viewModelScope.launch {
             try {
-                server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.BANNED))
-                server.disconnectClient(clientId)
+                server.disconnectClient(clientId, "Your device has been banned by the server administrator.")
             } catch (e: Exception) {
                 // Ignore if already disconnected
             }
@@ -255,8 +262,7 @@ class DesktopViewModel(
         _connectedDevices.update { it.filterNot { client -> client.id == clientId } }
         viewModelScope.launch {
             try {
-                server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_REJECTED)) // Inform client they are no longer paired
-                server.disconnectClient(clientId)
+                server.disconnectClient(clientId, "The server has removed this device from its trusted list.")
             } catch (e: Exception) {
                 // Ignore
             }
@@ -285,9 +291,8 @@ class DesktopViewModel(
                 consoleViewModel.addLog(LogLevel.Debug, "Text received from $clientId: $message")
                 if (message == "getMacros") {
                     val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-                    val macroListString = "macros:${macroNames.joinToString(",")}"
                     viewModelScope.launch {
-                        server.sendToClient(clientId, textMessage(macroListString))
+                        server.sendToClient(clientId, macroListMessage(macroNames))
                     }
                     consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
                 }

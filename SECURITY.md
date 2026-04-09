@@ -55,7 +55,8 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     *   **Persistent Whitelisting:** Approved devices are stored by their unique Device ID fingerprint in `trusted_devices.json`.
     *   **Banning System:** Malicious or spammy devices can be "Banned," adding them to a `banned_devices.json` blacklist. Banned devices are blocked at the network level and cannot trigger further pairing prompts.
     *   **Unpairing:** Users can "Unpair" a device, which removes its trusted status and forces a new pairing request upon the next connection attempt.
-    *   **Global Lockdown:** A "Allow new connections" toggle in Settings allows the server to reject all untrusted devices automatically without showing a pairing prompt.
+    *   **Global Lockdown (Device Discovery):** A "Device Discovery" toggle in Settings controls whether the server's presence is broadcast via UDP. Disabling this makes the server invisible to mobile app scans, though manual connections by IP are still possible (but still subject to pairing approval).
+    *   **One-Time Approvals ONLY:** An "Ask Every Time (One-Time Approvals ONLY)" mode can be enabled to force all new connections to be non-persistent. In this mode, the "Always Allow" option is removed from the pairing dialog, ensuring no new devices are added to the trusted list and a human must approve every session.
     *   **UI Safety:** All security-critical dialogs (Pairing, Settings, Ban) use `alwaysOnTop = true` to ensure they remain visible over other application windows.
 
 ## Reporting a Vulnerability
