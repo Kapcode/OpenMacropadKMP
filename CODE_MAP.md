@@ -48,13 +48,16 @@ This document serves as a guide for AI assistants to navigate the project effect
 
 ## 📡 Communication Protocol (WebSocket)
 
-The client and server communicate using string-based messages over WebSockets:
+The client and server communicate using **DataModel** objects serialized as JSON over WebSockets:
 
-- **Client -> Server**:
-    - `getMacros`: Requests the list of available macros.
-    - `play:[MacroName]`: Triggers the execution of a specific macro.
-- **Server -> Client**:
-    - `macros:[Name1,Name2,...]`: Sends the list of available macros to the client.
+- **Common Message Types**:
+    - `Text`: Raw string messages (Legacy support).
+    - `Command`: Application-specific commands (e.g., `getMacros`, `play:[MacroName]`).
+    - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `BANNED`, `DISCONNECT`).
+    - `Heartbeat`: Connection health checks.
+- **Security Handshake**:
+    - Authenticated Handshake with EC (secp256r1) and AES-GCM encryption.
+    - Physical Consent Pairing: Untrusted devices must be manually approved on the server UI.
 
 ## 🛠️ Key Technologies
 - **Kotlin Multiplatform (KMP)**

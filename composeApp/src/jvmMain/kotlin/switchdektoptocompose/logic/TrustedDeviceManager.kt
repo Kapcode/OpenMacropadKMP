@@ -7,9 +7,12 @@ import java.util.concurrent.ConcurrentHashMap
 object TrustedDeviceManager {
     private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
     private val trustedDevicesFile = File(workingDir, "trusted_devices.json")
+    private val bannedDevicesFile = File(workingDir, "banned_devices.json")
     
     // Map of Fingerprint -> DeviceName
     private val trustedDevices = ConcurrentHashMap<String, String>()
+    // Map of Fingerprint -> DeviceName
+    private val bannedDevices = ConcurrentHashMap<String, String>()
 
     init {
         if (!workingDir.exists()) {
@@ -19,12 +22,17 @@ object TrustedDeviceManager {
     }
 
     private fun load() {
-        if (trustedDevicesFile.exists()) {
+        loadMap(trustedDevicesFile, trustedDevices)
+        loadMap(bannedDevicesFile, bannedDevices)
+    }
+
+    private fun loadMap(file: File, map: ConcurrentHashMap<String, String>) {
+        if (file.exists()) {
             try {
-                val content = trustedDevicesFile.readText()
+                val content = file.readText()
                 val json = JSONObject(content)
                 json.keys().forEach { fingerprint ->
-                    trustedDevices[fingerprint] = json.getString(fingerprint)
+                    map[fingerprint] = json.getString(fingerprint)
                 }
             } catch (e: Exception) {
                 e.printStackTrace()
@@ -33,12 +41,17 @@ object TrustedDeviceManager {
     }
 
     private fun save() {
+        saveMap(trustedDevicesFile, trustedDevices)
+        saveMap(bannedDevicesFile, bannedDevices)
+    }
+
+    private fun saveMap(file: File, map: ConcurrentHashMap<String, String>) {
         try {
             val json = JSONObject()
-            trustedDevices.forEach { (fingerprint, name) ->
+            map.forEach { (fingerprint, name) ->
                 json.put(fingerprint, name)
             }
-            trustedDevicesFile.writeText(json.toString(4))
+            file.writeText(json.toString(4))
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -48,7 +61,12 @@ object TrustedDeviceManager {
         return trustedDevices.containsKey(fingerprint)
     }
 
+    fun isBanned(fingerprint: String): Boolean {
+        return bannedDevices.containsKey(fingerprint)
+    }
+
     fun addTrustedDevice(fingerprint: String, name: String) {
+        bannedDevices.remove(fingerprint) // Remove from ban list if adding to trusted
         trustedDevices[fingerprint] = name
         save()
     }
@@ -58,7 +76,22 @@ object TrustedDeviceManager {
         save()
     }
 
+    fun banDevice(fingerprint: String, name: String) {
+        trustedDevices.remove(fingerprint) // Remove from trusted if banning
+        bannedDevices[fingerprint] = name
+        save()
+    }
+
+    fun unbanDevice(fingerprint: String) {
+        bannedDevices.remove(fingerprint)
+        save()
+    }
+
     fun getTrustedDevices(): Map<String, String> {
         return trustedDevices.toMap()
+    }
+
+    fun getBannedDevices(): Map<String, String> {
+        return bannedDevices.toMap()
     }
 }

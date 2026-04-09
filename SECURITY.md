@@ -47,6 +47,17 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Description:** `java.util.Base64` required API level 26, causing crashes on Android 7.x (API 24/25).
 *   **Mitigation:** Implemented a KMP-safe `Base64Utils` that uses `android.util.Base64` on Android and `java.util.Base64` on JVM.
 
+### 8. Physical Consent Pairing & Device Management
+*   **Status:** ✅ **Fixed**
+*   **Description:** Any device could previously connect and send macro commands if they knew the server IP.
+*   **Mitigation:**
+    *   **Trust on First Use (TOFU) with Physical Consent:** Untrusted devices now trigger a modal pairing dialog on the server's physical screen. A human must manually "Approve" the connection.
+    *   **Persistent Whitelisting:** Approved devices are stored by their unique Device ID fingerprint in `trusted_devices.json`.
+    *   **Banning System:** Malicious or spammy devices can be "Banned," adding them to a `banned_devices.json` blacklist. Banned devices are blocked at the network level and cannot trigger further pairing prompts.
+    *   **Unpairing:** Users can "Unpair" a device, which removes its trusted status and forces a new pairing request upon the next connection attempt.
+    *   **Global Lockdown:** A "Allow new connections" toggle in Settings allows the server to reject all untrusted devices automatically without showing a pairing prompt.
+    *   **UI Safety:** All security-critical dialogs (Pairing, Settings, Ban) use `alwaysOnTop = true` to ensure they remain visible over other application windows.
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please open an issue or contact the maintainers directly.

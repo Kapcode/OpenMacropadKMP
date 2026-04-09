@@ -1,6 +1,7 @@
 package switchdektoptocompose.viewmodel
 
 import MacroKTOR.MacroKtorServer
+import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,15 +48,23 @@ class DesktopViewModel(
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
     private val server = MacroKtorServer(
-        onMessageReceived = ::onDataReceived,
+        onMessageReceived = { clientId, dataModel -> onDataReceived(clientId, dataModel) },
         onClientConnected = ::onClientConnected,
         onClientDisconnected = ::onClientDisconnected,
         onPairingRequest = ::onPairingRequest
     )
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
 
+    private val _bannedDevices = MutableStateFlow<Map<String, String>>(emptyMap())
+    val bannedDevices: StateFlow<Map<String, String>> = _bannedDevices.asStateFlow()
+
+    private val _trustedDevices = MutableStateFlow<Map<String, String>>(emptyMap())
+    val trustedDevices: StateFlow<Map<String, String>> = _trustedDevices.asStateFlow()
+
     init {
         findLocalIpAddresses()
+        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
+        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
         consoleViewModel.addLog(LogLevel.Info, "DesktopViewModel Initialized")
     }
 
@@ -157,7 +166,7 @@ class DesktopViewModel(
         viewModelScope.launch {
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
             val macroListString = "macros:${macroNames.joinToString(",")}"
-            server.sendToAll(macroListString)
+            server.sendToAll(com.kapcode.open.macropad.kmps.network.sockets.model.textMessage(macroListString))
             consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to all clients")
         }
     }
@@ -187,52 +196,121 @@ class DesktopViewModel(
         consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId)")
     }
 
-    fun approveDevice(clientId: String, clientName: String) {
-        switchdektoptocompose.logic.TrustedDeviceManager.addTrustedDevice(clientId, clientName)
+    fun approveDevice(clientId: String, clientName: String, persistent: Boolean = true) {
+        val finalPersistent = if (settingsViewModel.allowOnceOnly.value) false else persistent
+        if (finalPersistent) {
+            switchdektoptocompose.logic.TrustedDeviceManager.addTrustedDevice(clientId, clientName)
+            _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
+        } else {
+            server.approveTemporaryDevice(clientId)
+        }
+        
         _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
         onClientConnected(clientId, clientName)
         viewModelScope.launch {
-            server.sendToClient(clientId, "pairing_approved")
+            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_APPROVED))
             // Also send the macro list immediately upon approval
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
             val macroListString = "macros:${macroNames.joinToString(",")}"
-            server.sendToClient(clientId, macroListString)
+            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.textMessage(macroListString))
         }
-        consoleViewModel.addLog(LogLevel.Info, "Approved device: $clientName ($clientId)")
+        consoleViewModel.addLog(LogLevel.Info, "${if (persistent) "Permanently approved" else "Temporarily approved"} device: $clientName ($clientId)")
     }
 
     fun rejectDevice(clientId: String) {
         _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
         viewModelScope.launch {
-            server.sendToClient(clientId, "pairing_rejected")
+            server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_REJECTED))
         }
         consoleViewModel.addLog(LogLevel.Info, "Rejected device: $clientId")
     }
 
-    private fun onDataReceived(clientId: String, message: String) {
-        consoleViewModel.addLog(LogLevel.Debug, "Data received from $clientId: $message")
-
-        if (message == "getMacros") {
-            val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-            val macroListString = "macros:${macroNames.joinToString(",")}"
-            viewModelScope.launch {
-                server.sendToClient(clientId, macroListString)
-            }
-            consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
-        } else if (message.startsWith("play:")) {
-            if (_isMacroExecutionEnabled.value) {
-                val macroName = message.substringAfter("play:")
-                val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
-                if (macroToPlay != null) {
-                    macroManagerViewModel.onPlayMacro(macroToPlay)
-                    consoleViewModel.addLog(LogLevel.Info, "Playing macro '$macroName' for $clientId")
-                } else {
-                    consoleViewModel.addLog(LogLevel.Warn, "Macro '$macroName' not found for $clientId")
-                }
-            } else {
-                consoleViewModel.addLog(LogLevel.Info, "Macro execution is disabled. Ignoring play request from $clientId")
+    fun banDevice(clientId: String, clientName: String) {
+        switchdektoptocompose.logic.TrustedDeviceManager.banDevice(clientId, clientName)
+        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
+        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
+        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
+        _connectedDevices.update { it.filterNot { client -> client.id == clientId } }
+        
+        viewModelScope.launch {
+            try {
+                server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.BANNED))
+                server.disconnectClient(clientId)
+            } catch (e: Exception) {
+                // Ignore if already disconnected
             }
         }
+        consoleViewModel.addLog(LogLevel.Warn, "Banned device: $clientName ($clientId)")
+    }
+
+    fun unbanDevice(clientId: String) {
+        switchdektoptocompose.logic.TrustedDeviceManager.unbanDevice(clientId)
+        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
+        consoleViewModel.addLog(LogLevel.Info, "Unbanned device: $clientId")
+    }
+
+    fun removeTrustedDevice(clientId: String) {
+        switchdektoptocompose.logic.TrustedDeviceManager.removeTrustedDevice(clientId)
+        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
+        _connectedDevices.update { it.filterNot { client -> client.id == clientId } }
+        viewModelScope.launch {
+            try {
+                server.sendToClient(clientId, com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.PAIRING_REJECTED)) // Inform client they are no longer paired
+                server.disconnectClient(clientId)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+        consoleViewModel.addLog(LogLevel.Info, "Removed trusted device: $clientId")
+    }
+
+    fun unpairDevice(clientId: String) {
+        removeTrustedDevice(clientId)
+    }
+
+    fun disconnectClient(clientId: String) {
+        viewModelScope.launch {
+            try {
+                server.disconnectClient(clientId)
+                consoleViewModel.addLog(LogLevel.Info, "Disconnected client: $clientId")
+            } catch (e: Exception) {
+                consoleViewModel.addLog(LogLevel.Error, "Failed to disconnect $clientId: ${e.message}")
+            }
+        }
+    }
+
+    private fun onDataReceived(clientId: String, dataModel: DataModel) {
+        dataModel.handle(
+            onText = { message ->
+                consoleViewModel.addLog(LogLevel.Debug, "Text received from $clientId: $message")
+                if (message == "getMacros") {
+                    val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+                    val macroListString = "macros:${macroNames.joinToString(",")}"
+                    viewModelScope.launch {
+                        server.sendToClient(clientId, textMessage(macroListString))
+                    }
+                    consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
+                }
+            },
+            onCommand = { cmd, _ ->
+                consoleViewModel.addLog(LogLevel.Debug, "Command received from $clientId: $cmd")
+                if (cmd.startsWith("play:")) {
+                    if (_isMacroExecutionEnabled.value) {
+                        val macroName = cmd.substringAfter("play:")
+                        val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
+                        if (macroToPlay != null) {
+                            macroManagerViewModel.onPlayMacro(macroToPlay)
+                            consoleViewModel.addLog(LogLevel.Info, "Playing macro '$macroName' for $clientId")
+                        } else {
+                            consoleViewModel.addLog(LogLevel.Warn, "Macro '$macroName' not found for $clientId")
+                        }
+                    } else {
+                        consoleViewModel.addLog(LogLevel.Info, "Macro execution is disabled. Ignoring play request from $clientId")
+                    }
+                }
+            },
+            onHeartbeat = { _ -> }
+        )
     }
 
     fun onError(error: String) {

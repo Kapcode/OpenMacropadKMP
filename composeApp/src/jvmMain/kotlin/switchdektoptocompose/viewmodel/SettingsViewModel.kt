@@ -35,6 +35,12 @@ class SettingsViewModel {
     private val _hardEstop = MutableStateFlow(AppSettings.hardEstop)
     val hardEstop = _hardEstop.asStateFlow()
 
+    private val _allowNewConnections = MutableStateFlow(AppSettings.allowNewConnections)
+    val allowNewConnections = _allowNewConnections.asStateFlow()
+
+    private val _allowOnceOnly = MutableStateFlow(AppSettings.allowOnceOnly)
+    val allowOnceOnly = _allowOnceOnly.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -100,6 +106,16 @@ class SettingsViewModel {
     fun setHardEstop(enabled: Boolean) {
         _hardEstop.value = enabled
         AppSettings.hardEstop = enabled
+    }
+
+    fun setAllowNewConnections(enabled: Boolean) {
+        _allowNewConnections.value = enabled
+        AppSettings.allowNewConnections = enabled
+    }
+
+    fun setAllowOnceOnly(enabled: Boolean) {
+        _allowOnceOnly.value = enabled
+        AppSettings.allowOnceOnly = enabled
     }
 
     fun selectTheme(theme: String) {

@@ -19,6 +19,8 @@ object AppSettings {
     private const val CLICK_TRAY_TO_TOGGLE_KEY = "clickTrayToToggle"
     private const val ANIMATE_TO_TRAY_KEY = "animateToTray"
     private const val HARD_ESTOP_KEY = "hardEstop"
+    private const val ALLOW_NEW_CONNECTIONS_KEY = "allowNewConnections"
+    private const val ALLOW_ONCE_ONLY_KEY = "allowOnceOnly"
 
     init {
         if (!configDir.exists()) {
@@ -100,6 +102,20 @@ object AppSettings {
         get() = properties.getProperty(HARD_ESTOP_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(HARD_ESTOP_KEY, value.toString())
+            save()
+        }
+
+    var allowNewConnections: Boolean
+        get() = properties.getProperty(ALLOW_NEW_CONNECTIONS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ALLOW_NEW_CONNECTIONS_KEY, value.toString())
+            save()
+        }
+
+    var allowOnceOnly: Boolean
+        get() = properties.getProperty(ALLOW_ONCE_ONLY_KEY, "false").toBoolean()
+        set(value) {
+            properties.setProperty(ALLOW_ONCE_ONLY_KEY, value.toString())
             save()
         }
 

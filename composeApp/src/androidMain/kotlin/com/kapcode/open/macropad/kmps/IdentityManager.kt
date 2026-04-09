@@ -30,47 +30,95 @@ actual class IdentityManager actual constructor() {
         }
     }
 
-    private val keyStore: KeyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply {
-        load(null)
+    private val keyStore: KeyStore by lazy {
+        try {
+            KeyStore.getInstance(ANDROID_KEYSTORE).apply {
+                load(null)
+            }
+        } catch (e: Exception) {
+            // Log and handle Keystore failure
+            println("Failed to initialize KeyStore: ${e.message}")
+            throw e
+        }
     }
 
     private fun getOrCreateIdentityKey(): KeyPair {
-        if (!keyStore.containsAlias(KEY_ALIAS)) {
-            generateIdentityKey()
-        }
+        return try {
+            if (!keyStore.containsAlias(KEY_ALIAS)) {
+                generateIdentityKey()
+            }
 
-        val entry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
-        return KeyPair(entry.certificate.publicKey, entry.privateKey)
+            val entry = keyStore.getEntry(KEY_ALIAS, null) as? KeyStore.PrivateKeyEntry
+            if (entry == null) {
+                // Handle case where entry is not what we expect or doesn't exist despite containsAlias
+                println("Key entry is null or not a PrivateKeyEntry. Re-generating.")
+                keyStore.deleteEntry(KEY_ALIAS)
+                generateIdentityKey()
+                val newEntry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
+                KeyPair(newEntry.certificate.publicKey, newEntry.privateKey)
+            } else {
+                KeyPair(entry.certificate.publicKey, entry.privateKey)
+            }
+        } catch (e: Exception) {
+            println("Error accessing KeyPair: ${e.message}")
+            // If it's a ServiceSpecificException code 7, the key might be in a bad state.
+            // Try deleting and re-generating as a last resort.
+            try {
+                keyStore.deleteEntry(KEY_ALIAS)
+                generateIdentityKey()
+                val entry = keyStore.getEntry(KEY_ALIAS, null) as KeyStore.PrivateKeyEntry
+                KeyPair(entry.certificate.publicKey, entry.privateKey)
+            } catch (inner: Exception) {
+                println("Critical failure in KeyStore: ${inner.message}")
+                throw inner
+            }
+        }
     }
 
     private fun generateIdentityKey() {
-        val kpg: KeyPairGenerator = KeyPairGenerator.getInstance(
-            KeyProperties.KEY_ALGORITHM_EC,
-            ANDROID_KEYSTORE
-        )
+        try {
+            val kpg: KeyPairGenerator = KeyPairGenerator.getInstance(
+                KeyProperties.KEY_ALGORITHM_EC,
+                ANDROID_KEYSTORE
+            )
 
-        val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
-            KEY_ALIAS,
-            KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
-        ).run {
-            setDigests(KeyProperties.DIGEST_SHA256)
-            setCertificateSubject(X500Principal("CN=OpenMacropad Device, OU=Kapcode"))
-            build()
+            val parameterSpec: KeyGenParameterSpec = KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_SIGN or KeyProperties.PURPOSE_VERIFY
+            ).run {
+                setDigests(KeyProperties.DIGEST_SHA256)
+                // Use hardware-backed keys if available
+                setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                setCertificateSubject(X500Principal("CN=OpenMacropad Device, OU=Kapcode"))
+                build()
+            }
+
+            kpg.initialize(parameterSpec)
+            kpg.generateKeyPair()
+        } catch (e: Exception) {
+            println("Failed to generate identity key: ${e.message}")
+            throw e
         }
-
-        kpg.initialize(parameterSpec)
-        kpg.generateKeyPair()
     }
 
     actual fun getIdentityPublicKey(): ByteArray {
-        return getOrCreateIdentityKey().public.encoded
+        return try {
+            getOrCreateIdentityKey().public.encoded
+        } catch (e: Exception) {
+            // Fallback for UI to not hang if identity fails
+            ByteArray(0)
+        }
     }
 
     actual fun signMessage(message: ByteArray): ByteArray {
-        val privateKey = getOrCreateIdentityKey().private
-        val signature = Signature.getInstance("SHA256withECDSA")
-        signature.initSign(privateKey)
-        signature.update(message)
-        return signature.sign()
+        return try {
+            val privateKey = getOrCreateIdentityKey().private
+            val signature = Signature.getInstance("SHA256withECDSA")
+            signature.initSign(privateKey)
+            signature.update(message)
+            signature.sign()
+        } catch (e: Exception) {
+            ByteArray(0)
+        }
     }
 }

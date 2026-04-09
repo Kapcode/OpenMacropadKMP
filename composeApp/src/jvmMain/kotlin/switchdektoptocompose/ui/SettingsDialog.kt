@@ -8,6 +8,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import androidx.compose.runtime.*
@@ -36,8 +37,12 @@ fun SettingsDialog(
     val animateToTraySetting by settingsViewModel.animateToTray.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val hardEstop by settingsViewModel.hardEstop.collectAsState()
+    val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
+    val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
+    val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
+    val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
 
-    val dialogState = rememberDialogState(width = 600.dp, height = 600.dp) // Increased height
+    val dialogState = rememberDialogState(width = 600.dp, height = 700.dp) // Increased height
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
@@ -145,8 +150,28 @@ fun SettingsDialog(
 
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 
-                        // --- Server Ports ---
-                        Text("Network", style = MaterialTheme.typography.titleMedium)
+                        // --- Network/Security Settings ---
+                        Text("Security", style = MaterialTheme.typography.titleMedium)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Allow new connections (untrusted)", modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = allowNewConnections,
+                                onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Allow Once Only (Privacy Mode)", modifier = Modifier.weight(1f))
+                            Switch(
+                                checked = allowOnceOnly,
+                                onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -188,7 +213,58 @@ fun SettingsDialog(
                             modifier = Modifier.padding(start = 8.dp)
                         )
 
-                        Spacer(Modifier.weight(1f)) // Pushes the close button to the bottom
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+                        // --- Device Management ---
+                        Text("Trusted Devices", style = MaterialTheme.typography.titleMedium)
+                        if (trustedDevices.isEmpty()) {
+                            Text("No trusted devices.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+                        } else {
+                            trustedDevices.forEach { (id, name) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(name, style = MaterialTheme.typography.bodyLarge)
+                                        Text(id, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    Row {
+                                        TextButton(onClick = { desktopViewModel.unpairDevice(id) }) {
+                                            Text("Unpair")
+                                        }
+                                        TextButton(onClick = { desktopViewModel.banDevice(id, name) }) {
+                                            Text("Ban", color = MaterialTheme.colorScheme.error)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Banned Devices", style = MaterialTheme.typography.titleMedium)
+                        if (bannedDevices.isEmpty()) {
+                            Text("No banned devices.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
+                        } else {
+                            bannedDevices.forEach { (id, name) ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(name, style = MaterialTheme.typography.bodyLarge)
+                                        Text(id, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    TextButton(onClick = { desktopViewModel.unbanDevice(id) }) {
+                                        Text("Unban")
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
 
                         // --- Close Button ---
                         Box(modifier = Modifier.fillMaxWidth()) {

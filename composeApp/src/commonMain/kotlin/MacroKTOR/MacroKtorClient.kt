@@ -5,10 +5,8 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 
 /**
  * A wrapper for a Ktor WebSocket client that handles connection logic.
@@ -22,6 +20,7 @@ class MacroKtorClient(
     private var session: ClientWebSocketSession? = null
     val incomingMessages = Channel<Frame>(Channel.UNLIMITED)
     private val clientScope = CoroutineScope(Dispatchers.IO)
+    private var heartbeatJob: Job? = null
 
     /**
      * Connects to the server and suspends until the connection is established.
@@ -43,6 +42,19 @@ class MacroKtorClient(
             )
         }
 
+        // Start heartbeat sender
+        heartbeatJob?.cancel()
+        heartbeatJob = clientScope.launch {
+            while (isActive) {
+                delay(5000)
+                try {
+                    session?.send(Frame.Binary(true, com.kapcode.open.macropad.kmps.network.sockets.model.heartbeatMessage().toBytes()))
+                } catch (e: Exception) {
+                    break
+                }
+            }
+        }
+
         // Launch a separate coroutine to listen for messages.
         clientScope.launch {
             try {
@@ -53,8 +65,14 @@ class MacroKtorClient(
                 }
             } catch (e: Exception) {
                 println("Message listener error: ${e.message}")
+            } finally {
+                heartbeatJob?.cancel()
             }
         }
+    }
+
+    suspend fun send(bytes: ByteArray) {
+        session?.send(Frame.Binary(true, bytes))
     }
 
     suspend fun send(message: String) {
@@ -62,6 +80,7 @@ class MacroKtorClient(
     }
 
     fun close() {
+        heartbeatJob?.cancel()
         clientScope.launch {
             session?.close(CloseReason(CloseReason.Codes.NORMAL, "Client closing connection"))
             // Do not close the underlying HttpClient here, as it's managed by the Activity.

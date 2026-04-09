@@ -58,6 +58,18 @@ fun heartbeatMessage(): DataModel {
         .build()
 }
 
+fun controlMessage(
+    command: ControlCommand,
+    parameters: Map<String, String> = emptyMap(),
+    metadata: Map<String, String> = emptyMap()
+): DataModel {
+    return DataModelBuilder()
+        .control(command, parameters)
+        .metadata(metadata)
+        .priority(DataModel.Priority.HIGH)
+        .build()
+}
+
 // Added errorMessage function
 fun errorMessage(message: String, context: String = "general", throwable: Throwable? = null): DataModel {
     val metadata = mutableMapOf("context" to context)
@@ -76,6 +88,7 @@ inline fun DataModel.handle(
     onCommand: (String, Map<String, String>) -> Unit = { _, _ -> },
     onData: (String, ByteArray) -> Unit = { _, _ -> },
     onResponse: (Boolean, String, Any?) -> Unit = { _, _, _ -> },
+    onControl: (ControlCommand, Map<String, String>) -> Unit = { _, _ -> },
     onHeartbeat: (Long) -> Unit = {}
 ) {
     when (val msg = this.messageType) {
@@ -83,6 +96,7 @@ inline fun DataModel.handle(
         is MessageType.Command -> onCommand(msg.command, msg.parameters)
         is MessageType.Data -> onData(msg.key, msg.value)
         is MessageType.Response -> onResponse(msg.success, msg.message, msg.data)
+        is MessageType.Control -> onControl(msg.command, msg.parameters)
         is MessageType.Heartbeat -> onHeartbeat(msg.timestamp)
     }
 }

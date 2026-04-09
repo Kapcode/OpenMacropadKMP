@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
@@ -94,7 +95,7 @@ class ClientActivity : ComponentActivity() {
         val tokenManager = TokenManager.getInstance(this)
         if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
             activityScope.launch {
-                client?.send("play:$macroName")
+                client?.send(commandMessage("play:$macroName").toBytes())
             }
         } else {
             Toast.makeText(this, "Not enough tokens! Watch an ad to get more.", Toast.LENGTH_SHORT).show()
@@ -132,29 +133,57 @@ class ClientActivity : ComponentActivity() {
                     onUpdate("Connected", ipAddress)
                     backoffMillis = 1000L // Reset backoff on success
                     retryCount = 0
-                    tempClient.send("getMacros") // Request macros on successful connection
+                    tempClient.send(textMessage("getMacros").toBytes()) // Request macros on successful connection
 
                     tempClient.incomingMessages.receiveAsFlow().collect { frame ->
-                        val receivedText = when (frame) {
-                            is Frame.Text -> frame.readText()
-                            is Frame.Binary -> frame.readBytes().toString(Charsets.UTF_8)
-                            else -> ""
-                        }
-
-                        Log.d("ClientActivity", "Received from server: $receivedText")
-                        if (receivedText == "pairing_pending") {
-                            onUpdate("Pending Approval", null)
-                        } else if (receivedText == "pairing_approved") {
-                            onUpdate("Connected", ipAddress)
-                            tempClient.send("getMacros")
-                        } else if (receivedText == "pairing_rejected") {
-                            onUpdate("Pairing Denied", null)
-                            this@launch.cancel()
-                        } else if (receivedText.startsWith("macros:")) {
-                            onUpdate("Connected", ipAddress)
-                            val macroNames = receivedText.substringAfter("macros:").split(",").filter { it.isNotBlank() }
-                            macros.clear()
-                            macros.addAll(macroNames)
+                        if (frame is Frame.Binary) {
+                            try {
+                                val dataModel = DataModel.fromBytes(frame.readBytes())
+                                dataModel.handle(
+                                    onControl = { command, params ->
+                                        when (command) {
+                                            ControlCommand.PAIRING_PENDING -> onUpdate("Pending Approval", null)
+                                            ControlCommand.PAIRING_APPROVED -> {
+                                                onUpdate("Connected", ipAddress)
+                                                activityScope.launch {
+                                                    tempClient.send(textMessage("getMacros").toBytes())
+                                                }
+                                            }
+                                            ControlCommand.PAIRING_REJECTED -> {
+                                                onUpdate("Pairing Denied", null)
+                                                this@launch.cancel()
+                                            }
+                                            ControlCommand.BANNED -> {
+                                                val reason = params["reason"] ?: "Device is banned"
+                                                onUpdate("Banned: $reason", null)
+                                                this@launch.cancel()
+                                            }
+                                            ControlCommand.DISCONNECT -> {
+                                                onUpdate("Disconnected by Server", null)
+                                                this@launch.cancel()
+                                            }
+                                            else -> {}
+                                        }
+                                    },
+                                    onText = { text ->
+                                        if (text.startsWith("macros:")) {
+                                            onUpdate("Connected", ipAddress)
+                                            val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
+                                            macros.clear()
+                                            macros.addAll(macroNames)
+                                        }
+                                    },
+                                    onHeartbeat = {
+                                        // Update last seen timestamp if needed
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                Log.e("ClientActivity", "Error parsing DataModel", e)
+                            }
+                        } else if (frame is Frame.Text) {
+                            val receivedText = frame.readText()
+                            Log.d("ClientActivity", "Received legacy text from server: $receivedText")
+                            // Fallback for legacy messages if any
                         }
                     }
 

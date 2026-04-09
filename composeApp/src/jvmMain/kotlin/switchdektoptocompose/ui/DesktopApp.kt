@@ -195,8 +195,9 @@ fun DesktopApp(
         PairingRequestDialog(
             request = request,
             selectedTheme = selectedTheme,
-            onApprove = { desktopViewModel.approveDevice(request.id, request.name) },
-            onDeny = { desktopViewModel.rejectDevice(request.id) }
+            onApprove = { persistent -> desktopViewModel.approveDevice(request.id, request.name, persistent) },
+            onDeny = { desktopViewModel.rejectDevice(request.id) },
+            onBan = { desktopViewModel.banDevice(request.id, request.name) }
         )
     }
 
@@ -325,7 +326,12 @@ fun DesktopApp(
                             first(minSize = 250.dp) {
                                Column {
                                    Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                                       ConnectedDevicesScreen(devices = connectedDevices)
+                                       ConnectedDevicesScreen(
+                                           devices = connectedDevices,
+                                           onDisconnect = { desktopViewModel.disconnectClient(it) },
+                                           onUnpair = { desktopViewModel.unpairDevice(it) },
+                                           onBan = { desktopViewModel.banDevice(it.id, it.name) }
+                                       )
                                    }
                                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
                                        Console(viewModel = consoleViewModel)

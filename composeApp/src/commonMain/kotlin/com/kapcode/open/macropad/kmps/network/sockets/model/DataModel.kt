@@ -7,15 +7,28 @@ import javax.crypto.*
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import java.util.*
+import kotlin.jvm.JvmField
 
 /**
  * Sealed class representing different types of messages that can be sent
  * between client and server
  */
 sealed class MessageType : Serializable {
-    data class Text(val content: String) : MessageType()
-    data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType()
+    companion object {
+        @JvmField
+        val serialVersionUID = 1L
+    }
+    
+    data class Text(val content: String) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
+    }
+    
+    data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
+    }
+    
     data class Data(val key: String, val value: ByteArray) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Data) return false
@@ -30,8 +43,30 @@ sealed class MessageType : Serializable {
             return result
         }
     }
-    data class Response(val success: Boolean, val message: String, val data: Any? = null) : MessageType()
-    data class Heartbeat(val timestamp: Long = System.currentTimeMillis()) : MessageType()
+    
+    data class Response(val success: Boolean, val message: String, val data: Any? = null) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
+    }
+    
+    data class Control(val command: ControlCommand, val parameters: Map<String, String> = emptyMap()) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
+    }
+    
+    data class Heartbeat(val timestamp: Long = System.currentTimeMillis()) : MessageType() {
+        companion object { @JvmField val serialVersionUID = 1L }
+    }
+}
+
+/**
+ * Commands specifically for connection lifecycle and security
+ */
+enum class ControlCommand {
+    PAIRING_REQUEST,
+    PAIRING_PENDING,
+    PAIRING_APPROVED,
+    PAIRING_REJECTED,
+    BANNED,
+    DISCONNECT
 }
 
 /**
@@ -50,6 +85,8 @@ data class DataModel(
     }
 
     companion object {
+        @JvmField
+        val serialVersionUID = 1L
         private const val ALGORITHM = "AES"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val GCM_TAG_LENGTH = 128
@@ -200,7 +237,11 @@ class DataModelBuilder {
     fun response(success: Boolean, message: String, data: Any? = null) = apply {
         this.messageType = MessageType.Response(success, message, data)
     }
-    
+
+    fun control(command: ControlCommand, parameters: Map<String, String> = emptyMap()) = apply {
+        this.messageType = MessageType.Control(command, parameters)
+    }
+
     fun heartbeat() = apply { this.messageType = MessageType.Heartbeat() }
     
     fun addMetadata(key: String, value: String) = apply { this.metadata[key] = value }

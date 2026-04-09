@@ -15,10 +15,11 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 fun PairingRequestDialog(
     request: ClientInfo,
     selectedTheme: String,
-    onApprove: () -> Unit,
-    onDeny: () -> Unit
+    onApprove: (Boolean) -> Unit,
+    onDeny: () -> Unit,
+    onBan: () -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 400.dp, height = 250.dp)
+    val dialogState = rememberDialogState(width = 400.dp, height = 300.dp)
 
     DialogWindow(
         onCloseRequest = { /* Must act on the dialog */ },
@@ -51,11 +52,22 @@ fun PairingRequestDialog(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        TextButton(
+                            onClick = onBan,
+                            colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text("Ban")
+                        }
+                        Spacer(Modifier.weight(1f))
                         TextButton(onClick = onDeny) {
                             Text("Deny")
                         }
                         Spacer(Modifier.width(8.dp))
-                        Button(onClick = onApprove) {
+                        OutlinedButton(onClick = { onApprove(false) }) {
+                            Text("Allow Once")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(onClick = { onApprove(true) }) {
                             Text("Always Allow")
                         }
                     }
