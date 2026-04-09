@@ -1,5 +1,6 @@
 package MacroKTOR
 
+import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -10,6 +11,7 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import org.slf4j.event.Level
+import java.io.File
 import java.io.InputStream
 import java.security.KeyStore
 import java.util.UUID
@@ -30,23 +32,18 @@ class MacroKtorServer(
 
         server = embeddedServer(Netty, configure = {
             if (isSecure) {
-                val keystoreStream: InputStream? = this::class.java.classLoader.getResourceAsStream("keystore.p12")
-                if (keystoreStream == null) {
-                    throw RuntimeException("Keystore not found in resources. Cannot start encrypted server.")
-                }
+                val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+                if (!workingDir.exists()) workingDir.mkdirs()
 
-                val keystorePassword = "n678nbccfibliboo"
-                val privateKeyPassword = "n678nbccfibliboo"
-                val keyAlias = "your-alias-name"
-
-                val keystore = KeyStore.getInstance("PKCS12")
-                keystore.load(keystoreStream, keystorePassword.toCharArray())
+                val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
+                val keyAlias = keystore.aliases().nextElement()
+                val password = System.getProperty("keystore.password") ?: "temporary-dev-password"
 
                 sslConnector(
                     keyStore = keystore,
                     keyAlias = keyAlias,
-                    keyStorePassword = { keystorePassword.toCharArray() },
-                    privateKeyPassword = { privateKeyPassword.toCharArray() }
+                    keyStorePassword = { password.toCharArray() },
+                    privateKeyPassword = { password.toCharArray() }
                 ) {
                     this.port = port
                     this.host = "0.0.0.0"

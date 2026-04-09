@@ -37,6 +37,9 @@ class DesktopViewModel(
     private val _isServerRunning = MutableStateFlow(false)
     val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
 
+    private val _serverError = MutableStateFlow<String?>(null)
+    val serverError: StateFlow<String?> = _serverError.asStateFlow()
+
     private val _serverIpAddress = MutableStateFlow("Determining IP...")
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
@@ -87,15 +90,30 @@ class DesktopViewModel(
         consoleViewModel.addLog(LogLevel.Verbose, "Found local IPs: $ips")
     }
 
-    fun startServer() {
-        if (server.isRunning()) return
-        consoleViewModel.addLog(LogLevel.Info, "Starting server...")
+    fun startServer(forceRecreateKeystore: Boolean = false) {
+        if (server.isRunning() && !forceRecreateKeystore) return
+        if (forceRecreateKeystore) stopServer()
+        
+        consoleViewModel.addLog(LogLevel.Info, if (forceRecreateKeystore) "Recreating keystore and starting server..." else "Starting server...")
         try {
             val port = if (_encryptionEnabled.value) {
                 settingsViewModel.secureServerPort.value
             } else {
                 settingsViewModel.serverPort.value
             }
+            
+            if (_encryptionEnabled.value) {
+                try {
+                    val workingDir = java.io.File(System.getProperty("user.home"), ".openmacropad")
+                    if (!workingDir.exists()) workingDir.mkdirs()
+                    com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getOrCreateKeystore(workingDir, forceRecreateKeystore)
+                } catch (e: com.kapcode.open.macropad.kmps.utils.KeystorePasswordException) {
+                    consoleViewModel.addLog(LogLevel.Error, "Keystore Error: ${e.message}")
+                    _serverError.value = "Keystore password mismatch. Would you like to reset your server identity?"
+                    return
+                }
+            }
+
             server.start(port, _encryptionEnabled.value)
             _isServerRunning.value = server.isRunning()
             if (server.isRunning()) {
@@ -121,6 +139,10 @@ class DesktopViewModel(
             _isServerRunning.value = false
             consoleViewModel.addLog(LogLevel.Info, "Server stopped")
         }
+    }
+
+    fun clearServerError() {
+        _serverError.value = null
     }
 
     fun shutdown() {

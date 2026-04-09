@@ -23,6 +23,7 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `main.kt`: JVM Application entry point.
         - **`MacroKTOR/`**: Ktor 3.x server implementation (`MacroKtorServer.kt`).
         - **`com.kapcode.open.macropad.kmps/`**: JVM implementations of `DeviceInfo` and `IdentityManager`.
+            - `utils/KeystoreUtils.kt`: Secure local keystore management.
     - **`src/androidMain/kotlin/`**: Android Client implementation.
         - **`com.kapcode.open.macropad.kmps/`**: Android app logic.
             - `MainActivity.kt`: Server discovery and initial setup.
@@ -35,6 +36,8 @@ This document serves as a guide for AI assistants to navigate the project effect
 
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
+| **IdentityManager** | Provides persistent, platform-specific identity keys (Hardware-backed Android Keystore / Encrypted JVM Keystore). | `commonMain/com/.../IdentityManager.kt` |
+| **KeystoreUtils** | Manages JVM-local EC keystores with automated backup, password rotation handling, and 600 file permissions. | `jvmMain/com/.../utils/KeystoreUtils.kt` |
 | **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/com/.../network/sockets/` |
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |

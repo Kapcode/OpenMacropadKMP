@@ -1,26 +1,43 @@
 package com.kapcode.open.macropad.kmps
 
+import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
 import java.io.File
 import java.security.*
+import java.security.cert.X509Certificate
 import java.security.spec.ECGenParameterSpec
 import java.security.spec.X509EncodedKeySpec
 
 /**
  * JVM implementation of IdentityManager.
- * Stores a persistent identity key for the server.
- * (Vulnerability Fix 3 & 4: Migration from RSA to EC)
+ * Stores a persistent identity key for the server in a password-protected Keystore.
+ * (Vulnerability Fix 3 & 4: Migration from RSA to EC and encrypted storage)
  */
 actual class IdentityManager actual constructor() {
 
-    private val identityFile = File("server_identity.key")
-    private var keyPair: KeyPair? = null
+    private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+    private val keyStore: KeyStore
+
+    init {
+        if (!workingDir.exists()) workingDir.mkdirs()
+        
+        var ks: KeyStore
+        try {
+            ks = KeystoreUtils.getOrCreateKeystore(workingDir)
+        } catch (e: Exception) {
+            // During startup, if we can't load the identity, we initialize an empty one.
+            // The DesktopViewModel will catch the error later when trying to start the server.
+            ks = KeyStore.getInstance("PKCS12")
+            ks.load(null, null)
+        }
+        keyStore = ks
+    }
 
     actual companion object {
+        private const val ALIAS = "open-macropad-identity" 
         private const val ALGORITHM = "EC"
-        private const val CURVE = "secp256r1"
 
         actual fun verifySignature(message: ByteArray, signature: ByteArray, publicKeyBytes: ByteArray): Boolean {
-            val keyFactory = KeyFactory.getInstance(ALGORITHM)
+            val keyFactory = KeyFactory.getInstance("EC")
             val publicKey = keyFactory.generatePublic(X509EncodedKeySpec(publicKeyBytes))
             val sig = Signature.getInstance("SHA256withECDSA")
             sig.initVerify(publicKey)
@@ -30,35 +47,18 @@ actual class IdentityManager actual constructor() {
     }
 
     private fun getOrCreateIdentityKey(): KeyPair {
-        keyPair?.let { return it }
-
-        return if (identityFile.exists()) {
-            loadIdentityKey()
+        val aliasToUse = if (keyStore.aliases().hasMoreElements()) {
+            keyStore.aliases().nextElement()
         } else {
-            generateAndSaveIdentityKey()
+            throw IllegalStateException("Keystore is empty or not loaded.")
         }
-    }
 
-    private fun loadIdentityKey(): KeyPair {
-        // For a production desktop app, this should be in a password-protected KeyStore.
-        // For now, we are moving to EC keys to at least fix the algorithm vulnerability.
-        val kpg = KeyPairGenerator.getInstance(ALGORITHM)
-        kpg.initialize(ECGenParameterSpec(CURVE))
-        val newPair = kpg.generateKeyPair()
-        keyPair = newPair
-        return newPair
-    }
-
-    private fun generateAndSaveIdentityKey(): KeyPair {
-        val kpg = KeyPairGenerator.getInstance(ALGORITHM)
-        kpg.initialize(ECGenParameterSpec(CURVE))
-        val newPair = kpg.generateKeyPair()
+        val password = System.getProperty("keystore.password") ?: "temporary-dev-password"
         
-        // TODO: Persist the key properly. 
-        // For this security pass, we are focusing on the algorithm and protocol.
+        val privateKey = keyStore.getKey(aliasToUse, password.toCharArray()) as PrivateKey
+        val publicKey = keyStore.getCertificate(aliasToUse).publicKey
         
-        keyPair = newPair
-        return newPair
+        return KeyPair(publicKey, privateKey)
     }
 
     actual fun getIdentityPublicKey(): ByteArray {

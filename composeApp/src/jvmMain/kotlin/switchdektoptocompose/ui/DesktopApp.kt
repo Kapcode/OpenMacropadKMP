@@ -107,6 +107,7 @@ fun DesktopApp(
 
     val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
     val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
+    val serverError by desktopViewModel.serverError.collectAsState()
     val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
     val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
     val isMacroExecutionEnabled by desktopViewModel.isMacroExecutionEnabled.collectAsState()
@@ -174,6 +175,27 @@ fun DesktopApp(
             onStartRecording = {
                 macroManagerViewModel.startRecording(recordMacroViewModel)
                 showRecordDialog = false
+            }
+        )
+    }
+
+    serverError?.let { error ->
+        AlertDialog(
+            onDismissRequest = { desktopViewModel.clearServerError() },
+            title = { Text("Server Identity Error") },
+            text = { Text(error) },
+            confirmButton = {
+                TextButton(onClick = {
+                    desktopViewModel.clearServerError()
+                    desktopViewModel.startServer(forceRecreateKeystore = true)
+                }) {
+                    Text("Reset Identity")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { desktopViewModel.clearServerError() }) {
+                    Text("Cancel")
+                }
             }
         )
     }

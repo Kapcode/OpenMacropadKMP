@@ -129,7 +129,13 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: Storing private keys securely across different platforms.
 - **Solution**: 
     - **Android**: Integrated with the **Android Keystore System**. Private keys are generated within the hardware-backed TEE (Trusted Execution Environment) or StrongBox, ensuring they cannot be exported even if the device is rooted.
-    - **JVM**: Currently uses a local file storage with future plans for OS-level secret vault integration (e.g., Gnome Keyring, Windows Credential Manager).
+    - **JVM**: 
+        - **Local Storage**: Migrated to an automatic, local-only keystore generation in `KeystoreUtils.kt`. The keystore is stored in `~/.openmacropad/` and is never committed to Git.
+        - **Secret Management**: Passwords are now managed via `local.properties` (machine-local) and injected at build time via JVM System Properties (`-Dkeystore.password`).
+        - **Auto-Recovery & Safety**: The system detects password mismatches and prompts the user for consent before recreating the keystore. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
+        - **File Permissions**: The app automatically sets the keystore file to `600` (Owner Read/Write only) on POSIX-compliant systems (Linux/macOS) on every startup to prevent local access by other users.
+        - **Handshake Unification**: The server's SSL certificate and its long-term identity keys are now unified within the same password-protected keystore.
+        - **Next Steps**: Full integration with OS-level secret storage (Windows Credential Manager / macOS Keychain) is planned for production releases.
 
 ### Challenge: Android 7.0 (API 24) Compatibility
 - **Problem**: `java.util.Base64` was introduced in API 26, causing crashes on older Android devices.

@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.gradle.api.JavaVersion
+import java.util.Properties
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -155,6 +156,16 @@ configurations.all {
 compose.desktop {
     application {
         mainClass = "switchdektoptocompose.MainKt"
+        
+        val localProps = Properties()
+        val localPropsFile = project.rootProject.file("local.properties")
+        if (localPropsFile.exists()) {
+            localPropsFile.inputStream().use { stream -> localProps.load(stream) }
+        }
+        val keystorePass = localProps.getProperty("keystore.password") ?: "temporary-dev-password"
+
+        jvmArgs("-Dkeystore.password=$keystorePass")
+
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "OpenMacropadServer"
@@ -163,39 +174,6 @@ compose.desktop {
     }
 }
 
-tasks.register<Exec>("generateDevKeystore") {
-    group = "development"
-    description = "Generates a self-signed keystore for WSS encryption"
-
-    val outputDir = file("src/jvmMain/resources")
-    val keystoreFile = file("${outputDir}/keystore.p12")
-    val javaHome = System.getProperty("java.home")
-    val keytoolPath = if (System.getProperty("os.name").contains("Windows")) {
-        "${javaHome}\\bin\\keytool.exe"
-    } else {
-        "${javaHome}/bin/keytool"
-    }
-
-    doFirst {
-        if (!outputDir.exists()) outputDir.mkdirs()
-        if (keystoreFile.exists()) keystoreFile.delete()
-        println("Generating keystore at: ${keystoreFile.absolutePath}")
-    }
-
-    commandLine(
-        keytoolPath, "-genkeypair",
-        "-alias", "your-alias-name",
-        "-keyalg", "RSA",
-        "-keysize", "2048",
-        "-storetype", "PKCS12",
-        "-keystore", keystoreFile.absolutePath,
-        "-validity", "10000",
-        "-storepass", "n678nbccfibliboo",
-        "-keypass", "n678nbccfibliboo",
-        "-dname", "CN=OpenMacropad, OU=Development, O=Kapcode, L=Unknown, ST=Unknown, C=US",
-        "-noprompt"
-    )
-}
 
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
