@@ -23,7 +23,6 @@ fun Console(
     val selectedLogLevel by viewModel.logLevel.collectAsState()
     val isAutoScrollEnabled by viewModel.isAutoScrollEnabled.collectAsState()
     val isLoggingToFile by viewModel.isLoggingToFile.collectAsState()
-    val showLoggingWarning by viewModel.showLoggingWarning.collectAsState()
     
     var menuExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -32,34 +31,6 @@ fun Console(
         if (isAutoScrollEnabled && logMessages.isNotEmpty()) {
             listState.animateScrollToItem(logMessages.size - 1)
         }
-    }
-
-    if (showLoggingWarning) {
-        AlertDialog(
-            onDismissRequest = { viewModel.dismissLoggingWarning() },
-            title = { Text("Security and Performance Warning") },
-            text = {
-                Column {
-                    Text("Enabling 'Log to File' will record all activities, including key presses and mouse events, to a local file.")
-                    Spacer(Modifier.height(8.dp))
-                    Text("IMPLICATIONS:", style = MaterialTheme.typography.labelLarge)
-                    Text("• SECURITY: Sensitive information like passwords or private messages will be stored in plain text on your disk.")
-                    Text("• HARDWARE: Continuous writing to disk (especially SSDs) can contribute to hardware wear over long periods.")
-                    Spacer(Modifier.height(8.dp))
-                    Text("This setting should only be used TEMPORARILY for debugging. Do not leave it on.", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { viewModel.confirmLoggingToFile() }) {
-                    Text("I Understand, Enable Temporarily")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { viewModel.dismissLoggingWarning() }) {
-                    Text("Cancel")
-                }
-            }
-        )
     }
 
     Column(modifier = Modifier.fillMaxSize()) {

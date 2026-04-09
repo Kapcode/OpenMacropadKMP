@@ -384,6 +384,7 @@ fun DesktopApp(
     val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
+    val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
 
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
@@ -396,6 +397,17 @@ fun DesktopApp(
             onDismissRequest = { showSettingsDialog = false }
         )
     }
+
+    if (showLoggingWarning) {
+        LoggingToFileWarningDialog(
+            selectedTheme = selectedTheme,
+            onConfirm = { consoleViewModel.confirmLoggingToFile() },
+            onDismiss = { consoleViewModel.dismissLoggingWarning() }
+        )
+    }
+
+
+
     filePendingDeletion?.let { file ->
         ConfirmDeleteDialog(file = file, onConfirm = { macroManagerViewModel.confirmDeletion() }, onDismiss = { macroManagerViewModel.cancelDeletion() })
     }
@@ -433,6 +445,8 @@ fun DesktopApp(
             }
         )
     }
+
+
 
     AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
         Scaffold(
