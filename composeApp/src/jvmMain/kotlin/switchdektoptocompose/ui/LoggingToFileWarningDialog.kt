@@ -6,30 +6,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import switchdektoptocompose.viewmodel.ConsoleViewModel
 
 @Composable
 fun LoggingToFileWarningDialog(
     selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    DialogWindow(
+    AppDialog(
         onCloseRequest = onDismiss,
-        state = rememberDialogState(width = 500.dp, height = 400.dp),
+        state = rememberWindowState(width = 500.dp, height = 400.dp),
         title = "Security and Performance Warning",
-        resizable = false,
-        alwaysOnTop = true
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel
     ) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(16.dp),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
                     Column {
                         Text(
                             text = "Enabling 'Log to File' will record all activities, including key presses and mouse events, to a local file.",
@@ -66,8 +66,6 @@ fun LoggingToFileWarningDialog(
                             Text("I Understand, Enable Temporarily")
                         }
                     }
-                }
-            }
         }
     }
 }

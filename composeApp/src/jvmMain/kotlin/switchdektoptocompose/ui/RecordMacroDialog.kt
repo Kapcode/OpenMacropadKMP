@@ -8,54 +8,53 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import switchdektoptocompose.viewmodel.ConsoleViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RecordMacroDialog(
     viewModel: RecordMacroViewModel,
     selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
     onDismissRequest: () -> Unit,
     onStartRecording: () -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 800.dp, height = 600.dp)
-
-    DialogWindow(
+    AppDialog(
         onCloseRequest = onDismissRequest,
-        state = dialogState,
+        state = rememberWindowState(width = 800.dp, height = 600.dp),
         title = "Record a New Macro",
-        alwaysOnTop = true
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel
     ) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            val recordKeys by viewModel.recordKeys.collectAsState()
-            val recordMouseButtons by viewModel.recordMouseButtons.collectAsState()
-            val recordMouseMoves by viewModel.recordMouseMoves.collectAsState()
-            val recordMouseScroll by viewModel.recordMouseScroll.collectAsState()
-            val recordDelays by viewModel.recordDelays.collectAsState()
-            val useAutoDelay by viewModel.useAutoDelay.collectAsState()
-            val autoDelayMs by viewModel.autoDelayMs.collectAsState()
-            val macroName by viewModel.macroName.collectAsState()
-            val useRecordingDuration by viewModel.useRecordingDuration.collectAsState()
-            val recordingDurationMs by viewModel.recordingDurationMs.collectAsState()
-            val selectedStopKey by viewModel.selectedStopKey.collectAsState()
-            
-            val validationState by viewModel.validationState.collectAsState()
-            val isValid = validationState.first
-            val validationMessage = validationState.second
+        val recordKeys by viewModel.recordKeys.collectAsState()
+        val recordMouseButtons by viewModel.recordMouseButtons.collectAsState()
+        val recordMouseMoves by viewModel.recordMouseMoves.collectAsState()
+        val recordMouseScroll by viewModel.recordMouseScroll.collectAsState()
+        val recordDelays by viewModel.recordDelays.collectAsState()
+        val useAutoDelay by viewModel.useAutoDelay.collectAsState()
+        val autoDelayMs by viewModel.autoDelayMs.collectAsState()
+        val macroName by viewModel.macroName.collectAsState()
+        val useRecordingDuration by viewModel.useRecordingDuration.collectAsState()
+        val recordingDurationMs by viewModel.recordingDurationMs.collectAsState()
+        val selectedStopKey by viewModel.selectedStopKey.collectAsState()
+        
+        val validationState by viewModel.validationState.collectAsState()
+        val isValid = validationState.first
+        val validationMessage = validationState.second
 
-            Surface(modifier = Modifier.fillMaxSize()) {
-                val scrollState = rememberScrollState()
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(end = 12.dp) // Space for scrollbar
-                            .padding(16.dp)
-                            .verticalScroll(scrollState),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
+        val scrollState = rememberScrollState()
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = 12.dp) // Space for scrollbar
+                    .padding(16.dp)
+                    .verticalScroll(scrollState),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                         Text("What are we recording?", style = MaterialTheme.typography.headlineSmall)
                         
                         // Recording options
@@ -144,8 +143,6 @@ fun RecordMacroDialog(
                             hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
                         )
                     )
-                }
-            }
         }
     }
 }

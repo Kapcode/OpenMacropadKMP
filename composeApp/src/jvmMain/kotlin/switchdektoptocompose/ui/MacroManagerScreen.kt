@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun MacroManagerScreen(
     viewModel: MacroManagerViewModel,
+    consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
     onNewMacroClicked: () -> Unit
 ) {
@@ -33,6 +34,7 @@ fun MacroManagerScreen(
         RenameMacroDialog(
             currentName = macro.name,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onDismissRequest = { viewModel.cancelRename() },
             onRename = { newName -> viewModel.confirmRename(newName) }
         )

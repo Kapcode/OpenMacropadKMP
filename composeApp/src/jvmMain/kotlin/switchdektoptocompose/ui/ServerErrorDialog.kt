@@ -9,30 +9,27 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import switchdektoptocompose.viewmodel.ConsoleViewModel
 
 @Composable
 fun ServerErrorDialog(
     error: String,
     selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
     onResetIdentity: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val windowState = rememberWindowState(width = 450.dp, height = 250.dp)
-
-    Window(
+    AppDialog(
         onCloseRequest = onDismiss,
-        state = windowState,
+        state = rememberWindowState(width = 450.dp, height = 250.dp),
         title = "Server Identity Error",
-        resizable = false,
-        alwaysOnTop = true,
-        focusable = true
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel
     ) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
                     Column {
                         Text(
                             "Server Identity Error",
@@ -62,8 +59,6 @@ fun ServerErrorDialog(
                             Text("Reset Identity")
                         }
                     }
-                }
-            }
         }
     }
 }

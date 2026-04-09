@@ -101,7 +101,7 @@ fun DesktopApp(
     LaunchedEffect(logs) {
         if (logs.isNotEmpty()) {
             val lastLog = logs.last()
-            if (lastLog.contains("MACRO FINISHED") || lastLog.contains("MACRO CANCELLED") || lastLog.contains("E-STOP")) {
+            if (lastLog.contains("MACRO FINISHED") || lastLog.contains("MACRO CANCELLED") || lastLog.contains("E-STOP") || lastLog.contains("DIALOG CLOSED")) {
                  snackbarHostState.showSnackbar(lastLog)
             }
         }
@@ -132,6 +132,7 @@ fun DesktopApp(
         SettingsDialog(
             desktopViewModel = desktopViewModel,
             settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
             onDismissRequest = { 
                 showSettingsDialog = false
                 showSettingsToSecurity = false 
@@ -143,17 +144,17 @@ fun DesktopApp(
     if (showLoggingWarning) {
         LoggingToFileWarningDialog(
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onConfirm = { consoleViewModel.confirmLoggingToFile() },
             onDismiss = { consoleViewModel.dismissLoggingWarning() }
         )
     }
 
-
-
     filePendingDeletion?.let { file ->
         ConfirmDeleteDialog(
             file = file,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onConfirm = { macroManagerViewModel.confirmDeletion() },
             onDismiss = { macroManagerViewModel.cancelDeletion() }
         )
@@ -162,6 +163,7 @@ fun DesktopApp(
         ConfirmDeleteMultipleDialog(
             files = files,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onConfirm = { macroManagerViewModel.confirmMultipleDeletion() },
             onDismiss = { macroManagerViewModel.cancelMultipleDeletion() }
         )
@@ -170,6 +172,7 @@ fun DesktopApp(
         NewEventDialog(
             viewModel = newEventViewModel,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onDismissRequest = { showNewEventDialog = false },
             onAddEvent = {
                 if (newEventViewModel.isTriggerEvent.value) {
@@ -190,6 +193,7 @@ fun DesktopApp(
         RecordMacroDialog(
             viewModel = recordMacroViewModel,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onDismissRequest = { showRecordDialog = false },
             onStartRecording = {
                 macroManagerViewModel.startRecording(recordMacroViewModel)
@@ -203,6 +207,7 @@ fun DesktopApp(
         PairingRequestDialog(
             request = request,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             isAlwaysAllowAvailable = !allowOnceOnly,
             onApprove = { persistent -> desktopViewModel.approveDevice(request.id, request.name, persistent) },
             onDeny = { desktopViewModel.rejectDevice(request.id) },
@@ -214,6 +219,7 @@ fun DesktopApp(
         ServerErrorDialog(
             error = error,
             selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
             onResetIdentity = {
                 desktopViewModel.clearServerError()
                 desktopViewModel.startServer(forceRecreateKeystore = true)
@@ -413,13 +419,14 @@ fun DesktopApp(
                                }
                             }
                             second(minSize = 500.dp) {
-                                MacroEditingArea(
-                                    macroManagerViewModel = macroManagerViewModel,
-                                    macroEditorViewModel = macroEditorViewModel,
-                                    macroTimelineViewModel = macroTimelineViewModel,
-                                    settingsViewModel = settingsViewModel,
-                                    selectedTheme = selectedTheme,
-                                    onAddEventClicked = {
+        MacroEditingArea(
+            macroManagerViewModel = macroManagerViewModel,
+            macroEditorViewModel = macroEditorViewModel,
+            macroTimelineViewModel = macroTimelineViewModel,
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            selectedTheme = selectedTheme,
+            onAddEventClicked = {
                                         newEventViewModel.reset()
                                         showNewEventDialog = true
                                     },

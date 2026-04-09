@@ -10,32 +10,29 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import switchdektoptocompose.model.ClientInfo
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import switchdektoptocompose.viewmodel.ConsoleViewModel
 
 @Composable
 fun PairingRequestDialog(
     request: ClientInfo,
     selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
     isAlwaysAllowAvailable: Boolean = true,
     onApprove: (Boolean) -> Unit,
     onDeny: () -> Unit,
     onBan: () -> Unit
 ) {
-    val windowState = rememberWindowState(width = 550.dp, height = 300.dp)
-
-    Window(
-        onCloseRequest = { /* Must act on the dialog */ },
-        state = windowState,
+    AppDialog(
+        onCloseRequest = onDeny,
+        state = rememberWindowState(width = 550.dp, height = 300.dp),
         title = "Pairing Request",
-        resizable = false,
-        alwaysOnTop = true,
-        focusable = true
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel
     ) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
                     Column {
                         Text(
                             "Allow '${request.name}' to control this PC?",
@@ -77,8 +74,6 @@ fun PairingRequestDialog(
                             // Optionally add a note why Always Allow is missing
                         }
                     }
-                }
-            }
         }
     }
 }

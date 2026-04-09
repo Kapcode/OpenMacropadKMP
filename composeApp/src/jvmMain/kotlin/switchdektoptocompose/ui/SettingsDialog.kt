@@ -27,6 +27,7 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 fun SettingsDialog(
     desktopViewModel: DesktopViewModel,
     settingsViewModel: SettingsViewModel,
+    consoleViewModel: ConsoleViewModel,
     onDismissRequest: () -> Unit,
     initialScrollToSecurity: Boolean = false
 ) {
@@ -45,8 +46,6 @@ fun SettingsDialog(
     val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
     val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
 
-    val windowState = rememberWindowState(width = 600.dp, height = 700.dp)
-
     // Scroll state management
     val scrollState = rememberScrollState()
     var securitySectionOffset by remember { mutableStateOf(0f) }
@@ -57,24 +56,21 @@ fun SettingsDialog(
         }
     }
 
-    Window(
+    AppDialog(
         onCloseRequest = onDismissRequest,
-        state = windowState,
+        state = rememberWindowState(width = 600.dp, height = 700.dp),
         title = "Settings",
-        resizable = false,
-        alwaysOnTop = true,
-        focusable = true
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel
     ) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(modifier = Modifier.fillMaxSize()) {
-                Box(modifier = Modifier.fillMaxSize()) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(end = 12.dp)
-                            .padding(16.dp)
-                            .verticalScroll(scrollState)
-                    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(end = 12.dp)
+                    .padding(16.dp)
+                    .verticalScroll(scrollState)
+            ) {
                         // --- Theme Selection ---
                         Text("Theme", style = MaterialTheme.typography.titleMedium)
                         Column(Modifier.selectableGroup()) {
@@ -343,7 +339,5 @@ fun SettingsDialog(
                         )
                     )
                 }
-            }
-        }
     }
 }

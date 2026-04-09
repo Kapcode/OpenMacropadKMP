@@ -69,4 +69,4 @@ To assist users on touchscreens or with hidden system scrollbars, all major scro
 - **JSON Editor**: The `RSyntaxTextArea` (Swing) component is dynamically themed to match the Compose UI.
   - Dark Blue Theme -> `dark.xml`
   - Light Blue Theme -> `idea.xml`
-- **Dialogs**: All modal interactions use `DialogWindow` or custom `Surface`-based overlays to ensure they remain top-level over Swing-based components.
+- **Dialogs**: All modal interactions use `Window` (replacing `DialogWindow` for better minimization behavior) or custom `Surface`-based overlays to ensure they remain top-level over Swing-based components.
