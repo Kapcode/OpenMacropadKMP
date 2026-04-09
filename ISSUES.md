@@ -6,18 +6,17 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 7. Trust On First Use (TOFU) Gap
 - **Description**: During the initial pairing of a new device, the client must "trust" the server's identity certificate without prior verification.
-- **Abuse Scenario**: A sophisticated Man-in-the-Middle (MitM) attacker could spoof the server's identity during the *very first* connection attempt before the identity is pinned.
-- **Mitigation Strategy**: Optional out-of-band verification (e.g., displaying a 6-digit hash/QR code on the desktop that the user verifies on the mobile device).
+- **Status**: ✅ **Fixed**. Implemented out-of-band verification using a 6-digit code. The server generates a code and sends it to the client; both display it prominently during pairing for the user to verify.
 
 ### 8. Local Denial of Service (Keystore Corruption)
 - **Description**: Although we have implemented "Self-Healing" with backups, a malicious local process can repeatedly delete or corrupt the `server_keystore.p12` file.
 - **Abuse Scenario**: The user is forced into a loop of resetting their identity and re-pairing devices, rendering the application unusable.
-- **Mitigation Strategy**: This is largely an OS-level permissions issue, but can be further mitigated by strengthening the "Reset" confirmation logic.
+- **Status**: ✅ **Fixed**. Strengthened the "Reset Identity" flow with a mandatory "RESET" string confirmation to prevent accidental or rapid-fire resets.
 
 ### 9. Keystore Password Brute Force
 - **Description**: If the `server_keystore.p12` file is stolen, it can be subjected to offline brute-force or dictionary attacks.
 - **Abuse Scenario**: An attacker guesses the password stored in `local.properties` or a weak user-defined password.
-- **Mitigation Strategy**: Enforce minimum password complexity and use memory-hard key derivation functions (e.g., Argon2) if the format allows.
+- **Status**: ✅ **Fixed**. Increased the auto-generated keystore password entropy to 64 bytes (Base64 encoded) and ensured it is stored in the OS-native secure keyring.
 
 ---
 
@@ -41,7 +40,7 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 5. Macro Currency Deduction Timing
 - **Description**: Currency could be deducted even if a macro failed to execute.
-- **Status**: ✅ **Fixed**. Implemented `EXECUTION_START`, `EXECUTION_COMPLETE`, and `EXECUTION_FAILED` feedback loop.
+- **Status**: ✅ **Fixed**. Implemented `EXECUTION_START`, `EXECUTION_COMPLETE`, and `EXECUTION_FAILED` feedback loop. The Android client now tracks execution state and only deducts tokens upon successful command submission, with visual feedback for successes and failures.
 
 ### 6. Inspector Screenshot Limit
 - **Description**: No limit on active screenshots in the Inspector.

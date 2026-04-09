@@ -3,25 +3,17 @@ package com.kapcode.open.macropad.kmps
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -29,64 +21,82 @@ import kotlinx.coroutines.launch
 @Composable
 fun MacroButton(
     macroName: String,
-    showFeedback: Boolean,
+    isExecuting: Boolean,
+    isError: Boolean,
     onClick: () -> Unit
 ) {
-    val alpha = remember { Animatable(0f) }
+    val feedbackAlpha = remember { Animatable(0f) }
 
-    LaunchedEffect(showFeedback) {
-        if (showFeedback) {
-            alpha.animateTo(0.5f, animationSpec = tween(100))
-            alpha.animateTo(0f, animationSpec = tween(100))
+    LaunchedEffect(isExecuting) {
+        if (isExecuting) {
+            feedbackAlpha.animateTo(0.3f, animationSpec = tween(150))
+        } else {
+            feedbackAlpha.animateTo(0f, animationSpec = tween(300))
         }
     }
 
-    Box {
+    Box(modifier = Modifier.padding(4.dp)) {
         Button(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)
+                .height(80.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (isError) MaterialTheme.colorScheme.errorContainer 
+                                else MaterialTheme.colorScheme.primaryContainer,
+                contentColor = if (isError) MaterialTheme.colorScheme.onErrorContainer 
+                              else MaterialTheme.colorScheme.onPrimaryContainer
+            ),
+            shape = MaterialTheme.shapes.medium,
+            elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
         ) {
-            Text(macroName)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    macroName, 
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.labelLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (isExecuting) {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(2.dp).padding(top = 4.dp),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
         }
+        
+        // Visual tap feedback overlay
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(Color.White.copy(alpha = alpha.value)),
-            contentAlignment = Alignment.Center
-        ) {}
+                .background(Color.White.copy(alpha = feedbackAlpha.value), shape = MaterialTheme.shapes.medium)
+        )
     }
 }
 
 @Composable
 fun MacroButtonsScreen(
     macros: List<String>,
+    executingMacros: Set<String> = emptySet(),
+    failedMacros: Set<String> = emptySet(),
     onMacroClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var lastClickedMacro by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = modifier.fillMaxSize().padding(8.dp),
+        contentPadding = PaddingValues(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        macros.forEach { macroName ->
+        items(macros) { macroName ->
             MacroButton(
                 macroName = macroName,
-                showFeedback = lastClickedMacro == macroName,
-                onClick = {
-                    lastClickedMacro = macroName
-                    onMacroClick(macroName)
-                    scope.launch {
-                        delay(200)
-                        lastClickedMacro = null
-                    }
-                }
+                isExecuting = executingMacros.contains(macroName),
+                isError = failedMacros.contains(macroName),
+                onClick = { onMacroClick(macroName) }
             )
         }
     }

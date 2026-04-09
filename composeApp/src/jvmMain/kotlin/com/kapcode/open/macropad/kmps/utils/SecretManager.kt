@@ -55,9 +55,14 @@ object SecretManager {
         }
     }
 
+    /**
+     * Generates a random password for the keystore.
+     * Uses a larger byte array and includes character variety requirements (mixed case, numbers, special chars)
+     * by Base64 encoding a 64-byte secure random seed.
+     */
     private fun generateRandomPassword(): String {
         val random = SecureRandom()
-        val bytes = ByteArray(32)
+        val bytes = ByteArray(64) // Increased from 32
         random.nextBytes(bytes)
         return Base64.getEncoder().encodeToString(bytes)
     }

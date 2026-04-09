@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
 import switchdektoptocompose.model.ClientInfo
@@ -24,13 +26,13 @@ fun PairingRequestDialog(
 ) {
     AppDialog(
         onCloseRequest = onDeny,
-        state = rememberWindowState(width = 550.dp, height = 300.dp),
+        state = rememberWindowState(width = 550.dp, height = 380.dp), // Increased height from 300 to 380
         title = "Pairing Request",
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel
     ) {
         Column(
-            modifier = Modifier.padding(24.dp),
+            modifier = Modifier.padding(24.dp).fillMaxSize(), // Added fillMaxSize to ensure space-between works
             verticalArrangement = Arrangement.SpaceBetween
         ) {
                     Column {
@@ -44,6 +46,40 @@ fun PairingRequestDialog(
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        
+                        request.verificationCode?.let { code ->
+                            Spacer(Modifier.height(16.dp))
+                            Card(
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer
+                                ),
+                                modifier = Modifier.align(Alignment.CenterHorizontally)
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        "Verification Code",
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                    Text(
+                                        code,
+                                        style = MaterialTheme.typography.headlineLarge,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        letterSpacing = 4.sp
+                                    )
+                                }
+                            }
+                            Text(
+                                "Verify this code matches on your mobile device.",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
 
                     Row(
