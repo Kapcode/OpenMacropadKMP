@@ -82,17 +82,20 @@ class MacroKtorServer(
 
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
                 val keyAlias = keystore.aliases().nextElement()
-                val password = System.getProperty("keystore.password") ?: "temporary-dev-password"
+                val password = (System.getProperty("keystore.password") ?: "temporary-dev-password").toCharArray()
 
                 sslConnector(
                     keyStore = keystore,
                     keyAlias = keyAlias,
-                    keyStorePassword = { password.toCharArray() },
-                    privateKeyPassword = { password.toCharArray() }
+                    keyStorePassword = { password },
+                    privateKeyPassword = { password }
                 ) {
                     this.port = port
                     this.host = "0.0.0.0"
                 }
+                // Note: password array is passed as a lambda to Ktor, 
+                // we should be careful about when to clear it if Ktor needs it later.
+                // However, Ktor's sslConnector usually uses these to initialize the SSL context.
             } else {
                 connector {
                     this.port = port

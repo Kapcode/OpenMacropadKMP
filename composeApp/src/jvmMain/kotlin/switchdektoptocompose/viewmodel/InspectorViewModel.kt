@@ -24,6 +24,31 @@ class InspectorViewModel(
     private val _bottomRightY = MutableStateFlow("")
     val bottomRightY = _bottomRightY.asStateFlow()
 
+    private val _maxScreenshots = MutableStateFlow("10")
+    val maxScreenshots = _maxScreenshots.asStateFlow()
+
+    private val _screenshotCount = MutableStateFlow(0)
+    val screenshotCount = _screenshotCount.asStateFlow()
+
+    fun onMaxScreenshotsChanged(value: String) {
+        if (value.isEmpty() || value.all { it.isDigit() }) {
+            _maxScreenshots.value = value
+        }
+    }
+
+    fun incrementScreenshotCount() {
+        _screenshotCount.value += 1
+    }
+
+    fun resetScreenshotCount() {
+        _screenshotCount.value = 0
+    }
+
+    fun canTakeScreenshot(): Boolean {
+        val max = _maxScreenshots.value.toIntOrNull() ?: return true
+        return _screenshotCount.value < max
+    }
+
     fun onFKeySelected(key: String) {
         _selectedFKey.value = key
     }

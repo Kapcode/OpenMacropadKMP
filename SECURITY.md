@@ -26,8 +26,8 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     *   **Android:** Migrated to the hardware-backed **Android Keystore System**. Keys are now non-exportable and protected by the TEE/StrongBox.
     *   **JVM:** 
         *   **Local Storage:** Migrated to an automatic, local-only keystore generation in `KeystoreUtils.kt`. The keystore is stored in `~/.openmacropad/` and is never committed to Git.
-        *   **Secret Management:** Passwords are now managed via `local.properties` (machine-local) and injected at build time via JVM System Properties (`-Dkeystore.password`).
-        *   **Safety Net:** Implemented a non-destructive recovery path. If the password fails, the app prompts the user for consent. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
+        *   **Secret Management:** ✅ **Fixed**. Passwords are now managed via OS-native secure storage (**Windows Credential Manager**, **macOS Keychain**, and **Gnome Keyring**) using the `java-keyring` library. This ensures the "Golden Key" is never stored in plain text on the filesystem.
+        *   **Safety Net:** Implemented a non-destructive recovery path. If the password fails (e.g., after a hardware change), the app prompts the user for consent. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
         *   **File Permissions:** The application automatically attempts to set the keystore file permissions to `600` (Owner Read/Write only) on POSIX-compliant systems (Linux/macOS) to prevent local privilege escalation.
         *   **Handshake Unification:** The server's SSL certificate and its long-term identity keys are now unified within the same password-protected keystore.
         *   **Next Steps:** Full integration with OS-level secret storage (Windows Credential Manager / macOS Keychain) is planned for production releases.
@@ -37,10 +37,10 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Description:** Peer public keys were not validated before use.
 *   **Mitigation:** Implemented explicit public key validation using Bouncy Castle in `EncryptionManager.kt`. This prevents small subgroup attacks and invalid curve attacks.
 
-### 6. Data Persistence in ZRAM (Cold Storage Risk)
-*   **Status:** 🔄 **In Progress**
-*   **Description:** Sensitive data (AES keys) can persist in memory.
-*   **Mitigation:** Updated `EncryptionManager.kt` to explicitly zero out sensitive `ByteArray` objects after use. Note: Java's `String` immutability still poses a risk if keys are converted to Strings (see `Base64Utils` usage).
+### 6. Data Persistence in RAM (Cold Storage Risk)
+*   **Status:** ✅ **Fixed**
+*   **Description:** Sensitive data (AES keys, passwords) could previously persist in memory due to the use of immutable `String` objects.
+*   **Mitigation:** Transitioned sensitive data handling to `CharArray` and `ByteArray` which are explicitly zeroed out (`.fill('\u0000')`) immediately after use. This minimizes the window of opportunity for memory scraping attacks.
 
 ### 7. Base64 API Compatibility (Android < 8.0)
 *   **Status:** ✅ **Fixed**

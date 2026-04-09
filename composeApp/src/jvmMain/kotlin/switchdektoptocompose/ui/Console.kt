@@ -89,7 +89,8 @@ fun Console(
         SelectionContainer {
             LazyColumn(
                 state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface)
+                modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface),
+                contentPadding = PaddingValues(bottom = 200.dp)
             ) {
                 items(logMessages) { message ->
                     val color = when {
@@ -106,11 +107,6 @@ fun Console(
                         style = MaterialTheme.typography.bodySmall,
                         color = color
                     )
-                }
-
-                item {
-                    // Extra padding at the end of the console for better visibility on all monitors
-                    Spacer(modifier = Modifier.height(100.dp))
                 }
             }
         }

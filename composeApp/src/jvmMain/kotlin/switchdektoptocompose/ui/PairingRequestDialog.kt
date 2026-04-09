@@ -6,8 +6,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
 import switchdektoptocompose.model.ClientInfo
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
@@ -20,14 +20,15 @@ fun PairingRequestDialog(
     onDeny: () -> Unit,
     onBan: () -> Unit
 ) {
-    val dialogState = rememberDialogState(width = 550.dp, height = 300.dp)
+    val windowState = rememberWindowState(width = 550.dp, height = 300.dp)
 
-    DialogWindow(
+    Window(
         onCloseRequest = { /* Must act on the dialog */ },
-        state = dialogState,
+        state = windowState,
         title = "Pairing Request",
         resizable = false,
-        alwaysOnTop = true
+        alwaysOnTop = true,
+        focusable = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {

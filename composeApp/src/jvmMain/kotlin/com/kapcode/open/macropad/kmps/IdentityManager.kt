@@ -46,6 +46,14 @@ actual class IdentityManager actual constructor() {
         }
     }
 
+    private fun getPassword(): CharArray {
+        return (System.getProperty("keystore.password") ?: "temporary-dev-password").toCharArray()
+    }
+
+    private fun clearPassword(password: CharArray) {
+        password.fill('\u0000')
+    }
+
     private fun getOrCreateIdentityKey(): KeyPair {
         val aliasToUse = if (keyStore.aliases().hasMoreElements()) {
             keyStore.aliases().nextElement()
@@ -53,12 +61,14 @@ actual class IdentityManager actual constructor() {
             throw IllegalStateException("Keystore is empty or not loaded.")
         }
 
-        val password = System.getProperty("keystore.password") ?: "temporary-dev-password"
-        
-        val privateKey = keyStore.getKey(aliasToUse, password.toCharArray()) as PrivateKey
-        val publicKey = keyStore.getCertificate(aliasToUse).publicKey
-        
-        return KeyPair(publicKey, privateKey)
+        val password = getPassword()
+        try {
+            val privateKey = keyStore.getKey(aliasToUse, password) as PrivateKey
+            val publicKey = keyStore.getCertificate(aliasToUse).publicKey
+            return KeyPair(publicKey, privateKey)
+        } finally {
+            clearPassword(password)
+        }
     }
 
     actual fun getIdentityPublicKey(): ByteArray {

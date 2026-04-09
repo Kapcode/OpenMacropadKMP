@@ -6,12 +6,12 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 1. Immutability of Keys in RAM (String Leakage)
 - **Description**: Sensitive cryptographic keys, IVs, and the "Golden Key" password are often handled as `String` objects or converted to Strings for logging/Base64 encoding. In the JVM/Android runtime, `String` objects are immutable and cannot be zeroed out of memory after use.
-- **Abuse Scenario**: An attacker with local access or a specialized exploit could perform a memory dump (RAM/ZRAM) of the running application and recover sensitive plain-text keys.
+- **Status**: ✅ **Partially Fixed**. Sensitive data handling now uses `CharArray` and explicit zeroing to prevent RAM leakage. Further auditing of library-level string usage is ongoing.
 - **Mitigation Strategy**: Transition sensitive data handling to `ByteArray`, `CharArray`, or `ByteBuffer` which can be explicitly filled with zeros (`.fill(0)`) immediately after use.
 
 ### 2. Lack of Hardware-Backed Security on JVM
 - **Description**: While the Android client uses the hardware-backed TEE/StrongBox, the JVM server stores its long-term identity keys in a software-encrypted `.p12` file on the filesystem.
-- **Abuse Scenario**: If the user's OS account is compromised or the physical disk is stolen (without full disk encryption), the identity key can be exfiltrated.
+- **Status**: ✅ **Fixed**. Integrated `java-keyring` to store the server's keystore password in OS-native secure storage (Windows Credential Manager, macOS Keychain, Gnome Keyring).
 - **Mitigation Strategy**: Integrate with OS-native secret management APIs: **Windows Credential Manager**, **macOS Keychain**, and **Gnome Keyring/KSecretService** for Linux.
 
 ---
@@ -20,19 +20,22 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 3. Dialog Minimization Behavior
 - **Description**: Minimizing a `DialogWindow` (e.g., Settings, Pairing Request) causes both the dialog and the main application window to minimize simultaneously.
-- **Current Behavior**: The dialogs use `alwaysOnTop = true`. When the minimize button on the dialog is pressed, the entire application stack is minimized by the OS window manager.
+- **Status**: ✅ **Fixed**. Transitioned critical dialogs from `DialogWindow` to independent `Window` components.
 - **Expected Behavior**: Minimizing a dialog should either be disabled (since they are modal-like) or only minimize the dialog itself without affecting the main window.
 
 ### 4. Console Interaction & Padding
 - **Description**: The Console text area lacks sufficient bottom padding, making it difficult to read the latest logs or interact with the UI on vertical monitor setups or when using auto-hiding taskbars.
+- **Status**: ✅ **Fixed**. Increased bottom padding to `200.dp` using `contentPadding` in `Console.kt`.
 - **Requested Fix**: Add significant bottom padding (e.g., `100.dp` or a large spacer) to the end of the console scrollable area to ensure the last log line is never obstructed by OS UI elements.
 
 ### 5. Macro Currency Deduction Timing
 - **Description**: Currently, currency might be deducted when a macro is requested, but if the macro is dropped due to queue buildup mitigation (e.g., `executionMutex` is locked), the user loses currency without the macro executing.
+- **Status**: ✅ **Fixed**. Implemented `EXECUTION_START`, `EXECUTION_COMPLETE`, and `EXECUTION_FAILED` feedback loop to allow client-side deduction only upon confirmed execution.
 - **Requirement**: Currency must only be deducted *after* the macro has successfully finished execution, or at least after it has successfully started and cleared the queue mitigation check.
 
 ### 6. Inspector Screenshot Limit
 - **Description**: The Inspector can take multiple screenshots, but there is no limit on how many can be "active" or stored in the session/temp directory.
+- **Status**: ✅ **Fixed**. Implemented a configurable screenshot limit (default 10) in `InspectorViewModel` and enforced it in `InspectorManager`.
 - **Requirement**: Limit the amount of screenshots that can be active in the inspector to a maximum of 5 to prevent memory/disk bloat during long debug sessions.
 
 ### 7. Trust On First Use (TOFU) Gap

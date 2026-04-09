@@ -18,8 +18,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.Window
+import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -45,7 +45,7 @@ fun SettingsDialog(
     val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
     val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
 
-    val dialogState = rememberDialogState(width = 600.dp, height = 700.dp)
+    val windowState = rememberWindowState(width = 600.dp, height = 700.dp)
 
     // Scroll state management
     val scrollState = rememberScrollState()
@@ -57,12 +57,13 @@ fun SettingsDialog(
         }
     }
 
-    DialogWindow(
+    Window(
         onCloseRequest = onDismissRequest,
-        state = dialogState,
+        state = windowState,
         title = "Settings",
         resizable = false,
-        alwaysOnTop = true
+        alwaysOnTop = true,
+        focusable = true
     ) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(modifier = Modifier.fillMaxSize()) {

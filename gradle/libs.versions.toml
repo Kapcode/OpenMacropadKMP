@@ -30,6 +30,7 @@ flatlaf = "3.7.1"
 svg-salamander = "1.0"
 json = "20251224"
 slf4j = "2.0.17"
+java-keyring = "1.0.4"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
@@ -68,6 +69,7 @@ flatlaf = { module = "com.formdev:flatlaf", version.ref = "flatlaf" }
 svg-salamander = { module = "com.kitfox.svg:svg-salamander", version.ref = "svg-salamander" }
 json = { module = "org.json:json", version.ref = "json" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
+java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "java-keyring" }
 
 [plugins]
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

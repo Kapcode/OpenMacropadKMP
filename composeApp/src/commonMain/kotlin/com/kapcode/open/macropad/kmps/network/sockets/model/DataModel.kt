@@ -66,7 +66,10 @@ enum class ControlCommand {
     PAIRING_APPROVED,
     PAIRING_REJECTED,
     BANNED,
-    DISCONNECT
+    DISCONNECT,
+    EXECUTION_START,
+    EXECUTION_COMPLETE,
+    EXECUTION_FAILED
 }
 
 /**
@@ -104,6 +107,7 @@ data class DataModel(
         /**
          * Convert a key to Base64 string for storage/transmission
          */
+        @Deprecated("Leaks sensitive data in RAM as a String. Use keyToBytes or similar.", ReplaceWith("Base64Utils.encode(key.encoded)"))
         fun keyToString(key: SecretKey): String {
             return Base64Utils.encode(key.encoded)
         }

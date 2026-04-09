@@ -26,10 +26,17 @@ class KeystorePasswordException(message: String, cause: Throwable? = null) : Exc
 
 object KeystoreUtils {
     private const val ALIAS = "open-macropad-server"
-    private val PASSWORD = System.getProperty("keystore.password") ?: "temporary-dev-password"
 
     init {
         Security.addProvider(BouncyCastleProvider())
+    }
+
+    private fun getPassword(): CharArray {
+        return SecretManager.getOrCreatePassword()
+    }
+
+    private fun clearPassword(password: CharArray) {
+        password.fill('\u0000')
     }
 
     /**
@@ -55,14 +62,17 @@ object KeystoreUtils {
         val keyStore = KeyStore.getInstance("PKCS12")
 
         if (keystoreFile.exists() && !forceRecreate) {
+            val password = getPassword()
             try {
                 keystoreFile.inputStream().use { 
-                    keyStore.load(it, PASSWORD.toCharArray()) 
+                    keyStore.load(it, password) 
                 }
                 setSecurePermissions(keystoreFile)
                 return keyStore
             } catch (e: Exception) {
                 throw KeystorePasswordException("Failed to load keystore (possibly wrong password).", e)
+            } finally {
+                clearPassword(password)
             }
         }
 
@@ -77,16 +87,21 @@ object KeystoreUtils {
         keyStore.load(null, null)
         val keyPair = generateKeyPair()
         val certificate = generateCertificate(keyPair)
+        val password = getPassword()
 
-        keyStore.setKeyEntry(
-            ALIAS,
-            keyPair.private,
-            PASSWORD.toCharArray(),
-            arrayOf(certificate)
-        )
+        try {
+            keyStore.setKeyEntry(
+                ALIAS,
+                keyPair.private,
+                password,
+                arrayOf(certificate)
+            )
 
-        FileOutputStream(keystoreFile).use {
-            keyStore.store(it, PASSWORD.toCharArray())
+            FileOutputStream(keystoreFile).use {
+                keyStore.store(it, password)
+            }
+        } finally {
+            clearPassword(password)
         }
         
         setSecurePermissions(keystoreFile)

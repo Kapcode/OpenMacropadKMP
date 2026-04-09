@@ -85,6 +85,7 @@ kotlin {
             implementation(libs.svg.salamander)
             implementation(libs.json)
             implementation(libs.slf4j.simple)
+            implementation(libs.java.keyring)
             
             implementation(libs.bouncycastle.bcpkix)
             implementation(libs.bouncycastle.bcprov)

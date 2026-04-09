@@ -304,13 +304,37 @@ class DesktopViewModel(
                         val macroName = cmd.substringAfter("play:")
                         val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
                         if (macroToPlay != null) {
-                            macroManagerViewModel.onPlayMacro(macroToPlay)
+                            macroManagerViewModel.onPlayMacro(
+                                macro = macroToPlay,
+                                onStart = {
+                                    viewModelScope.launch {
+                                        server.sendToClient(clientId, DataModelBuilder().control(ControlCommand.EXECUTION_START, mapOf("macro" to macroName)).build())
+                                    }
+                                },
+                                onComplete = {
+                                    viewModelScope.launch {
+                                        server.sendToClient(clientId, DataModelBuilder().control(ControlCommand.EXECUTION_COMPLETE, mapOf("macro" to macroName)).build())
+                                    }
+                                },
+                                onFailure = { error ->
+                                    viewModelScope.launch {
+                                        server.sendToClient(clientId, DataModelBuilder().control(ControlCommand.EXECUTION_FAILED, mapOf("macro" to macroName, "error" to error)).build())
+                                    }
+                                }
+                            )
                             consoleViewModel.addLog(LogLevel.Info, "Playing macro '$macroName' for $clientId")
                         } else {
                             consoleViewModel.addLog(LogLevel.Warn, "Macro '$macroName' not found for $clientId")
+                            viewModelScope.launch {
+                                server.sendToClient(clientId, DataModelBuilder().control(ControlCommand.EXECUTION_FAILED, mapOf("macro" to macroName, "error" to "Macro not found")).build())
+                            }
                         }
                     } else {
                         consoleViewModel.addLog(LogLevel.Info, "Macro execution is disabled. Ignoring play request from $clientId")
+                        val macroName = cmd.substringAfter("play:")
+                        viewModelScope.launch {
+                            server.sendToClient(clientId, DataModelBuilder().control(ControlCommand.EXECUTION_FAILED, mapOf("macro" to macroName, "error" to "Execution disabled")).build())
+                        }
                     }
                 }
             },

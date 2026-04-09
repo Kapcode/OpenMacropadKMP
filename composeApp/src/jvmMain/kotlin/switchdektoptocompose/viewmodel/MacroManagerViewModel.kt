@@ -138,12 +138,16 @@ class MacroManagerViewModel(
         }
     }
 
-    fun onPlayMacro(macro: MacroFileState) {
-        if (!macro.isActive) return
+    fun onPlayMacro(macro: MacroFileState, onStart: (() -> Unit)? = null, onComplete: (() -> Unit)? = null, onFailure: ((String) -> Unit)? = null) {
+        if (!macro.isActive) {
+            onFailure?.invoke("Macro is not active.")
+            return
+        }
         
         viewModelScope.launch {
             if (executionMutex.tryLock()) {
                 try {
+                    onStart?.invoke()
                     val logStart = ">>> MACRO STARTING: ${macro.name}"
                     println(logStart)
                     consoleViewModel.addLog(LogLevel.Info, logStart)
@@ -155,16 +159,19 @@ class MacroManagerViewModel(
                     val logFinish = "<<< MACRO FINISHED: ${macro.name} (Duration: ${duration}ms)"
                     println(logFinish)
                     consoleViewModel.addLog(LogLevel.Info, logFinish)
+                    onComplete?.invoke()
                 } catch (e: CancellationException) {
                     val logCancel = "!!! MACRO CANCELLED: ${macro.name}"
                     println(logCancel)
                     consoleViewModel.addLog(LogLevel.Warn, logCancel)
+                    onFailure?.invoke("Macro cancelled.")
                     throw e
                 } catch (e: Exception) {
                     val logError = "!!! MACRO ERROR: ${macro.name} - ${e.message}"
                     println(logError)
                     consoleViewModel.addLog(LogLevel.Error, logError)
                     e.printStackTrace()
+                    onFailure?.invoke(e.message ?: "Unknown error.")
                 } finally {
                     executionMutex.unlock()
                 }
@@ -172,6 +179,7 @@ class MacroManagerViewModel(
                 val msg = "Macro '${macro.name}' dropped: Another macro is currently running."
                 println(msg)
                 consoleViewModel.addLog(LogLevel.Warn, msg) 
+                onFailure?.invoke("Another macro is currently running.")
             }
         }
     }

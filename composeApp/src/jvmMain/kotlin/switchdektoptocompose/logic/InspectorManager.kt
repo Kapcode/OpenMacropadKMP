@@ -57,7 +57,11 @@ class InspectorManager(
         consoleViewModel.addLog(LogLevel.Info, "Pixel Color (ARGB): $argbColor")
 
         if (viewModel.screenshotOnPress.value) {
-            takeScreenshot()
+            if (viewModel.canTakeScreenshot()) {
+                takeScreenshot()
+            } else {
+                consoleViewModel.addLog(LogLevel.Warn, "Screenshot limit reached (${viewModel.maxScreenshots.value}).")
+            }
         }
     }
     
@@ -73,7 +77,8 @@ class InspectorManager(
                 if (fileChooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
                     val fileToSave = fileChooser.selectedFile
                     ImageIO.write(screenshot, "png", fileToSave)
-                    consoleViewModel.addLog(LogLevel.Info, "Screenshot saved to: ${fileToSave.absolutePath}")
+                    viewModel.incrementScreenshotCount()
+                    consoleViewModel.addLog(LogLevel.Info, "Screenshot saved to: ${fileToSave.absolutePath} (Count: ${viewModel.screenshotCount.value})")
                 }
             }
         } catch (ex: Exception) {
