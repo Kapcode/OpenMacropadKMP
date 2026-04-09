@@ -5,34 +5,43 @@ This document serves as a guide for AI assistants to navigate the project effect
 ## 📂 Project Structure
 
 - **`composeApp/`**: The main module containing all code.
-    - **`src/commonMain/`**: Shared logic between Android and Desktop.
-        - `network/`: Core networking logic, message models, and `sockets` module for encrypted communication.
-        - `ui/`: Shared UI components (CommonAppBar, ConnectionItem, etc.).
-    - **`src/jvmMain/`**: Desktop Server implementation (Compose for Desktop).
-        - **`switchdektoptocompose/`**: Root package for the desktop application.
-            - `di/`: Dependency injection and `ViewModelFactory`.
-            - `logic/`: Core logic (Macro execution, settings, server discovery, input simulation).
-            - `model/`: Data models and state representations.
-            - `ui/`: Compose UI screens, dialogs, and themes.
-            - `viewmodel/`: ViewModels for state management and UI logic.
-        - `MacroKTOR/`: Ktor 3.x-based WebSocket server implementation.
-        - `com/kapcode/open/macropad/kmps/DeviceInfo.kt`: JVM-specific device name (hostname) and unique ID.
-    - **`src/androidMain/`**: Android Client implementation.
-        - `MainActivity.kt`: Server discovery and initial setup.
-        - `ClientActivity.kt`: Remote control UI and token management.
-        - `DeviceInfo.kt`: Android-specific device name and unique ID (hashed ANDROID_ID).
+    - **`src/commonMain/kotlin/`**: Shared logic between Android and Desktop.
+        - **`com.kapcode.open.macropad.kmps/`**: Shared root package.
+            - `network/sockets/`: Authenticated & Encrypted WebSocket implementation (Client/Server/Model).
+            - `ui/components/`: Shared UI (CommonAppBar, ConnectionItem, LoadingIndicator, SplashScreen).
+            - `settings/`: Shared settings ViewModels and Screens.
+            - `DeviceInfo.kt` & `IdentityManager.kt`: Shared hardware/security interfaces.
+            - `App.kt`: Main Compose entry point for shared UI.
+        - **`MacroKTOR/`**: Ktor 3.x common client utilities (`MacroKtorClient.kt`).
+    - **`src/jvmMain/kotlin/`**: Desktop Server implementation (Compose for Desktop).
+        - **`switchdektoptocompose/`**: Main Desktop logic and UI.
+            - `di/`: Centralized dependency injection (`ViewModelFactory`).
+            - `logic/`: Core automation logic (MacroPlayer, TriggerListener, ServerDiscovery, KeyParser).
+            - `model/`: Desktop-specific state models (MacroModels, ClientInfo).
+            - `ui/`: Desktop-specific Compose screens, themes, and specialized components (SwingCodeEditor).
+            - `viewmodel/`: Desktop ViewModels for state management.
+            - `main.kt`: JVM Application entry point.
+        - **`MacroKTOR/`**: Ktor 3.x server implementation (`MacroKtorServer.kt`).
+        - **`com.kapcode.open.macropad.kmps/`**: JVM implementations of `DeviceInfo` and `IdentityManager`.
+    - **`src/androidMain/kotlin/`**: Android Client implementation.
+        - **`com.kapcode.open.macropad.kmps/`**: Android app logic.
+            - `MainActivity.kt`: Server discovery and initial setup.
+            - `ClientActivity.kt`: Remote control UI and token management.
+            - `TokenManager.kt` & `RewardedAd.kt`: Monetization and persistent storage logic.
+            - `DeviceInfo.kt` & `IdentityManager.kt`: Android hardware-backed security.
+            - `MacroApplication.kt`: Android Application class for initialization.
 
 ## 🧩 Core Components & Responsibilities
 
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
-| **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/network/sockets/` |
-| **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/DeviceInfo.kt` |
+| **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/com/.../network/sockets/` |
+| **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
-| **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/ClientActivity.kt` & `commonMain/network/sockets/` |
-| **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/network/sockets/model/` |
-| **Discovery** | UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/ClientDiscovery.kt` |
+| **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
+| **Discovery** | UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
 
 ## 📡 Communication Protocol (WebSocket)
 
