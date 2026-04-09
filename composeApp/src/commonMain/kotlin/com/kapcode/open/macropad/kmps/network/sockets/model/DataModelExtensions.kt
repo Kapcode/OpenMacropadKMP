@@ -3,7 +3,6 @@ package com.kapcode.open.macropad.kmps.network.sockets.model
 import com.kapcode.open.macropad.kmps.network.sockets.model.DataModel
 import com.kapcode.open.macropad.kmps.network.sockets.model.DataModelBuilder
 import com.kapcode.open.macropad.kmps.network.sockets.model.MessageType
-import com.kapcode.open.macropad.kmps.network.sockets.model.SecureSocket
 
 
 /**
@@ -70,25 +69,6 @@ fun errorMessage(message: String, context: String = "general", throwable: Throwa
         .build()
 }
 
-
-// Extension function to easily send with priority
-fun SecureSocket.sendWithPriority(
-    messageType: MessageType,
-    priority: DataModel.Priority = DataModel.Priority.NORMAL
-) {
-    val dataModel = DataModel(messageType = messageType, priority = priority)
-    this.send(dataModel)
-}
-
-// Extension function to send text quickly
-fun SecureSocket.sendText(text: String) {
-    this.send(textMessage(text))
-}
-
-// Extension function to send command quickly
-fun SecureSocket.sendCommand(command: String, parameters: Map<String, String> = emptyMap()) {
-    this.send(commandMessage(command, parameters))
-}
 
 // Extension function to handle received messages with pattern matching
 inline fun DataModel.handle(
