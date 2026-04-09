@@ -18,7 +18,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
@@ -72,20 +74,45 @@ class ClientActivity : ComponentActivity() {
                 var connectionStatus by remember { mutableStateOf("Connecting...") }
                 var serverName by remember { mutableStateOf<String?>(null) }
                 var disconnectReason by remember { mutableStateOf<String?>(null) }
+                var verificationCode by remember { mutableStateOf<String?>(null) }
+                val executingMacros = remember { mutableStateOf(setOf<String>()) }
+                val failedMacros = remember { mutableStateOf(setOf<String>()) }
 
                 LaunchedEffect(Unit) {
-                    connectToServer(ipAddress, port, deviceName, isSecure) { status, name, reason ->
-                        connectionStatus = status
-                        serverName = name
-                        disconnectReason = reason
-                    }
+                    connectToServer(
+                        ipAddress,
+                        port,
+                        deviceName,
+                        isSecure,
+                        onUpdate = { status, name, reason, code ->
+                            connectionStatus = status
+                            serverName = name
+                            disconnectReason = reason
+                            verificationCode = code
+                        },
+                        onExecutionStart = { macro ->
+                            executingMacros.value += macro
+                            failedMacros.value -= macro
+                        },
+                        onExecutionComplete = { macro ->
+                            executingMacros.value -= macro
+                        },
+                        onExecutionFailed = { macro, error ->
+                            executingMacros.value -= macro
+                            failedMacros.value += macro
+                            Toast.makeText(this@ClientActivity, "Macro '$macro' failed: $error", Toast.LENGTH_SHORT).show()
+                        }
+                    )
                 }
 
                 ClientScreen(
                     connectionStatus = connectionStatus,
                     serverName = serverName ?: serverAddressFull,
                     disconnectReason = disconnectReason,
+                    verificationCode = verificationCode,
                     macros = macros,
+                    executingMacros = executingMacros.value,
+                    failedMacros = failedMacros.value,
                     settingsViewModel = settingsViewModel,
                     onGetMacros = { activityScope.launch { client?.send("getMacros") } },
                     onMacroClick = ::sendMacro,
@@ -111,7 +138,10 @@ class ClientActivity : ComponentActivity() {
         port: Int,
         deviceName: String,
         isSecure: Boolean,
-        onUpdate: (status: String, serverName: String?, reason: String?) -> Unit
+        onUpdate: (status: String, serverName: String?, reason: String?, verificationCode: String?) -> Unit,
+        onExecutionStart: (String) -> Unit = {},
+        onExecutionComplete: (String) -> Unit = {},
+        onExecutionFailed: (String, String) -> Unit = { _, _ -> }
     ) {
         clientJob = activityScope.launch {
             var backoffMillis = 1000L
@@ -129,12 +159,12 @@ class ClientActivity : ComponentActivity() {
                     tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
                     this@ClientActivity.client = tempClient
 
-                    onUpdate("Connecting...", ipAddress, null)
+                    onUpdate("Connecting...", ipAddress, null, null)
                     withContext(Dispatchers.IO) {
                         tempClient.connect(deviceName)
                     }
 
-                    onUpdate("Connected", ipAddress, null)
+                    onUpdate("Connected", ipAddress, null, null)
                     backoffMillis = 1000L // Reset backoff on success
                     retryCount = 0
                     var lastHeartbeat = System.currentTimeMillis()
@@ -161,36 +191,48 @@ class ClientActivity : ComponentActivity() {
                                         when (command) {
                                             ControlCommand.PAIRING_PENDING -> {
                                                 macros.clear()
-                                                onUpdate("Pending Approval", null, null)
+                                                val code = params["code"]
+                                                onUpdate("Pending Approval", null, null, code)
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
-                                                onUpdate("Connected", ipAddress, null)
+                                                onUpdate("Connected", ipAddress, null, null)
                                                 activityScope.launch {
                                                     tempClient.send(textMessage("getMacros").toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
                                                 macros.clear()
-                                                onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.")
+                                                onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.", null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.BANNED -> {
                                                 macros.clear()
                                                 val reason = params["reason"] ?: "Device is banned"
-                                                onUpdate("Banned", null, reason)
+                                                onUpdate("Banned", null, reason, null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.DISCONNECT -> {
                                                 macros.clear()
-                                                onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.")
+                                                onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.", null)
                                                 this@launch.cancel()
+                                            }
+                                            ControlCommand.EXECUTION_START -> {
+                                                params["macro"]?.let { onExecutionStart(it) }
+                                            }
+                                            ControlCommand.EXECUTION_COMPLETE -> {
+                                                params["macro"]?.let { onExecutionComplete(it) }
+                                            }
+                                            ControlCommand.EXECUTION_FAILED -> {
+                                                val macro = params["macro"] ?: "Unknown"
+                                                val error = params["error"] ?: "Unknown error"
+                                                onExecutionFailed(macro, error)
                                             }
                                             else -> {}
                                         }
                                     },
                                     onText = { text ->
                                         if (text.startsWith("macros:")) {
-                                            onUpdate("Connected", ipAddress, null)
+                                            onUpdate("Connected", ipAddress, null, null)
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                                             macros.clear()
                                             macros.addAll(macroNames)
@@ -219,12 +261,12 @@ class ClientActivity : ComponentActivity() {
                     retryCount++
                     if (retryCount > MAX_RETRIES) {
                         Log.e("ClientActivity", "Max retries reached. Finishing activity.")
-                        onUpdate("Failed", null, "Max retries reached. Please check your connection.")
+                        onUpdate("Failed", null, "Max retries reached. Please check your connection.", null)
                         this@launch.cancel()
                         return@launch
                     }
                     val errorMsg = e.message ?: "Unknown error"
-                    onUpdate("Connecting...", null, "Retrying ($retryCount/$MAX_RETRIES)...")
+                    onUpdate("Connecting...", null, "Retrying ($retryCount/$MAX_RETRIES)...", null)
                     Log.w("ClientActivity", "Connection failed ($errorMsg), retrying in ${backoffMillis / 1000}s")
                 } finally {
                     tempClient?.close()
@@ -275,7 +317,10 @@ fun ClientScreen(
     connectionStatus: String,
     serverName: String?,
     disconnectReason: String?,
+    verificationCode: String?,
     macros: List<String>,
+    executingMacros: Set<String> = emptySet(),
+    failedMacros: Set<String> = emptySet(),
     settingsViewModel: SettingsViewModel,
     onGetMacros: () -> Unit,
     onMacroClick: (String) -> Unit,
@@ -346,7 +391,12 @@ fun ClientScreen(
                     color = MaterialTheme.colorScheme.background
                 ) {
                     if (macros.isNotEmpty()) {
-                        MacroButtonsScreen(macros = macros, onMacroClick = onMacroClick)
+                        MacroButtonsScreen(
+                            macros = macros, 
+                            executingMacros = executingMacros,
+                            failedMacros = failedMacros,
+                            onMacroClick = onMacroClick
+                        )
                     } else {
                         Column(
                             modifier = Modifier.fillMaxSize().padding(16.dp),
@@ -357,6 +407,16 @@ fun ClientScreen(
                                 CircularProgressIndicator()
                                 Spacer(Modifier.height(16.dp))
                                 Text("Please approve this device on your Desktop.")
+                                verificationCode?.let { code ->
+                                    Spacer(Modifier.height(24.dp))
+                                    Text("Verification Code:", style = MaterialTheme.typography.labelLarge)
+                                    Text(
+                                        code,
+                                        style = MaterialTheme.typography.displayMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 8.sp
+                                    )
+                                }
                             } else if (disconnectReason != null) {
                                 Icon(
                                     Icons.AutoMirrored.Filled.ArrowBack, 

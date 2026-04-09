@@ -194,10 +194,17 @@ class DesktopViewModel(
     }
 
     private fun onPairingRequest(clientId: String, clientName: String) {
+        val verificationCode = (100000..999999).random().toString()
         _pendingPairingRequests.update { currentList ->
-            if (currentList.any { it.id == clientId }) currentList else currentList + ClientInfo(id = clientId, name = clientName)
+            if (currentList.any { it.id == clientId }) currentList 
+            else currentList + ClientInfo(id = clientId, name = clientName, verificationCode = verificationCode)
         }
-        consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId)")
+        
+        viewModelScope.launch {
+            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("code" to verificationCode)))
+        }
+        
+        consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Verification code: $verificationCode")
     }
 
     fun approveDevice(clientId: String, clientName: String, persistent: Boolean = true) {

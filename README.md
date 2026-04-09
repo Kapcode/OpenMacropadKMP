@@ -19,17 +19,17 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
-*   **Security & Device Management**: Features a Physical Consent Pairing system, persistent whitelisting/banning, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
+*   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes, persistent whitelisting/banning, hardware-backed keystore management, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
 *   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.
 *   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging.
 
 ### Android Client
-*   **Remote Triggering:** Interface to execute desktop macros from a mobile device.
+*   **Remote Triggering:** Interface to execute desktop macros from a mobile device with real-time execution feedback (progress bars and status).
 *   **Token System:** A rewarded ad-supported model for macro execution.
 *   **Discovery:** Automatic discovery of servers on the local network.
-*   **Security:** Supports TLS/SSL (WSS) for encrypted communication.
+*   **Security:** Supports TLS/SSL (WSS) for encrypted communication and out-of-band TOFU verification.
 
 ## Installation and Usage
 

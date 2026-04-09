@@ -82,7 +82,7 @@ class MacroKtorServer(
 
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
                 val keyAlias = keystore.aliases().nextElement()
-                val password = (System.getProperty("keystore.password") ?: "temporary-dev-password").toCharArray()
+                val password = com.kapcode.open.macropad.kmps.utils.SecretManager.getOrCreatePassword()
 
                 sslConnector(
                     keyStore = keystore,
@@ -131,7 +131,8 @@ class MacroKtorServer(
                             close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "New connections are disabled"))
                             return@webSocket
                         }
-                        send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING).toBytes()))
+                        // We no longer send an empty PAIRING_PENDING here.
+                        // DesktopViewModel.onPairingRequest will send it with the verification code.
                         onPairingRequest(clientId, clientName)
                     }
 
@@ -153,8 +154,12 @@ class MacroKtorServer(
                                             onCommand = { _, _ -> onMessageReceived(clientId, dataModel) }
                                         )
                                     } else {
-                                        // Drop messages from untrusted devices
-                                        send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING).toBytes()))
+                                        // Still handle heartbeats to update lastSeen, but drop other messages
+                                        dataModel.handle(
+                                            onHeartbeat = { /* Already updated lastSeen */ },
+                                            onText = { _ -> /* Dropped */ },
+                                            onCommand = { _, _ -> /* Dropped */ }
+                                        )
                                     }
                                 } catch (e: Exception) {
                                     e.printStackTrace()

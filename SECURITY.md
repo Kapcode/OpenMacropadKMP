@@ -26,7 +26,7 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     *   **Android:** Migrated to the hardware-backed **Android Keystore System**. Keys are now non-exportable and protected by the TEE/StrongBox.
     *   **JVM:** 
         *   **Local Storage:** Migrated to an automatic, local-only keystore generation in `KeystoreUtils.kt`. The keystore is stored in `~/.openmacropad/` and is never committed to Git.
-        *   **Secret Management:** ✅ **Fixed**. Passwords are now managed via OS-native secure storage (**Windows Credential Manager**, **macOS Keychain**, and **Gnome Keyring**) using the `java-keyring` library. This ensures the "Golden Key" is never stored in plain text on the filesystem.
+        *   **Secret Management:** ✅ **Fixed**. Passwords are now managed via OS-native secure storage (**Windows Credential Manager**, **macOS Keychain**, and **Gnome Keyring**) using the `java-keyring` library. This ensures the "Golden Key" is never stored in plain text on the filesystem. Auto-generated passwords now have 64 bytes of entropy (Base64 encoded).
         *   **Safety Net:** Implemented a non-destructive recovery path. If the password fails (e.g., after a hardware change), the app prompts the user for consent. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
         *   **File Permissions:** The application automatically attempts to set the keystore file permissions to `600` (Owner Read/Write only) on POSIX-compliant systems (Linux/macOS) to prevent local privilege escalation.
         *   **Handshake Unification:** The server's SSL certificate and its long-term identity keys are now unified within the same password-protected keystore.
@@ -51,10 +51,11 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Status:** ✅ **Fixed**
 *   **Description:** Any device could previously connect and send macro commands if they knew the server IP.
 *   **Mitigation:**
-    *   **Trust on First Use (TOFU) with Physical Consent:** Untrusted devices now trigger a modal pairing dialog on the server's physical screen. A human must manually "Approve" the connection.
+    *   **Trust on First Use (TOFU) with Physical Consent:** ✅ **Fixed**. Untrusted devices trigger a modal pairing dialog on the server's physical screen. Implemented out-of-band verification using a random 6-digit code displayed on both the server and the mobile device. A human must manually verify the codes and "Approve" the connection.
     *   **Persistent Whitelisting:** Approved devices are stored by their unique Device ID fingerprint in `trusted_devices.json`.
     *   **Banning System:** Malicious or spammy devices can be "Banned," adding them to a `banned_devices.json` blacklist. Banned devices are blocked at the network level and cannot trigger further pairing prompts.
     *   **Unpairing:** Users can "Unpair" a device, which removes its trusted status and forces a new pairing request upon the next connection attempt.
+    *   **Macro Execution Feedback:** ✅ **Fixed**. Implemented `EXECUTION_START`, `EXECUTION_COMPLETE`, and `EXECUTION_FAILED` control loop. The mobile client provides real-time visual feedback (progress bars and error states) for macro execution, ensuring tokens are only deducted for valid requests and preventing "blind" execution errors.
     *   **Global Lockdown (Device Discovery):** A "Device Discovery" toggle in Settings controls whether the server's presence is broadcast via UDP. Disabling this makes the server invisible to mobile app scans, though manual connections by IP are still possible (but still subject to pairing approval).
     *   **One-Time Approvals ONLY:** An "Ask Every Time (One-Time Approvals ONLY)" mode can be enabled to force all new connections to be non-persistent. In this mode, the "Always Allow" option is removed from the pairing dialog, ensuring no new devices are added to the trusted list and a human must approve every session.
     *   **UI Safety:** All security-critical dialogs (Pairing, Settings, Ban) use `alwaysOnTop = true` to ensure they remain visible over other application windows.
