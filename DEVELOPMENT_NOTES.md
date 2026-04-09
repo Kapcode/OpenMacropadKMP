@@ -281,7 +281,16 @@ Automated macros could cause loss of system control if they ran too long or went
     3.  **Refined Visibility**: Moved models like `ClientInfo` and `MacroFileState` to a common `model` package to resolve visibility issues across UI and ViewModel layers.
     4.  **Compose Optimization**: Cleaned up imports and property delegates across 20+ files to ensure consistent use of `by` and `collectAsState()`.
 
-## 23. To-Do List & Future Improvements
+## 23. Repository Structure & Branching Strategy
+
+### Challenge: Mental Load and Release Management
+- **Problem**: Maintaining a single branch for both active development and stable releases made it difficult to track what code was "shippable" versus "experimental."
+- **Solution**:
+    - **Main Branch**: Reset to the exact state of the last stable release (`V-1`). This branch is now protected and only updated when a new version is ready for the public.
+    - **Dev Branch**: Created as the primary workspace for all ongoing development. This allows for rapid iteration and testing without affecting the stability of the `main` branch.
+    - **Protected Branches**: Enabled GitHub branch protection on `main` to prevent accidental force-pushes or deletions.
+
+## 24. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.

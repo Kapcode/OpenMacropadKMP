@@ -2,6 +2,8 @@
 ![Screen-Shot-Of-Application](OpenMacropadImage.png)
 OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android device into a powerful, remote macropad for your desktop computer. It includes a full-featured desktop server application for creating, managing, and executing powerful automation macros.
 
+> **Development Note**: This project uses a `main` branch for stable releases and a `dev` branch for active development. Please ensure you are on the `dev` branch for the latest features and updates.
+
 ![Screen-Shot-Of-Application](MainActivityImage.png)
 
 ![Screen-Shot-Of-Application](ClientActivityImage.png)
