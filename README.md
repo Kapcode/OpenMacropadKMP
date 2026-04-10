@@ -21,6 +21,10 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
 *   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, hardware-backed keystore management, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
 *   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a dynamic multi-QR grid (up to 4x4) that synchronizes with the visible device list, allowing rapid setup of multiple mobile clients.
+*   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger.
+    *   **Single Slam**: Execute a primary macro or "OK" action.
+    *   **Double Slam**: Execute a secondary macro or "Cancel/Back" action with configurable timing thresholds.
+    *   **Context Aware**: Automatically acts as a QR scanner toggle during setup, then transitions to macro triggering once connected.
 *   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.

@@ -6,9 +6,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.atomic.AtomicLong
 
 class ConsoleViewModel {
-    private val _logMessages = MutableStateFlow<List<String>>(emptyList())
+    data class LogEntry(
+        val id: Long,
+        val level: LogLevel,
+        val message: String,
+        val timestamp: String,
+        val formatted: String
+    )
+
+    private val _logMessages = MutableStateFlow<List<LogEntry>>(emptyList())
     val logMessages = _logMessages.asStateFlow()
 
     private val _logLevel = MutableStateFlow(LogLevel.Info)
@@ -23,9 +32,10 @@ class ConsoleViewModel {
     private val _showLoggingWarning = MutableStateFlow(false)
     val showLoggingWarning = _showLoggingWarning.asStateFlow()
 
-    private val allLogs = mutableListOf<Triple<LogLevel, String, String>>() // Level, Message, Timestamp
+    private val allLogs = mutableListOf<LogEntry>()
     private val timestampFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
     private var logFile: File? = null
+    private val idGenerator = AtomicLong(0)
 
     fun setLogLevel(level: LogLevel) {
         _logLevel.value = level
@@ -68,12 +78,19 @@ class ConsoleViewModel {
 
     fun addLog(level: LogLevel, message: String) {
         val timestamp = LocalDateTime.now().format(timestampFormatter)
-        allLogs.add(Triple(level, message, timestamp))
-        
         val formattedLog = "[$timestamp] [$level] $message"
+        val entry = LogEntry(
+            id = idGenerator.incrementAndGet(),
+            level = level,
+            message = message,
+            timestamp = timestamp,
+            formatted = formattedLog
+        )
+        
+        allLogs.add(entry)
         
         if (level.ordinal >= _logLevel.value.ordinal) {
-            _logMessages.value = _logMessages.value + formattedLog
+            _logMessages.value = _logMessages.value + entry
         }
 
         if (_isLoggingToFile.value) {
@@ -82,8 +99,6 @@ class ConsoleViewModel {
     }
 
     private fun filterLogs() {
-        _logMessages.value = allLogs.filter { (level, _, _) ->
-            level.ordinal >= _logLevel.value.ordinal
-        }.map { (level, message, timestamp) -> "[$timestamp] [$level] $message" }
+        _logMessages.value = allLogs.filter { it.level.ordinal >= _logLevel.value.ordinal }
     }
 }

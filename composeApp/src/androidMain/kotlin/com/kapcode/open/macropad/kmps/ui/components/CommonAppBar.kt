@@ -8,6 +8,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
@@ -50,7 +51,8 @@ fun CommonAppBar(
     onZoomOut: () -> Unit = {},
     onCloseScanner: () -> Unit = {},
     isAutoZoomEnabled: Boolean = false,
-    onAutoZoomToggle: (Boolean) -> Unit = {}
+    onAutoZoomToggle: (Boolean) -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as Activity
@@ -148,6 +150,7 @@ fun CommonAppBar(
             title = { Text(title) },
             navigationIcon = navigationIcon,
             actions = {
+                actions()
                 Row(
                     modifier = Modifier.clickable { showGetTokensDialog = true },
                     verticalAlignment = Alignment.CenterVertically

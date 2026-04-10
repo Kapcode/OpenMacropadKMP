@@ -12,28 +12,46 @@ import io.ktor.server.websocket.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import switchdektoptocompose.logic.AppSettings
+import switchdektoptocompose.logic.TrustedDeviceManager
 import java.io.File
-import java.io.InputStream
-import java.security.KeyStore
+import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 class MacroKtorServer(
+    private val appSettings: AppSettings,
+    private val trustedDeviceManager: TrustedDeviceManager,
     private val onMessageReceived: (clientId: String, DataModel) -> Unit,
     private val onClientConnected: (clientId: String, clientName: String) -> Unit,
     private val onClientDisconnected: (clientId: String) -> Unit,
     private val onPairingRequest: (clientId: String, clientName: String) -> Unit
 ) {
+    private val logger = LoggerFactory.getLogger(MacroKtorServer::class.java)
     private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
-    private val connections = ConcurrentHashMap<String, WebSocketServerSession>()
-    private val pendingAuthChallenges = ConcurrentHashMap<String, String>() // clientId -> challenge
-    private val lastSeen = ConcurrentHashMap<String, Long>()
+    private val clients = ConcurrentHashMap<String, ConnectedClient>()
     private val temporaryTrustedDevices = java.util.Collections.synchronizedSet(mutableSetOf<String>())
-    private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    private var heartbeatJob: Job? = null
+    private val serverScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private var watchdogJob: Job? = null
+
+    private enum class AuthStatus {
+        CHALLENGE_PENDING,
+        AUTHENTICATED,
+        BANNED
+    }
+
+    private data class ConnectedClient(
+        val id: String,
+        val name: String,
+        val session: DefaultWebSocketServerSession,
+        var authStatus: AuthStatus,
+        var lastSeen: Long,
+        var pendingChallenge: String? = null,
+        var pongsSinceLastPing: Int = 0
+    )
 
     fun isRunning(): Boolean = server != null
 
@@ -43,38 +61,23 @@ class MacroKtorServer(
 
     fun isDeviceTrusted(clientId: String): Boolean {
         return temporaryTrustedDevices.contains(clientId) ||
-                switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)
+                trustedDeviceManager.isTrusted(clientId)
+    }
+
+    /**
+     * Explicitly marks a client as authenticated.
+     * Useful for manual pairing approval flow.
+     */
+    fun authenticateClient(clientId: String) {
+        clients[clientId]?.let { client ->
+            client.authStatus = AuthStatus.AUTHENTICATED
+            client.pendingChallenge = null
+            logger.info("Client {} manually promoted to AUTHENTICATED", clientId)
+        }
     }
 
     fun start(port: Int, isSecure: Boolean) {
         if (isRunning()) return
-
-        heartbeatJob = serverScope.launch {
-            while (isActive) {
-                delay(5000)
-                val now = System.currentTimeMillis()
-                val heartbeat = heartbeatMessage()
-                
-                connections.forEach { (id, session) ->
-                    val lastTime = lastSeen[id] ?: now
-                    if (now - lastTime > 15000) {
-                        launch {
-                            try {
-                                session.close(CloseReason(CloseReason.Codes.INTERNAL_ERROR, "Heartbeat timeout"))
-                            } catch (e: Exception) {}
-                        }
-                    } else {
-                        try {
-                            if (session.isActive) {
-                                session.send(Frame.Binary(true, heartbeat.toBytes()))
-                            }
-                        } catch (e: Exception) {
-                            // Session likely closed
-                        }
-                    }
-                }
-            }
-        }
 
         server = embeddedServer(Netty, configure = {
             if (isSecure) {
@@ -94,9 +97,6 @@ class MacroKtorServer(
                     this.port = port
                     this.host = "0.0.0.0"
                 }
-                // Note: password array is passed as a lambda to Ktor, 
-                // we should be careful about when to clear it if Ktor needs it later.
-                // However, Ktor's sslConnector usually uses these to initialize the SSL context.
             } else {
                 connector {
                     this.port = port
@@ -104,7 +104,15 @@ class MacroKtorServer(
                 }
             }
         }) {
-            install(WebSockets)
+            install(WebSockets) {
+                if (appSettings.enableWebsocketPings) {
+                    pingPeriod = 5.seconds
+                    timeout = 30.seconds
+                } else {
+                    pingPeriod = null
+                    timeout = 3600.seconds // Effectively disabled native timeout
+                }
+            }
             install(CallLogging) {
                 level = Level.INFO
                 filter { call -> call.request.path().startsWith("/") }
@@ -115,142 +123,221 @@ class MacroKtorServer(
                     val clientName = queryParams["name"] ?: queryParams["deviceName"] ?: "Unknown"
                     val clientId = queryParams["id"] ?: UUID.randomUUID().toString()
 
-                    connections[clientId] = this
-                    lastSeen[clientId] = System.currentTimeMillis()
+                    val client = ConnectedClient(
+                        id = clientId,
+                        name = clientName,
+                        session = this,
+                        authStatus = AuthStatus.CHALLENGE_PENDING,
+                        lastSeen = System.currentTimeMillis()
+                    )
+                    clients[clientId] = client
 
-                    if (switchdektoptocompose.logic.TrustedDeviceManager.isBanned(clientId)) {
-                        send(Frame.Binary(true, controlMessage(ControlCommand.BANNED).toBytes()))
-                        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Device is banned"))
-                        return@webSocket
-                    }
-
-                    if (isDeviceTrusted(clientId)) {
-                        // VULNERABILITY FIX 2: Challenge-Response Authentication
-                        // Instead of immediate trust, send a challenge.
-                        val challenge = UUID.randomUUID().toString()
-                        pendingAuthChallenges[clientId] = challenge
-                        send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("challenge" to challenge)).toBytes()))
-                    } else {
-                        if (!switchdektoptocompose.logic.AppSettings.allowNewConnections) {
-                            send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "New connections disabled")).toBytes()))
-                            close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "New connections are disabled"))
-                            return@webSocket
-                        }
-                        onPairingRequest(clientId, clientName)
-                        
-                        // Send current server's fingerprint to help client with pinning
-                        val workingDir = File(System.getProperty("user.home"), ".openmacropad")
-                        val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
-                        val fingerprint = KeystoreUtils.getCertificateFingerprint(keystore)
-                        send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("fingerprint" to fingerprint)).toBytes()))
-                    }
-
-                    try {
-                        for (frame in incoming) {
-                            if (frame is Frame.Binary) {
-                                try {
-                                    val dataModel = DataModel.fromBytes(frame.readBytes())
-                                    lastSeen[clientId] = System.currentTimeMillis()
-                                    
-                                    val isTrusted = isDeviceTrusted(clientId)
-                                    val isAuthenticated = isTrusted && !pendingAuthChallenges.containsKey(clientId)
-
-                                    if (isAuthenticated) {
-                                        onMessageReceived(clientId, dataModel)
-                                    } else {
-                                        // Handle Auth and Pairing while not fully authenticated
-                                        dataModel.handle(
-                                            onControl = onControl@{ cmd, params ->
-                                                when (cmd) {
-                                                    ControlCommand.AUTH_RESPONSE -> {
-                                                        val challenge = pendingAuthChallenges[clientId]
-                                                        val signature = params["signature"]
-                                                        val publicKeyBase64 = params["publicKey"]
-                                                        
-                                                        if (challenge != null && signature != null && publicKeyBase64 != null) {
-                                                            // SECURITY FIX: Ensure the public key matches the claimed clientId (fingerprint)
-                                                            // We use contains here because encoding or line endings might differ slightly between platforms
-                                                            if (!clientId.contains(publicKeyBase64.take(10)) && !publicKeyBase64.contains(clientId.take(10))) {
-                                                                println("Security Alert: Authentication attempted with mismatched public key for clientId $clientId")
-                                                                println("Expected match for: $clientId")
-                                                                println("Received: $publicKeyBase64")
-                                                                this@webSocket.launch {
-                                                                    this@webSocket.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
-                                                                }
-                                                                return@onControl
-                                                            }
-
-                                                            // Verify signature of the challenge using the public key
-                                                            val isValid = com.kapcode.open.macropad.kmps.IdentityManager.verifySignature(
-                                                                challenge.toByteArray(),
-                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(signature),
-                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKeyBase64)
-                                                            )
-                                                            
-                                                            if (isValid) {
-                                                                pendingAuthChallenges.remove(clientId)
-                                                                onClientConnected(clientId, clientName)
-                                                                this@webSocket.launch {
-                                                                    send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
-                                                                    // Explicitly send macros after approval
-                                                                    onMessageReceived(clientId, getMacrosRequest())
-                                                                }
-                                                            } else {
-                                                                this@webSocket.launch {
-                                                                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                    ControlCommand.PAIRING_RESPONSE -> {
-                                                        // Always allow pairing response
-                                                        onMessageReceived(clientId, dataModel)
-                                                    }
-                                                    else -> {}
-                                                }
-                                            }
-                                        )
-                                    }
-                                    
-                                    dataModel.handle(
-                                        onControl = { cmd, _ ->
-                                            if (cmd == ControlCommand.DISCONNECT) {
-                                                close(CloseReason(CloseReason.Codes.NORMAL, "Client requested disconnect"))
-                                            }
-                                        }
-                                    )
-                                } catch (e: Exception) {
-                                    e.printStackTrace()
-                                }
-                            } else {
-                                // Ignore all non-binary frames (like Frame.Text) to prevent auth bypass
-                                // and ensure all communication uses the secure DataModel format.
-                                if (frame !is Frame.Ping && frame !is Frame.Pong) {
-                                    println("Ignoring non-binary frame from $clientId: ${frame::class.simpleName}")
-                                }
-                            }
-                        }
-                    } catch (e: ClosedReceiveChannelException) {
-                        // Client disconnected
-                    } finally {
-                        connections.remove(clientId)
-                        lastSeen.remove(clientId)
-                        temporaryTrustedDevices.remove(clientId)
-                        onClientDisconnected(clientId)
-                    }
+                    handleSession(client)
                 }
             }
         }
         server?.start(wait = false)
+        logger.info("Server started on port {} (secure={})", port, isSecure)
+
+        // Mandatory application-level heartbeat watchdog
+        watchdogJob?.cancel()
+        watchdogJob = serverScope.launch {
+            var reportTimer = 0
+            while (isActive) {
+                delay(5000)
+                reportTimer += 5000
+                val now = System.currentTimeMillis()
+                val isReportIteration = reportTimer >= 30000
+
+                clients.forEach { (id, client) ->
+                    if (isReportIteration) {
+                        if (logger.isTraceEnabled) {
+                            logger.trace("ping---- echo verbose ({}/12 expected) pongs received from {}", client.pongsSinceLastPing, id)
+                        }
+                        client.pongsSinceLastPing = 0
+                    }
+
+                    // If no message (including heartbeat) received for 35 seconds, disconnect
+                    if (now - client.lastSeen > 35000) {
+                        logger.warn("Watchdog: Client {} timed out. Last seen {}ms ago.", id, now - client.lastSeen)
+                        launch { 
+                            try {
+                                disconnectClient(id, "Heartbeat timeout")
+                            } catch (e: Exception) {
+                                logger.error("Failed to disconnect timed-out client {}", id, e)
+                            }
+                        }
+                    }
+                }
+                if (isReportIteration) reportTimer = 0
+            }
+        }
+    }
+
+    private suspend fun DefaultWebSocketServerSession.handleSession(client: ConnectedClient) {
+        logger.info("New connection from {} ({})", client.name, client.id)
+
+        try {
+            if (trustedDeviceManager.isBanned(client.id)) {
+                client.authStatus = AuthStatus.BANNED
+                send(Frame.Binary(true, controlMessage(ControlCommand.BANNED).toBytes()))
+                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Device is banned"))
+                return
+            }
+
+            if (isDeviceTrusted(client.id)) {
+                val challenge = UUID.randomUUID().toString()
+                client.pendingChallenge = challenge
+                logger.info("Sending AUTH_CHALLENGE to trusted device {}", client.id)
+                send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("challenge" to challenge)).toBytes()))
+            } else {
+                if (!appSettings.allowNewConnections) {
+                    send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "New connections disabled")).toBytes()))
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "New connections are disabled"))
+                    return
+                }
+                logger.info("New pairing request for device {} ({})", client.name, client.id)
+                onPairingRequest(client.id, client.name)
+                
+                val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+                val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
+                val fingerprint = KeystoreUtils.getCertificateFingerprint(keystore)
+                send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("fingerprint" to fingerprint)).toBytes()))
+            }
+
+            for (frame in incoming) {
+                when (frame) {
+                    is Frame.Binary -> processBinaryFrame(client, frame.readBytes())
+                    is Frame.Text -> logger.warn("Ignoring text frame from {}", client.id)
+                    is Frame.Pong -> {
+                        client.pongsSinceLastPing++
+                        client.lastSeen = System.currentTimeMillis()
+                    }
+                    else -> { /* Ktor handles Ping/Pong */ }
+                }
+            }
+        } catch (e: ClosedReceiveChannelException) {
+            logger.info("Client disconnected: {}", client.id)
+        } catch (e: Exception) {
+            logger.error("Error in session for {}", client.id, e)
+        } finally {
+            clients.remove(client.id)
+            temporaryTrustedDevices.remove(client.id)
+            onClientDisconnected(client.id)
+        }
+    }
+
+    private suspend fun processBinaryFrame(client: ConnectedClient, bytes: ByteArray) {
+        try {
+            val dataModel = DataModel.fromBytes(bytes)
+            client.lastSeen = System.currentTimeMillis()
+
+            // Handle heartbeats immediately and reply to keep the client's watchdog happy
+            if (dataModel.messageType is MessageType.Heartbeat) {
+                client.pongsSinceLastPing++
+                try {
+                    client.session.send(Frame.Binary(true, heartbeatMessage().toBytes()))
+                } catch (e: Exception) {
+                    logger.error("Failed to send heartbeat reply to {}", client.id)
+                }
+                return 
+            }
+
+            // Auto-promote to AUTHENTICATED if the device is now trusted and we aren't waiting for a challenge.
+            // This handles the transition after manual pairing approval in the UI.
+            if (client.authStatus == AuthStatus.CHALLENGE_PENDING && client.pendingChallenge == null && isDeviceTrusted(client.id)) {
+                logger.info("Client {} automatically promoted to AUTHENTICATED (now trusted)", client.id)
+                client.authStatus = AuthStatus.AUTHENTICATED
+            }
+            
+            if (client.authStatus == AuthStatus.AUTHENTICATED) {
+                logger.info("Received message from authenticated client {}: {}", client.id, dataModel.messageType)
+                onMessageReceived(client.id, dataModel)
+            } else {
+                handleUnauthenticatedMessage(client, dataModel)
+            }
+            
+            dataModel.handle(
+                onControl = { cmd, _ ->
+                    if (cmd == ControlCommand.DISCONNECT) {
+                        client.session.close(CloseReason(CloseReason.Codes.NORMAL, "Client requested disconnect"))
+                    }
+                }
+            )
+        } catch (e: Exception) {
+            logger.error("Failed to process binary frame from {}", client.id, e)
+        }
+    }
+
+    private suspend fun handleUnauthenticatedMessage(client: ConnectedClient, dataModel: DataModel) {
+        dataModel.handle(
+            onControl = { cmd, params ->
+                when (cmd) {
+                    ControlCommand.AUTH_RESPONSE -> handleAuthResponse(client, params)
+                    ControlCommand.PAIRING_RESPONSE -> {
+                        logger.info("Forwarding PAIRING_RESPONSE from unauthenticated client {}", client.id)
+                        onMessageReceived(client.id, dataModel)
+                    }
+                    else -> logger.warn("Ignoring control command {} from unauthenticated client {}", cmd, client.id)
+                }
+            },
+            onCommand = { cmd, _ ->
+                logger.warn("Ignoring macro command {} from unauthenticated client {}", cmd, client.id)
+            },
+            onText = { text ->
+                logger.warn("Ignoring text message '{}' from unauthenticated client {}", text, client.id)
+            }
+        )
+    }
+
+    private suspend fun handleAuthResponse(client: ConnectedClient, params: Map<String, String>) {
+        val challenge = client.pendingChallenge
+        val signature = params["signature"]
+        val publicKeyBase64 = params["publicKey"]
+
+        if (challenge != null && signature != null && publicKeyBase64 != null) {
+            val hashedPublicKey = hashPublicKey(publicKeyBase64)
+            if (client.id != hashedPublicKey) {
+                logger.error("Security Alert: Identity mismatch for {}. Expected {}, received publicKey hash {}", client.id, client.id, hashedPublicKey)
+                client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
+                clients.remove(client.id)
+                return
+            }
+
+            val isValid = com.kapcode.open.macropad.kmps.IdentityManager.verifySignature(
+                challenge.toByteArray(),
+                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(signature),
+                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKeyBase64)
+            )
+
+            if (isValid) {
+                client.authStatus = AuthStatus.AUTHENTICATED
+                client.pendingChallenge = null
+                onClientConnected(client.id, client.name)
+                client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                onMessageReceived(client.id, getMacrosRequest())
+            } else {
+                logger.warn("Authentication failed for {}", client.id)
+                client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
+                clients.remove(client.id)
+            }
+        }
+    }
+
+    private fun hashPublicKey(publicKeyBase64: String): String {
+        val bytes = com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKeyBase64)
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(bytes)
+        return hash.joinToString("") { "%02x".format(it) }
     }
 
     fun stop() {
-        heartbeatJob?.cancel()
-        val currentConnections = connections.toMap()
+        watchdogJob?.cancel()
+        val currentClients = clients.values.toList()
         runBlocking {
-            currentConnections.forEach { (id, _) ->
+            currentClients.forEach { client ->
                 try {
-                    disconnectClient(id)
+                    disconnectClient(client.id)
                 } catch (e: Exception) {}
             }
         }
@@ -259,20 +346,21 @@ class MacroKtorServer(
     }
 
     suspend fun sendToClient(clientId: String, dataModel: DataModel) {
-        connections[clientId]?.send(Frame.Binary(true, dataModel.toBytes()))
+        clients[clientId]?.session?.send(Frame.Binary(true, dataModel.toBytes()))
     }
 
     suspend fun disconnectClient(clientId: String, reason: String = "Disconnected by server") {
-        try {
-            sendToClient(clientId, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)))
-            connections[clientId]?.close(CloseReason(CloseReason.Codes.NORMAL, reason))
-        } catch (e: Exception) {
-            // Already gone
+        clients[clientId]?.let { client ->
+            try {
+                client.session.send(Frame.Binary(true, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)).toBytes()))
+                client.session.close(CloseReason(CloseReason.Codes.NORMAL, reason))
+            } catch (e: Exception) {}
+            clients.remove(clientId)
         }
     }
 
     suspend fun sendToAll(dataModel: DataModel) {
         val bytes = dataModel.toBytes()
-        connections.values.forEach { it.send(Frame.Binary(true, bytes)) }
+        clients.values.forEach { it.session.send(Frame.Binary(true, bytes)) }
     }
 }

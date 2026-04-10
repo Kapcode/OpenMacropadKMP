@@ -16,7 +16,7 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     - The server issues a random UUID challenge upon connection.
     - The client signs this challenge using its platform-specific private EC key (secp256r1).
     - The server verifies the signature against the stored public key for that `clientId`. Trust is only granted if the signature is valid.
-    - **Security Fix (Identity Mismatch):** ✅ **Fixed**. The server now strictly verifies that the public key provided in the `AUTH_RESPONSE` exactly matches the `clientId` used to establish the session. This prevents an attacker from signing a challenge with their own key but claiming to be a different, trusted user.
+    - **Identity Mismatch Fix (SHA-256 Hash):** ✅ **Fixed**. The server now strictly verifies that the `clientId` provided in the connection URL is the **SHA-256 hash** of the public key provided in the `AUTH_RESPONSE`. This prevents an attacker from signing a challenge with their own key but claiming to be a different, trusted user, and replaces the previously weak 10-character prefix check with cryptographically strong equality.
 
 ### 3. Pairing Code Interception
 *   **Status:** ✅ **Fixed**

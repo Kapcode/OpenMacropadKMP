@@ -31,7 +31,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,16 +76,90 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.coroutines.cancellation.CancellationException
 
+import android.view.KeyEvent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.content.Context
+import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
+
 @ExperimentalGetImage
 @OptIn(ExperimentalMaterial3Api::class)
-class ClientActivity : ComponentActivity() {
+class ClientActivity : ComponentActivity(), SensorEventListener {
 
     private var client: MacroKtorClient? = null
     private val activityScope = CoroutineScope(Dispatchers.Main.immediate)
     private var clientJob: Job? = null
     private val macros = mutableStateListOf<String>()
     private val settingsViewModel = SettingsViewModel()
+    private lateinit var settingsStorage: SettingsStorage
     private val MAX_RETRIES = 5
+
+    private var sensorManager: SensorManager? = null
+    private var proximitySensor: Sensor? = null
+    private var onOkayPressed: (() -> Unit)? = null
+    private var onCancelPressed: (() -> Unit)? = null
+    private var onSlamTriggered: ((Boolean) -> Unit)? = null
+    private var lastProximityState: Boolean? = null // null = unknown, true = covered, false = uncovered
+    private var lastTriggerTime = 0L
+    private var triggerPending = false
+    private var pendingTriggerType: String? = null // "BUTTON" or "PROXIMITY"
+    private var lastToast: Toast? = null
+
+    private fun showSlamToast(message: String) {
+        lastToast?.cancel()
+        lastToast = Toast.makeText(this, message, Toast.LENGTH_SHORT)
+        lastToast?.show()
+    }
+
+    private fun handleSlamFire(isDouble: Boolean) {
+        onSlamTriggered?.invoke(isDouble)
+        
+        if (isDouble) {
+            val doubleMacro = settingsViewModel.slamFireDoubleSelectedMacro.value
+            if (doubleMacro != null) {
+                sendMacro(doubleMacro)
+                showSlamToast("Double Slam: $doubleMacro")
+            } else {
+                // Default negative action: Cancel/Back
+                onCancelPressed?.invoke() ?: onBackPressedDispatcher.onBackPressed()
+                showSlamToast("Double Slam: Cancel")
+            }
+        } else {
+            val singleMacro = settingsViewModel.slamFireSelectedMacro.value
+            if (singleMacro != null) {
+                sendMacro(singleMacro)
+                showSlamToast("Slam Fire: $singleMacro")
+            } else {
+                onOkayPressed?.invoke()
+                showSlamToast("Slam Fire Triggered")
+            }
+        }
+    }
+
+    private fun processTrigger() {
+        val now = System.currentTimeMillis()
+        val threshold = settingsViewModel.slamFireDoubleThreshold.value
+        
+        if (now - lastTriggerTime < threshold) {
+            // Double tap detected
+            triggerPending = false
+            handleSlamFire(true)
+            lastTriggerTime = 0 // Reset to prevent triple tap as another double
+        } else {
+            // Potential single tap, wait to see if it's a double
+            triggerPending = true
+            lastTriggerTime = now
+            activityScope.launch {
+                delay(threshold + 10)
+                if (triggerPending && System.currentTimeMillis() - lastTriggerTime >= threshold) {
+                    triggerPending = false
+                    handleSlamFire(false)
+                }
+            }
+        }
+    }
 
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -98,6 +174,9 @@ class ClientActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
 
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
         val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Android Device"
@@ -114,6 +193,9 @@ class ClientActivity : ComponentActivity() {
         }
 
         Log.d("ClientActivity", "Targeting $ipAddress:$port (Secure: $isSecure)")
+
+        settingsStorage = SettingsStorage(this)
+        settingsStorage.bindViewModel(settingsViewModel, activityScope)
 
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
@@ -172,6 +254,11 @@ class ClientActivity : ComponentActivity() {
                     showQrScanner = showQrScanner,
                     onQrScannerToggle = { show ->
                         if (show) {
+                            // BLOCK QR if we are already connected/have macros
+                            if (macros.isNotEmpty()) {
+                                Log.d("ClientActivity", "Ignoring QR toggle: Already connected with macros.")
+                                return@ClientScreen
+                            }
                             requestPermissionLauncher.launch(android.Manifest.permission.CAMERA)
                         }
                         showQrScanner = show
@@ -184,15 +271,28 @@ class ClientActivity : ComponentActivity() {
                     },
                     onMacroClick = ::sendMacro,
                     onPairingCodeEntered = { code ->
-                        Log.d("ClientActivity", "Submitting pairing code: $code")
-                        activityScope.launch {
-                            val msg = controlMessage(ControlCommand.PAIRING_RESPONSE, mapOf("code" to code))
-                            client?.send(msg.toBytes())
-                        }
+                        submitPairingCode(code)
                     },
-                    onBackToMain = { finish() }
+                    onBackToMain = { finish() },
+                    onOkayTriggerSet = { trigger ->
+                        onOkayPressed = trigger
+                    },
+                    onCancelTriggerSet = { trigger ->
+                        onCancelPressed = trigger
+                    },
+                    onSlamTriggerSet = { trigger ->
+                        onSlamTriggered = trigger
+                    }
                 )
             }
+        }
+    }
+
+    private fun submitPairingCode(code: String) {
+        Log.d("ClientActivity", "Submitting pairing code: $code")
+        activityScope.launch {
+            val msg = controlMessage(ControlCommand.PAIRING_RESPONSE, mapOf("code" to code))
+            client?.send(msg.toBytes())
         }
     }
 
@@ -437,6 +537,60 @@ class ClientActivity : ComponentActivity() {
         }
     }
 
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (settingsViewModel.slamFireEnabled.value) {
+            val trigger = settingsViewModel.slamFireTrigger.value
+            val isMatch = when (trigger) {
+                SlamFireTrigger.VolumeDown -> keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+                SlamFireTrigger.VolumeUp -> keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                SlamFireTrigger.Power -> keyCode == KeyEvent.KEYCODE_POWER
+                SlamFireTrigger.Bixby -> keyCode == 1082
+                SlamFireTrigger.Assistant -> keyCode == KeyEvent.KEYCODE_ASSIST || keyCode == KeyEvent.KEYCODE_VOICE_ASSIST
+                else -> false
+            }
+            if (isMatch) {
+                processTrigger()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_PROXIMITY && settingsViewModel.slamFireEnabled.value) {
+            val distance = event.values[0]
+            val maxRange = event.sensor.maximumRange
+            
+            val threshold = if (maxRange > 5f) 5f else maxRange / 2f
+            val isCovered = distance < threshold
+            
+            if (isCovered != lastProximityState) {
+                lastProximityState = isCovered
+                val trigger = settingsViewModel.slamFireTrigger.value
+                val isTriggered = (trigger == SlamFireTrigger.ProximityCovered && isCovered) || 
+                                 (trigger == SlamFireTrigger.ProximityUncovered && !isCovered)
+                
+                if (isTriggered) {
+                    processTrigger()
+                }
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+
+    override fun onResume() {
+        super.onResume()
+        proximitySensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        sensorManager?.unregisterListener(this)
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         clientJob?.cancel()
@@ -656,6 +810,9 @@ fun ClientScreen(
     onMacroClick: (String) -> Unit,
     onPairingCodeEntered: (String) -> Unit,
     onBackToMain: () -> Unit,
+    onOkayTriggerSet: (() -> Unit) -> Unit = {},
+    onCancelTriggerSet: (() -> Unit) -> Unit = {},
+    onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
     showQrScanner: Boolean = false,
     onQrScannerToggle: (Boolean) -> Unit = {}
 ) {
@@ -664,6 +821,42 @@ fun ClientScreen(
     var isAutoZoomEnabled by remember { mutableStateOf(true) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(onBackToMain) {
+        onCancelTriggerSet(onBackToMain)
+    }
+
+    LaunchedEffect(macros.isEmpty()) {
+        onSlamTriggerSet { isDouble ->
+            if (macros.isEmpty() && !showQrScanner) { // Only toggle QR if not in macro grid AND not already in QR mode
+                if (!isDouble) {
+                    onQrScannerToggle(true)
+                }
+            } else if (showQrScanner) {
+                // If scanner is ALREADY showing, double slam can turn it off
+                if (isDouble) {
+                    onQrScannerToggle(false)
+                }
+            }
+        }
+    }
+
+    val slamFireEnabled by settingsViewModel.slamFireEnabled.collectAsState()
+    val slamFireSelectedMacro by settingsViewModel.slamFireSelectedMacro.collectAsState()
+    val slamFireDoubleSelectedMacro by settingsViewModel.slamFireDoubleSelectedMacro.collectAsState()
+    
+    val onOkayAction = {
+        if (showQrScanner) {
+            // No obvious "Okay" for scanner, maybe do nothing or toggle?
+        } else if (connectionStatus == "Pending Approval") {
+            // Could auto-submit code if length is 6? 
+            // For now, let's just use it as a generic "Okay"
+        }
+    }
+
+    LaunchedEffect(connectionStatus, showQrScanner) {
+        onOkayTriggerSet(onOkayAction)
+    }
 
     BackHandler(enabled = showSettings) {
         showSettings = false
@@ -711,6 +904,93 @@ fun ClientScreen(
                             Icon(Icons.Default.Menu, contentDescription = "Macros")
                         }
                     }
+                },
+                actions = {
+                    if (!showSettings && macros.isNotEmpty() && slamFireEnabled) {
+                        var expandedSingle by remember { mutableStateOf(false) }
+                        var expandedDouble by remember { mutableStateOf(false) }
+
+                        // Scrollable container for Slam Fire dropdowns
+                        Row(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .horizontalScroll(rememberScrollState()),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            // Single Slam Dropdown
+                            Box {
+                                TextButton(
+                                    onClick = { expandedSingle = true },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        text = slamFireSelectedMacro ?: "None",
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                DropdownMenu(expanded = expandedSingle, onDismissRequest = { expandedSingle = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text("None (OK)") },
+                                        onClick = {
+                                            settingsViewModel.setSlamFireSelectedMacro(null)
+                                            expandedSingle = false
+                                        }
+                                    )
+                                    macros.forEach { macro ->
+                                        DropdownMenuItem(
+                                            text = { Text(macro) },
+                                            onClick = {
+                                                settingsViewModel.setSlamFireSelectedMacro(macro)
+                                                expandedSingle = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Double Slam Dropdown
+                            Box {
+                                TextButton(
+                                    onClick = { expandedDouble = true },
+                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                ) {
+                                    Icon(Icons.Default.DoubleArrow, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(2.dp))
+                                    Text(
+                                        text = slamFireDoubleSelectedMacro ?: "Cancel",
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                DropdownMenu(expanded = expandedDouble, onDismissRequest = { expandedDouble = false }) {
+                                    DropdownMenuItem(
+                                        text = { Text("None (Cancel)") },
+                                        onClick = {
+                                            settingsViewModel.setSlamFireDoubleSelectedMacro(null)
+                                            expandedDouble = false
+                                        }
+                                    )
+                                    macros.forEach { macro ->
+                                        DropdownMenuItem(
+                                            text = { Text(macro) },
+                                            onClick = {
+                                                settingsViewModel.setSlamFireDoubleSelectedMacro(macro)
+                                                expandedDouble = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             )
         },
@@ -750,7 +1030,7 @@ fun ClientScreen(
                         .padding(innerPadding),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (macros.isNotEmpty()) {
+                    if (macros.isNotEmpty() && !showQrScanner) {
                         MacroButtonsScreen(
                             macros = macros, 
                             executingMacros = executingMacros,

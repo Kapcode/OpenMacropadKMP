@@ -96,5 +96,65 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        val slamFireEnabled by viewModel.slamFireEnabled.collectAsState()
+        val slamFireTrigger by viewModel.slamFireTrigger.collectAsState()
+        
+        Text("Slam Fire", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Slam Fire Mode", style = MaterialTheme.typography.bodyLarge)
+                Text("Trigger an 'Okay' action via hardware interaction.", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(
+                checked = slamFireEnabled,
+                onCheckedChange = { viewModel.setSlamFireEnabled(it) }
+            )
+        }
+
+        if (slamFireEnabled) {
+            Column(Modifier.selectableGroup().padding(start = 16.dp)) {
+                SlamFireTrigger.entries.forEach { trigger ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .selectable(
+                                selected = (trigger == slamFireTrigger),
+                                onClick = { viewModel.setSlamFireTrigger(trigger) },
+                                role = Role.RadioButton
+                            )
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = (trigger == slamFireTrigger),
+                            onClick = null
+                        )
+                        Text(
+                            text = when(trigger) {
+                                SlamFireTrigger.VolumeDown -> "Volume Down"
+                                SlamFireTrigger.VolumeUp -> "Volume Up"
+                                SlamFireTrigger.Power -> "Power Button (Limited Support)"
+                                SlamFireTrigger.Bixby -> "Bixby / Side Button"
+                                SlamFireTrigger.Assistant -> "Assistant Button"
+                                SlamFireTrigger.ProximityCovered -> "Proximity Sensor (Covered)"
+                                SlamFireTrigger.ProximityUncovered -> "Proximity Sensor (Uncovered)"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(start = 16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
     }
 }

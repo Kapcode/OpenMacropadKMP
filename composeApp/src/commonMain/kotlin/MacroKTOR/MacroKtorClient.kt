@@ -1,6 +1,7 @@
 package MacroKTOR
 
 import com.kapcode.open.macropad.kmps.network.sockets.model.handle
+import com.kapcode.open.macropad.kmps.utils.HashUtils
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -31,7 +32,10 @@ class MacroKtorClient(
     suspend fun connect(deviceName: String) {
         val identityManager = com.kapcode.open.macropad.kmps.IdentityManager()
         val publicKey = identityManager.getIdentityPublicKey()
-        val fingerprint = com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey)
+        
+        // Calculate the fingerprint as a SHA-256 hash (hex) to match server's new security requirements
+        val digest = HashUtils.sha256(publicKey)
+        val fingerprint = digest.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
         println("MacroKtorClient: Connecting to $host:$port (Secure: $isSecure) with id: $fingerprint")
 

@@ -73,6 +73,11 @@ fun App(
             ConnectionItem(
                 name = server.name,
                 ipAddressPort = server.address,
+                isDefault = server.isDefault,
+                onSetDefault = { 
+                    // This will be handled by the caller to update storage and state
+                    onConnectClick(server.copy(name = "SET_DEFAULT"), deviceName)
+                },
                 onClick = { onConnectClick(server, deviceName) }
             )
         }

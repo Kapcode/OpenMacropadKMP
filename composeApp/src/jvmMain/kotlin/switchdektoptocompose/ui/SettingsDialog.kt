@@ -46,6 +46,7 @@ fun SettingsDialog(
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val fleetModeEnabled by settingsViewModel.fleetModeEnabled.collectAsState()
+    val enableWebsocketPings by settingsViewModel.enableWebsocketPings.collectAsState()
     val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
     val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
     val multiQrEnabled by sharedSettingsViewModel.multiQrEnabled.collectAsState()
@@ -276,6 +277,33 @@ fun SettingsDialog(
                                 Switch(
                                     checked = allowOnceOnly,
                                     onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("WebSocket Protocol Heartbeats", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = enableWebsocketPings,
+                                    onCheckedChange = { settingsViewModel.setEnableWebsocketPings(it) }
                                 )
                             }
                         }

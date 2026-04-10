@@ -1,6 +1,8 @@
 package switchdektoptocompose.viewmodel
 
 import MacroKTOR.MacroKtorServer
+import switchdektoptocompose.logic.AppSettings
+import switchdektoptocompose.logic.TrustedDeviceManager
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +50,8 @@ class DesktopViewModel(
     val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
     private val server = MacroKtorServer(
+        appSettings = AppSettings,
+        trustedDeviceManager = TrustedDeviceManager,
         onMessageReceived = { clientId, dataModel -> onDataReceived(clientId, dataModel) },
         onClientConnected = ::onClientConnected,
         onClientDisconnected = ::onClientDisconnected,
@@ -223,6 +227,8 @@ class DesktopViewModel(
         } else {
             server.approveTemporaryDevice(clientId)
         }
+        
+        server.authenticateClient(clientId)
         
         _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
         onClientConnected(clientId, clientName)

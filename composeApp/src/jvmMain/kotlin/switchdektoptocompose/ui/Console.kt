@@ -1,10 +1,13 @@
 package switchdektoptocompose.ui
 
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
@@ -13,7 +16,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isPrimaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import switchdektoptocompose.model.LogLevel
 import switchdektoptocompose.viewmodel.ConsoleViewModel
 
@@ -28,86 +40,143 @@ fun Console(
     
     var menuExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    var containerHeight by remember { mutableStateOf(0) }
+    var autoScrollJob by remember { mutableStateOf<Job?>(null) }
+    var isDragging by remember { mutableStateOf(false) }
 
     LaunchedEffect(logMessages.size) {
-        if (isAutoScrollEnabled && logMessages.isNotEmpty()) {
-            listState.animateScrollToItem(logMessages.size - 1)
+        // Only auto-scroll to bottom if enabled and user is NOT currently selecting/dragging
+        if (isAutoScrollEnabled && logMessages.isNotEmpty() && !isDragging) {
+            val lastVisibleIndex = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
+            if (lastVisibleIndex >= logMessages.size - 5 || logMessages.size < 10) {
+                listState.animateScrollToItem(logMessages.size - 1)
+            }
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        // Toolbar
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Log level selector
-            Box {
-                OutlinedButton(onClick = { menuExpanded = true }) {
-                    Text("Level: ${selectedLogLevel.name}")
+    // Wrap the entire content in SelectionContainer so that dragging into the toolbar
+    // doesn't cause the selection to lose its context or "cutoff".
+    SelectionContainer {
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Toolbar
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Log level selector
+                Box {
+                    OutlinedButton(onClick = { menuExpanded = true }) {
+                        Text("Level: ${selectedLogLevel.name}")
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        LogLevel.entries.forEach { level ->
+                            DropdownMenuItem(
+                                text = { Text(level.name) },
+                                onClick = {
+                                    viewModel.setLogLevel(level)
+                                    menuExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    LogLevel.entries.forEach { level ->
-                        DropdownMenuItem(
-                            text = { Text(level.name) },
-                            onClick = {
-                                viewModel.setLogLevel(level)
-                                menuExpanded = false
+
+                // Auto-scroll toggle
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(
+                        checked = isAutoScrollEnabled,
+                        onCheckedChange = { viewModel.setAutoScroll(it) }
+                    )
+                    Text("Auto-scroll", style = MaterialTheme.typography.bodySmall)
+                }
+
+                Spacer(Modifier.weight(1f))
+
+                // Log to file toggle
+                FilterChip(
+                    selected = isLoggingToFile,
+                    onClick = { viewModel.toggleLoggingToFile() },
+                    label = { Text("Log to File") },
+                    leadingIcon = if (isLoggingToFile) {
+                        { Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp)) }
+                    } else null
+                )
+            }
+
+            // Log messages
+            Box(modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .onGloballyPositioned { containerHeight = it.size.height }
+                .pointerInput(Unit) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            // Use Main pass (bubble) to detect drag state without stealing events from children
+                            val event = awaitPointerEvent(PointerEventPass.Main)
+                            isDragging = event.buttons.isPrimaryPressed
+                            
+                            if (isDragging) {
+                                val y = event.changes.first().position.y
+                                // Scroll if cursor is outside the log area bounds
+                                val scrollAmount = when {
+                                    y < 0f -> (y / 2).coerceIn(-150f, -20f) 
+                                    containerHeight > 0 && y > containerHeight -> ((y - containerHeight) / 2).coerceIn(20f, 150f)
+                                    else -> 0f
+                                }
+
+                                if (scrollAmount != 0f) {
+                                    if (autoScrollJob == null || autoScrollJob?.isActive != true) {
+                                        autoScrollJob = scope.launch {
+                                            while (isActive) {
+                                                listState.scrollBy(scrollAmount)
+                                                delay(50)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    autoScrollJob?.cancel()
+                                    autoScrollJob = null
+                                }
+                            } else {
+                                autoScrollJob?.cancel()
+                                autoScrollJob = null
                             }
+                        }
+                    }
+                }
+            ) {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface),
+                    contentPadding = PaddingValues(bottom = 8.dp)
+                ) {
+                    items(logMessages, key = { it.id }) { entry ->
+                        val color = when {
+                            entry.formatted.contains("[Error]") -> MaterialTheme.colorScheme.error
+                            entry.formatted.contains("[Warn]") -> Color(0xFFFFA500) // Orange
+                            entry.formatted.contains("[Info]") -> MaterialTheme.colorScheme.onSurface
+                            entry.formatted.contains("[Debug]") -> Color.Gray
+                            else -> MaterialTheme.colorScheme.onSurface
+                        }
+                        
+                        Text(
+                            text = entry.formatted,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = color
                         )
                     }
                 }
-            }
-
-            // Auto-scroll toggle
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(
-                    checked = isAutoScrollEnabled,
-                    onCheckedChange = { viewModel.setAutoScroll(it) }
+                
+                VerticalScrollbar(
+                    modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                    adapter = rememberScrollbarAdapter(listState)
                 )
-                Text("Auto-scroll", style = MaterialTheme.typography.bodySmall)
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            // Log to file toggle
-            FilterChip(
-                selected = isLoggingToFile,
-                onClick = { viewModel.toggleLoggingToFile() },
-                label = { Text("Log to File") },
-                leadingIcon = if (isLoggingToFile) {
-                    { Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp)) }
-                } else null
-            )
-        }
-
-        // Log messages
-        SelectionContainer {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surface),
-                contentPadding = PaddingValues(bottom = 200.dp)
-            ) {
-                items(logMessages) { message ->
-                    val color = when {
-                        message.contains("[Error]") -> MaterialTheme.colorScheme.error
-                        message.contains("[Warn]") -> Color(0xFFFFA500) // Orange
-                        message.contains("[Info]") -> MaterialTheme.colorScheme.onSurface
-                        message.contains("[Debug]") -> Color.Gray
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
-                    
-                    Text(
-                        text = message,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = color
-                    )
-                }
             }
         }
     }

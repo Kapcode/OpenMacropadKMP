@@ -4,13 +4,10 @@ This document serves as a technical log for the challenges encountered and solut
 
 ## Critical Technical Challenges & Solutions
 
-### 1. Ktor 2.x to 3.x Migration (Multiplatform)
+### 1. Ktor 2.x to 3.x Migration & Server Refactor
 
 **Problem:**
-Upgrading from Ktor 2.3.x to 3.0.x in a Kotlin Multiplatform project introduced severe dependency resolution conflicts and compilation errors.
-*   **Version Mismatch:** The compiler reported `actual type is Duration, but Long was expected` for the `server.stop()` function.
-*   **Classpath Pollution:** Legacy Ktor 2 artifacts (specifically `ktor-server-host-common`) were being transitively included, forcing old method signatures even when the version catalog was set to 3.0.x.
-*   **Plugin Conflicts:** The `composeHotReload` plugin was incompatible with Kotlin 2.0 compiler flags, causing `Unsupported plugin option` crashes.
+Upgrading from Ktor 2.3.x to 3.0.x in a Kotlin Multiplatform project introduced severe dependency resolution conflicts and compilation errors. Additionally, the initial `MacroKtorServer` implementation was tightly coupled and lacked robust state management.
 
 **Solution:**
 *   **Nuclear Alignment:** Aligned the project to a stable "Golden Trio": **Kotlin 2.1.0**, **Compose Multiplatform 1.7.3**, and **Ktor 3.0.3**.
@@ -18,6 +15,9 @@ Upgrading from Ktor 2.3.x to 3.0.x in a Kotlin Multiplatform project introduced 
 *   **Explicit JVM Artifacts:** Switched to explicit `-jvm` suffixes for Ktor server dependencies in the Desktop target to remove resolution ambiguity.
 *   **Forced Resolution:** Used `resolutionStrategy.force` to ensure Ktor 3.0.3 and Coroutines 1.10.1 were used globally, preventing silent downgrades.
 *   **Duration API:** Migrated all time-based logic (WebSockets, server timeouts) to use the native `kotlin.time.Duration` API. *Note: As of 3.0.x, `EmbeddedServer.stop()` still requires `Long` milliseconds.*
+*   **Architecture Refactor:** Re-architected `MacroKtorServer` to use a single `ConnectedClient` state object and `ConcurrentHashMap`. Extracted protocol handling into specialized functions (`handleAuthResponse`, `handleUnauthenticatedMessage`, etc.) and implemented Dependency Injection for `AppSettings` and `TrustedDeviceManager`.
+*   **Native Heartbeats:** Replaced manual `heartbeatJob` loops with Ktor's native WebSocket `pingPeriod` (15s) and `timeout` (30s) configurations, reducing overhead and improving reliability.
+
 
 ### 2. JNativeHook and Swing Threading
 
@@ -128,8 +128,9 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Solution**: Implemented **Cryptographic Challenge-Response** authentication.
     - The server issues a random UUID challenge upon connection.
     - The client signs this challenge using its platform-specific private EC key (Hardware-backed on Android, password-protected PKCS12 on JVM).
-    - The server verifies the signature against the stored public key for that `clientId`.
-    - **Identity Mismatch Fix**: ✅ **Fixed**. The server now strictly verifies that the public key provided in the `AUTH_RESPONSE` exactly matches the `clientId` used to establish the session. This prevents an attacker from signing a challenge with their own key while claiming to be a different, trusted user.
+    - **Identity Fingerprinting**: The `clientId` is now the full SHA-256 hex hash of the client's public key.
+    - **Strict Verification**: The server strictly verifies that the public key provided in `AUTH_RESPONSE` matches the `clientId` used to establish the session.
+
 
 ### Challenge: Pairing Code Interception (Vulnerability 3)
 - **Problem**: The 6-digit verification code was sent over the network to the client, allowing a passive attacker to see it.
@@ -300,6 +301,11 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
 - [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to ~1.2s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
 - [x] **UI Feedback**: Implemented `BlinkingCursor` and `ThreeDotsLoading` with `rememberInfiniteTransition` for reliable feedback during startup and discovery.
+- [x] **Slam Fire Trigger Logic**: Implemented a "Slam Fire" hardware trigger system using the Android Proximity Sensor.
+    - **Double Slam Detection**: Uses a 300ms (configurable) threshold to distinguish between single and double triggers.
+    - **Contextual UI Control**: Integrated with the QR scanner (Single=Open, Double=Close) during the discovery phase.
+    - **Persistence**: Built a `SettingsStorage` handler using `SharedPreferences` to persist Slam Fire bindings, thresholds, and overall app state across activity restarts.
+    - **Toast Management**: Centralized `showSlamToast` to prevent UI "pileup" when triggering hardware inputs rapidly.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
 - [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
 

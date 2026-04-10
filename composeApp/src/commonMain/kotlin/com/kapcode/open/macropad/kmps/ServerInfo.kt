@@ -4,5 +4,6 @@ data class ServerInfo(
     val name: String,
     val address: String, // e.g., "192.168.1.10:8443"
     val isSecure: Boolean,
-    val fingerprint: String? = null
+    val fingerprint: String? = null,
+    val isDefault: Boolean = false
 )

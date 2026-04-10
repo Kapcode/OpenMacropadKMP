@@ -22,6 +22,7 @@ object AppSettings {
     private const val ALLOW_NEW_CONNECTIONS_KEY = "allowNewConnections"
     private const val ALLOW_ONCE_ONLY_KEY = "allowOnceOnly"
     private const val FLEET_MODE_ENABLED_KEY = "fleetModeEnabled"
+    private const val ENABLE_WEBSOCKET_PINGS_KEY = "enableWebsocketPings"
 
     init {
         if (!configDir.exists()) {
@@ -124,6 +125,13 @@ object AppSettings {
         get() = properties.getProperty(FLEET_MODE_ENABLED_KEY, "false").toBoolean()
         set(value) {
             properties.setProperty(FLEET_MODE_ENABLED_KEY, value.toString())
+            save()
+        }
+
+    var enableWebsocketPings: Boolean
+        get() = properties.getProperty(ENABLE_WEBSOCKET_PINGS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ENABLE_WEBSOCKET_PINGS_KEY, value.toString())
             save()
         }
 

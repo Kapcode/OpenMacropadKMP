@@ -106,8 +106,8 @@ fun DesktopApp(
     LaunchedEffect(logs) {
         if (logs.isNotEmpty()) {
             val lastLog = logs.last()
-            if (lastLog.contains("MACRO FINISHED") || lastLog.contains("MACRO CANCELLED") || lastLog.contains("E-STOP") || lastLog.contains("DIALOG CLOSED")) {
-                 snackbarHostState.showSnackbar(lastLog)
+            if (lastLog.formatted.contains("MACRO FINISHED") || lastLog.formatted.contains("MACRO CANCELLED") || lastLog.formatted.contains("E-STOP") || lastLog.formatted.contains("DIALOG CLOSED")) {
+                 snackbarHostState.showSnackbar(lastLog.formatted)
             }
         }
     }

@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,13 +23,15 @@ fun ConnectionItem(
     name: String,
     ipAddressPort: String,
     modifier: Modifier = Modifier,
-    onClick: (String) -> Unit = {} // Added onClick parameter
+    isDefault: Boolean = false,
+    onSetDefault: () -> Unit = {},
+    onClick: (String) -> Unit = {}
 ) {
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(8.dp)
-            .clickable { onClick(ipAddressPort) }, // Make the card clickable and pass the IP:Port
+            .clickable { onClick(ipAddressPort) },
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
@@ -37,7 +39,7 @@ fun ConnectionItem(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = name,
                     style = MaterialTheme.typography.titleMedium
@@ -50,9 +52,12 @@ fun ConnectionItem(
                 )
             }
             
-            // Placeholder for image buttons
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                // Image buttons will go here later
+            IconButton(onClick = onSetDefault) {
+                Icon(
+                    imageVector = if (isDefault) Icons.Default.Star else Icons.Outlined.StarOutline,
+                    contentDescription = if (isDefault) "Remove Default" else "Set as Default",
+                    tint = if (isDefault) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

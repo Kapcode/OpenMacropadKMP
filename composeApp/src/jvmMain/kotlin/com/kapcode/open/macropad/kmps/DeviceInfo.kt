@@ -14,11 +14,11 @@ actual object DeviceInfo {
     actual val uniqueId: String
         get() {
             return try {
-                // Use a combination of hostname and username to create a stable, unique ID for the JVM
+                // Hash it to make it anonymous while remaining unique and stable.
                 val idString = name + System.getProperty("user.name")
                 val digest = MessageDigest.getInstance("SHA-256")
                 val hash = digest.digest(idString.toByteArray())
-                hash.joinToString("") { "%02x".format(it) }.take(4)
+                hash.joinToString("") { "%02x".format(it) }
             } catch (e: Exception) {
                 "jvm"
             }

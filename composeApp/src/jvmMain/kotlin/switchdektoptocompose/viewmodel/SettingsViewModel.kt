@@ -44,6 +44,9 @@ class SettingsViewModel {
     private val _fleetModeEnabled = MutableStateFlow(AppSettings.fleetModeEnabled)
     val fleetModeEnabled = _fleetModeEnabled.asStateFlow()
 
+    private val _enableWebsocketPings = MutableStateFlow(AppSettings.enableWebsocketPings)
+    val enableWebsocketPings = _enableWebsocketPings.asStateFlow()
+
     private val _multiQrEnabled = MutableStateFlow(false) // Default to false
     val multiQrEnabled = _multiQrEnabled.asStateFlow()
 
@@ -127,6 +130,11 @@ class SettingsViewModel {
     fun setFleetModeEnabled(enabled: Boolean) {
         _fleetModeEnabled.value = enabled
         AppSettings.fleetModeEnabled = enabled
+    }
+
+    fun setEnableWebsocketPings(enabled: Boolean) {
+        _enableWebsocketPings.value = enabled
+        AppSettings.enableWebsocketPings = enabled
     }
 
     fun setMultiQrEnabled(enabled: Boolean) {

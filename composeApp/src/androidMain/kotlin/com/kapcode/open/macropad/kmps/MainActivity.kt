@@ -61,18 +61,38 @@ import openmacropadkmp.composeapp.generated.resources.Res
 import openmacropadkmp.composeapp.generated.resources.macropadIcon512
 import org.jetbrains.compose.resources.painterResource
 
+import android.view.KeyEvent
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.content.Context
+import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
+
 const val TAG = "MainActivity"
 
 @OptIn(ExperimentalMaterial3Api::class)
-class MainActivity : ComponentActivity() {
+class MainActivity : ComponentActivity(), SensorEventListener {
 
     private val clientDiscovery by lazy { ClientDiscovery() }
-    private val settingsViewModel by lazy { SettingsViewModel() }
+    private val settingsViewModel = SettingsViewModel()
+    private lateinit var settingsStorage: SettingsStorage
+    private var onOkayPressed: (() -> Unit)? = null
+    
+    private var sensorManager: SensorManager? = null
+    private var proximitySensor: Sensor? = null
+    private var lastProximityState: Boolean? = null // null = unknown, true = covered, false = uncovered
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+
+        settingsStorage = SettingsStorage(this)
+        settingsStorage.bindViewModel(settingsViewModel, lifecycleScope)
         
         setContent {
             val splashScreenVisible = remember { mutableStateOf(true) }
@@ -115,23 +135,73 @@ class MainActivity : ComponentActivity() {
                         settingsViewModel = settingsViewModel,
                         clientDiscovery = clientDiscovery,
                         onLaunchClient = { serverInfo: ServerInfo, deviceName: String ->
-                            Log.d(
-                                TAG,
-                                "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})"
-                            )
-                            val intent = Intent(this@MainActivity, ClientActivity::class.java).apply {
-                                putExtra("SERVER_ADDRESS", serverInfo.address)
-                                putExtra("DEVICE_NAME", deviceName)
-                                putExtra("IS_SECURE", serverInfo.isSecure)
-                                putExtra("SERVER_FINGERPRINT", serverInfo.fingerprint)
-                            }
-                            startActivity(intent)
+                            launchClient(serverInfo, deviceName)
+                        },
+                        onOkayTriggerSet = { trigger: () -> Unit ->
+                            onOkayPressed = trigger
                         }
                     )
                 }
             }
         }
     }
+
+    private fun launchClient(serverInfo: ServerInfo, deviceName: String) {
+        Log.d(
+            TAG,
+            "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})"
+        )
+        val intent = Intent(this@MainActivity, ClientActivity::class.java).apply {
+            putExtra("SERVER_ADDRESS", serverInfo.address)
+            putExtra("DEVICE_NAME", deviceName)
+            putExtra("IS_SECURE", serverInfo.isSecure)
+            putExtra("SERVER_FINGERPRINT", serverInfo.fingerprint)
+        }
+        startActivity(intent)
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (settingsViewModel.slamFireEnabled.value) {
+            val trigger = settingsViewModel.slamFireTrigger.value
+            val isMatch = when (trigger) {
+                SlamFireTrigger.VolumeDown -> keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
+                SlamFireTrigger.VolumeUp -> keyCode == KeyEvent.KEYCODE_VOLUME_UP
+                SlamFireTrigger.Power -> keyCode == KeyEvent.KEYCODE_POWER
+                SlamFireTrigger.Bixby -> keyCode == 1082 // Common Bixby code
+                SlamFireTrigger.Assistant -> keyCode == KeyEvent.KEYCODE_ASSIST || keyCode == KeyEvent.KEYCODE_VOICE_ASSIST
+                else -> false
+            }
+            if (isMatch) {
+                onOkayPressed?.invoke()
+                return true
+            }
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onSensorChanged(event: SensorEvent?) {
+        if (event?.sensor?.type == Sensor.TYPE_PROXIMITY && settingsViewModel.slamFireEnabled.value) {
+            val distance = event.values[0]
+            val maxRange = event.sensor.maximumRange
+            
+            // Many sensors are binary (0 for near, maxRange for far). 
+            // For non-binary sensors, 5cm is a common "near" threshold.
+            val threshold = if (maxRange > 5f) 5f else maxRange / 2f
+            val isCovered = distance < threshold
+            
+            if (isCovered != lastProximityState) {
+                lastProximityState = isCovered
+                val trigger = settingsViewModel.slamFireTrigger.value
+                if (trigger == SlamFireTrigger.ProximityCovered && isCovered) {
+                    onOkayPressed?.invoke()
+                } else if (trigger == SlamFireTrigger.ProximityUncovered && !isCovered) {
+                    onOkayPressed?.invoke()
+                }
+            }
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
 
     @Composable
     private fun SplashUI(isBlinking: Boolean) {
@@ -180,11 +250,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        proximitySensor?.let {
+            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+        }
         // Removed eager discovery start to save resources until user clicks "Scan"
     }
 
     override fun onPause() {
         super.onPause()
+        sensorManager?.unregisterListener(this)
         // clientDiscovery is lazy, only stop if it was initialized
     }
 
