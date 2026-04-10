@@ -375,6 +375,10 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Physical Consent & QR Support**: Implemented a "Physical Consent Pairing" security feature with **QR code scanning** for seamless setup. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
 - [x] **OS-Level Secret Vault**: Integrated native secure storage for identity keys using macOS Keychain, Windows Credential Manager, and Linux Libsecret via `SecretManager`.
 - [x] **Smart QR Grid**: Implemented "Fleet Mode" for dynamic scaling of pairing requests.
+- [x] **Stable Hardware Fingerprinting**: Replaced `FINGERPRINT` with a combination of `MANUFACTURER|MODEL|BOARD|HARDWARE` to ensure persistent device identity across Android OS updates.
+- [x] **Gold Standard Currency Protocol**: Implemented a unified `currency_update` and `currency_spent` binary protocol to synchronize Android `TokenManager` balances with the Desktop's global ledger.
+- [x] **Split Pane Desktop Layout**: Integrated `VerticalSplitPane` with custom **Pill-Shaped Pulltabs** for the Desktop console, providing a flexible layout for monitoring active sessions vs. connection history.
+- [x] **Persistent Connection Auditing**: Added a "Recent Activity" sidebar to the Desktop console that persists connection history to disk, providing a clear audit trail of past access.
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 

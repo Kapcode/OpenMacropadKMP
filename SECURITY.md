@@ -69,3 +69,16 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Status:** ✅ **Fixed**
 *   **Description:** The JVM identity keystore password was previously stored in plain text or relied on user input, which was either insecure or prone to data loss.
 *   **Mitigation:** Integrated **`SecretManager`** to leverage native OS keyrings (macOS Keychain, Windows Credential Manager, and Linux Libsecret via `libsecret-1`). `IdentityManager` now automatically retrieves or generates a secure **64-character Base64 password** (derived from a `SecureRandom` 64-byte seed) stored in the system's encrypted vault. This provides hardware-level security semantics on Desktop, ensuring that identity keys cannot be decrypted even if the local file system is compromised, as the password remains locked behind the user's OS login.
+
+### 11. Hardware Metadata Binding
+*   **Status:** ✅ **Fixed**
+*   **Description:** Device IDs derived solely from `FINGERPRINT` were found to be unstable across Android OS updates, potentially causing trusted devices to be treated as new, untrusted connections.
+*   **Mitigation:** Implemented a **Stable Hardware Fingerprint** using a concatenated combination of `MANUFACTURER|MODEL|BOARD|HARDWARE`. This provides a consistent identity that survives OS minor/major updates while remaining unique to the physical device.
+
+### 12. Connection Auditing & History
+*   **Status:** ✅ **Fixed**
+*   **Description:** Previously, there was no persistent record of which devices connected to the server, making it difficult to audit past access.
+*   **Mitigation:** Implemented a persistent **Recent Activity** audit trail.
+    - All connection attempts (Success, Failed, Unauthorized) are logged to a persistent store.
+    - The Desktop UI features a "Recent Activity" sidebar that displays the history of device IDs, timestamps, and connection status.
+    - This audit trail is displayed in a `VerticalSplitPane` alongside active sessions, allowing administrators to monitor both live and historical access at a glance.

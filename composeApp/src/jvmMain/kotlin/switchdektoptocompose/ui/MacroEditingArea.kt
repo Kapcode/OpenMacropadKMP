@@ -1,6 +1,11 @@
 package switchdektoptocompose.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import switchdektoptocompose.viewmodel.*
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
@@ -38,6 +43,30 @@ fun MacroEditingArea(
                 second(minSize = 300.dp) {
                     MacroEditorScreen(viewModel = macroEditorViewModel, settingsViewModel = settingsViewModel)
                 }
+                splitter {
+                    visiblePart {
+                        Box(Modifier.fillMaxSize()) {
+                            Box(
+                                Modifier
+                                    .width(4.dp)
+                                    .height(48.dp)
+                                    .background(
+                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                        shape = MaterialTheme.shapes.extraSmall
+                                    )
+                                    .align(Alignment.Center)
+                            )
+                        }
+                    }
+                    handle {
+                        Box(
+                            Modifier
+                                .markAsHandle()
+                                .fillMaxHeight()
+                                .width(8.dp)
+                        )
+                    }
+                }
             }
         }
         // --- Bottom Pane (Timeline) ---
@@ -47,6 +76,30 @@ fun MacroEditingArea(
                 onAddEventClicked = onAddEventClicked,
                 onRecordMacroClicked = onRecordMacroClicked
             )
+        }
+        splitter {
+            visiblePart {
+                Box(Modifier.fillMaxSize()) {
+                    Box(
+                        Modifier
+                            .width(48.dp)
+                            .height(4.dp)
+                            .background(
+                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                shape = MaterialTheme.shapes.extraSmall
+                            )
+                            .align(Alignment.Center)
+                    )
+                }
+            }
+            handle {
+                Box(
+                    Modifier
+                        .markAsHandle()
+                        .fillMaxWidth()
+                        .height(8.dp)
+                )
+            }
         }
     }
 }

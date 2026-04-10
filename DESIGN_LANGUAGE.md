@@ -16,8 +16,9 @@ The application supports two primary themes: **Dark Blue** (default) and **Light
 | **Surface Variant** | `#DFE2EB` | `#43474E` |
 | **Background** | `#FDFCFF` | `#1A1C1E` |
 | **Status (Success)** | `#008000` (High Contrast) | `#00FF00` (Standard Green) |
+| **Gold Standard** | `#FFFFD700` | `#FFFFD700` |
 
-**Key Principle**: Use `SurfaceVariant` for grouping related controls (e.g., Device List, Console background) to provide depth without using heavy shadows.
+**Key Principle**: Use `SurfaceVariant` for grouping related controls (e.g., Device List, Console background) to provide depth without using heavy shadows. All currency-related text and icons (CurrencyExchange) strictly use the **Gold Standard** (`#FFFFD700`) to denote monetization and value.
 
 ### Iconography
 - **Library**: Material Symbols / Icons.
@@ -42,7 +43,9 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
     - **Error/Stopped**: Material 3 Error color (`#BA1A1A`).
 - **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
 
-### Desktop Motion
+### Desktop Motion & Layout
+- **Split Pane Navigation**: The Desktop console utilizes a `VerticalSplitPane` for the sidebar, dividing "Current Sessions" and "Recent Activity." This allows users to adjust their focus between active control and historical auditing.
+- **Pill-Shaped Pulltabs**: All split panes use custom-styled, high-visibility "pill" handles (pulltabs). These are designed to be easily discoverable and provide a tactile feel for layout adjustment.
 - **Minimize to Tray**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area.
 - **Tray Interaction**: Single-click on the tray icon toggles window visibility; right-click provides an OS-native context menu.
 

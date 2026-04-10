@@ -7,15 +7,18 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.MonetizationOn
@@ -34,7 +37,9 @@ import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.BillingConstants
@@ -42,12 +47,15 @@ import com.kapcode.open.macropad.kmps.TokenManager
 import com.kapcode.open.macropad.kmps.loadRewardedAd
 import com.kapcode.open.macropad.kmps.showRewardedAd
 
+val GoldCurrencyColor = Color(0xFFFFD700)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CommonAppBar(
     title: String,
     onSettingsClick: () -> Unit,
     navigationIcon: @Composable () -> Unit,
+    currency: Long = 0,
     isQrScannerActive: Boolean = false,
     onZoomIn: () -> Unit = {},
     onZoomOut: () -> Unit = {},
@@ -172,6 +180,26 @@ fun CommonAppBar(
             navigationIcon = navigationIcon,
             actions = {
                 actions()
+                if (currency > 0) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CurrencyExchange,
+                            contentDescription = "Currency",
+                            tint = GoldCurrencyColor,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = currency.toString(),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = GoldCurrencyColor,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
                 Row(
                     modifier = Modifier.clickable { showGetTokensDialog = true },
                     verticalAlignment = Alignment.CenterVertically

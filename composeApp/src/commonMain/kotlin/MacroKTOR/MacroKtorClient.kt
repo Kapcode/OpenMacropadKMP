@@ -87,7 +87,8 @@ class MacroKtorClient(
                                                         com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_RESPONSE,
                                                         mapOf(
                                                             "signature" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(sig),
-                                                            "publicKey" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey)
+                                                            "publicKey" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey),
+                                                            "metadata" to com.kapcode.open.macropad.kmps.DeviceInfo.hardwareMetadata
                                                         )
                                                     )
                                                     send(response.toBytes())

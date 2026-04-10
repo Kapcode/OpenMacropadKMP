@@ -21,6 +21,8 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
 *   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, **native OS keyring integration** (via `SecretManager`) for identity protection, hardware-backed keystore management on Android, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
 *   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a **Smart Multi-QR Grid** that automatically calculates optimal row/column density based on window size and visibility toggles to prevent UI overlap. Includes a **Spatial Grid Selector** to persistently enable/disable specific grid positions (Corners and Centers).
+*   **Gold Standard Currency**: A unified monetization system across Desktop and Android. All currency-related icons and values are displayed in high-contrast Gold (`#FFFFD700`).
+*   **Split Pane Console**: Redesigned Desktop sidebar with a `VerticalSplitPane` and custom **Pill-Shaped Pulltabs**, dividing "Current Sessions" and "Recent Activity" for better auditing and oversight.
 *   **Lifecycle Management**: Support for in-app application restarts (via `ProcessBuilder`) and a standardized `ExitConfirmDialog` for graceful shutdowns.
 *   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger.
     *   **Single Slam**: Execute a primary macro or "OK" action.
@@ -35,7 +37,8 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Remote Triggering:** Interface to execute desktop macros from a mobile device with real-time execution feedback (progress bars and status).
 *   **Token System:** A rewarded ad-supported model for macro execution.
 *   **Discovery:** Automatic discovery of servers on the local network.
-*   **Security:** Supports TLS/SSL (WSS) for encrypted communication and out-of-band TOFU verification.
+*   **Gold Standard Token Sync:** Seamlessly synchronizes the Android `TokenManager` balance with the Server's global ledger. Reports `currency_spent` events in real-time to maintain an accurate cross-platform audit of expenditure.
+*   **Security:** Supports TLS/SSL (WSS) for encrypted communication and out-of-band TOFU verification. Uses stable hardware fingerprints (`MANUFACTURER|MODEL|BOARD|HARDWARE`) to ensure reliable device identification.
 
 ## Installation and Usage
 

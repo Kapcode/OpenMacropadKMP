@@ -20,7 +20,8 @@ data class ClientUiState(
     val manualZoomRatio: Float = 1f,
     val manualFocusDistance: Float = 0f,
     val currentActualZoom: Float = 1f,
-    val currentFocusState: String = "Idle"
+    val currentFocusState: String = "Idle",
+    val currency: Long = 0L
 )
 
 class ClientViewModel : ViewModel() {
@@ -68,12 +69,22 @@ class ClientViewModel : ViewModel() {
         _uiState.update { it.copy(currentFocusState = state) }
     }
 
+    fun updateCurrency(amount: Long) {
+        _uiState.update { it.copy(currency = amount) }
+    }
+
     fun onMacroExecutionStart(macro: String) {
-        _uiState.update { it.copy(executingMacros = it.executingMacros + macro) }
+        _uiState.update { it.copy(
+            executingMacros = it.executingMacros + macro,
+            failedMacros = it.failedMacros - macro
+        ) }
     }
 
     fun onMacroExecutionComplete(macro: String) {
-        _uiState.update { it.copy(executingMacros = it.executingMacros - macro) }
+        _uiState.update { it.copy(
+            executingMacros = it.executingMacros - macro,
+            failedMacros = it.failedMacros - macro
+        ) }
     }
 
     fun onMacroExecutionFailed(macro: String) {

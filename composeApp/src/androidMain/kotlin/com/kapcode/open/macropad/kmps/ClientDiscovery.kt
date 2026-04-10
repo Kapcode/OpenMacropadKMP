@@ -35,11 +35,17 @@ class ClientDiscovery {
     val isScanning = _isScanning.asStateFlow()
 
     private val lastProcessedFromIp = mutableMapOf<String, Long>()
+    private val malformedPacketCount = mutableMapOf<String, Int>()
+    private val temporaryBlacklist = mutableMapOf<String, Long>()
+    private var globalLastProcessedTime = 0L
 
     private companion object {
         const val DISCOVERY_PREFIX = "OMP_DISCOVERY_V1:"
         const val RATE_LIMIT_MS = 2000L
+        const val GLOBAL_RATE_LIMIT_MS = 500L
         const val STALE_TIMEOUT_MS = 15000L
+        const val BLACKLIST_DURATION_MS = 300000L // 5 minutes
+        const val MAX_MALFORMED_ATTEMPTS = 3
         const val MAX_SERVERS = 20
     }
 
@@ -52,15 +58,24 @@ class ClientDiscovery {
         
         _isScanning.value = true
         
-        // Cleanup job to remove stale servers
+        // Cleanup job to remove stale servers and expired blacklist entries
         cleanupJob = discoveryScope.launch {
             while (isActive) {
                 delay(5000)
                 val now = System.currentTimeMillis()
+                
+                // 1. Cleanup Stale Servers
                 val currentList = foundServers.value
                 val filteredList = currentList.filter { now - it.lastSeen < STALE_TIMEOUT_MS }
                 if (filteredList.size != currentList.size) {
                     foundServers.value = filteredList
+                }
+
+                // 2. Cleanup Expired Blacklist
+                val expiredBlacklist = temporaryBlacklist.filter { now >= it.value }.keys
+                expiredBlacklist.forEach { 
+                    temporaryBlacklist.remove(it)
+                    malformedPacketCount.remove(it)
                 }
             }
         }
@@ -78,44 +93,64 @@ class ClientDiscovery {
                 while (isActive) {
                     try {
                         socket?.receive(packet)
-                        val rawData = String(packet.data, 0, packet.length)
-                        
-                        // 1. Prefix Validation
-                        if (!rawData.startsWith(DISCOVERY_PREFIX)) continue
-                        
-                        val hostAddress = packet.address
-                        val hostIp = hostAddress?.hostAddress ?: continue
                         val now = System.currentTimeMillis()
 
-                        // 2. Rate Limiting (per IP)
+                        // 1. Global Rate Limit (Protect CPU from packet storms)
+                        if (now - globalLastProcessedTime < GLOBAL_RATE_LIMIT_MS) continue
+                        globalLastProcessedTime = now
+
+                        val hostAddress = packet.address
+                        val hostIp = hostAddress?.hostAddress ?: continue
+
+                        // 2. Blacklist Check
+                        val blacklistExpiry = temporaryBlacklist[hostIp]
+                        if (blacklistExpiry != null && now < blacklistExpiry) continue
+
+                        val rawData = String(packet.data, 0, packet.length)
+                        
+                        // 3. Prefix Validation
+                        if (!rawData.startsWith(DISCOVERY_PREFIX)) {
+                            handleMalformedPacket(hostIp)
+                            continue
+                        }
+                        
+                        // 4. Rate Limiting (per IP)
                         val lastSeenTime = lastProcessedFromIp[hostIp] ?: 0L
                         if (now - lastSeenTime < RATE_LIMIT_MS) continue
                         lastProcessedFromIp[hostIp] = now
 
-                        val jsonString = rawData.removePrefix(DISCOVERY_PREFIX)
-                        val json = JSONObject(jsonString)
+                        try {
+                            val jsonString = rawData.removePrefix(DISCOVERY_PREFIX)
+                            val json = JSONObject(jsonString)
 
-                        val serverName = json.getString("serverName")
-                        val port = json.getInt("port")
-                        val isSecure = json.getBoolean("isSecure")
-                        val fingerprint = if (json.has("fingerprint")) json.getString("fingerprint") else null
-                        val serverAddress = "$hostIp:$port"
+                            val serverName = json.getString("serverName")
+                            val port = json.getInt("port")
+                            val isSecure = json.getBoolean("isSecure")
+                            val fingerprint = if (json.has("fingerprint")) json.getString("fingerprint") else null
+                            val serverAddress = "$hostIp:$port"
 
-                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure, fingerprint, now)
+                            val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure, fingerprint, now)
 
-                        // 3. Update the list of found servers
-                        val currentServers = foundServers.value.toMutableList()
-                        val existingIndex = currentServers.indexOfFirst { it.host == newServer.host && it.address == newServer.address }
-                        
-                        if (existingIndex != -1) {
-                            currentServers[existingIndex] = newServer
-                        } else {
-                            // 4. Capacity Limit
-                            if (currentServers.size < MAX_SERVERS) {
-                                currentServers.add(newServer)
+                            // 5. Update the list of found servers
+                            val currentServers = foundServers.value.toMutableList()
+                            val existingIndex = currentServers.indexOfFirst { it.host == newServer.host && it.address == newServer.address }
+                            
+                            if (existingIndex != -1) {
+                                currentServers[existingIndex] = newServer
+                            } else {
+                                // 6. Capacity Limit
+                                if (currentServers.size < MAX_SERVERS) {
+                                    currentServers.add(newServer)
+                                }
                             }
+                            foundServers.value = currentServers
+                            
+                            // Successful packet - Reset malformed count for this IP
+                            malformedPacketCount.remove(hostIp)
+
+                        } catch (e: Exception) {
+                            handleMalformedPacket(hostIp)
                         }
-                        foundServers.value = currentServers
                         
                     } catch (e: Exception) {
                         if (isActive) {
@@ -135,6 +170,15 @@ class ClientDiscovery {
         }
     }
 
+    private fun handleMalformedPacket(ip: String) {
+        val count = (malformedPacketCount[ip] ?: 0) + 1
+        malformedPacketCount[ip] = count
+        if (count >= MAX_MALFORMED_ATTEMPTS) {
+            temporaryBlacklist[ip] = System.currentTimeMillis() + BLACKLIST_DURATION_MS
+            println("IP $ip blacklisted for 5 minutes due to $count malformed packets.")
+        }
+    }
+
     fun stop() {
         discoveryJob?.cancel()
         cleanupJob?.cancel()
@@ -144,6 +188,8 @@ class ClientDiscovery {
         discoveryJob = null
         cleanupJob = null
         lastProcessedFromIp.clear()
+        malformedPacketCount.clear()
+        temporaryBlacklist.clear()
         foundServers.value = emptyList()
     }
 }

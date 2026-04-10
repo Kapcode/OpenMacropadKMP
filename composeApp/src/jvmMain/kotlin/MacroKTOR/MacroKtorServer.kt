@@ -37,20 +37,21 @@ class MacroKtorServer(
     private val serverScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var watchdogJob: Job? = null
 
-    private enum class AuthStatus {
+    enum class AuthStatus {
         CHALLENGE_PENDING,
         AUTHENTICATED,
         BANNED
     }
 
-    private data class ConnectedClient(
+    data class ConnectedClient(
         val id: String,
         val name: String,
         val session: DefaultWebSocketServerSession,
         var authStatus: AuthStatus,
         var lastSeen: Long,
         var pendingChallenge: String? = null,
-        var pongsSinceLastPing: Int = 0
+        var pongsSinceLastPing: Int = 0,
+        var metadata: String? = null
     )
 
     fun isRunning(): Boolean = server != null
@@ -76,6 +77,10 @@ class MacroKtorServer(
             logger.info("Client {} manually promoted to AUTHENTICATED", clientId)
             onClientConnected(client.id, client.name)
         }
+    }
+
+    fun getMetadata(clientId: String): String? {
+        return clients[clientId]?.metadata
     }
 
     fun start(port: Int, isSecure: Boolean) {
@@ -132,6 +137,15 @@ class MacroKtorServer(
                         authStatus = AuthStatus.CHALLENGE_PENDING,
                         lastSeen = System.currentTimeMillis()
                     )
+
+                    // 1. Session Concurrency Control: One session per Client ID
+                    clients[clientId]?.let { existingClient ->
+                        logger.warn("Duplicate session for {}. Disconnecting existing session.", clientId)
+                        serverScope.launch {
+                            disconnectClient(existingClient, "Connected from another location")
+                        }
+                    }
+                    
                     clients[clientId] = client
 
                     handleSession(client)
@@ -167,7 +181,7 @@ class MacroKtorServer(
                         logger.warn("Watchdog: Client {} ({}) timed out. Last seen {}ms ago.", id, client.authStatus, now - client.lastSeen)
                         launch { 
                             try {
-                                disconnectClient(id, "Heartbeat timeout")
+                                disconnectClient(client, "Heartbeat timeout")
                             } catch (e: Exception) {
                                 logger.error("Failed to disconnect timed-out client {}", id, e)
                             }
@@ -204,7 +218,6 @@ class MacroKtorServer(
                     return
                 }
                 logger.info("New pairing request for device {} ({})", client.name, client.id)
-                onPairingRequest(client.id, client.name)
                 
                 val workingDir = File(System.getProperty("user.home"), ".openmacropad")
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
@@ -216,6 +229,9 @@ class MacroKtorServer(
                 }
 
                 send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING, params).toBytes()))
+                
+                // Trigger the pairing request callback to show the dialog on the server
+                onPairingRequest(client.id, client.name)
             }
 
             for (frame in incoming) {
@@ -312,13 +328,14 @@ class MacroKtorServer(
         val challenge = client.pendingChallenge
         val signature = params["signature"]
         val publicKeyBase64 = params["publicKey"]
+        val metadata = params["metadata"] ?: "Unknown"
+        client.metadata = metadata
 
         if (challenge != null && signature != null && publicKeyBase64 != null) {
             val hashedPublicKey = hashPublicKey(publicKeyBase64)
             if (client.id != hashedPublicKey) {
                 logger.error("Security Alert: Identity mismatch for {}. Expected {}, received publicKey hash {}", client.id, client.id, hashedPublicKey)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
-                // Do not remove here, finally block handles it correctly with the identity check
                 return
             }
 
@@ -329,16 +346,43 @@ class MacroKtorServer(
             )
 
             if (isValid) {
+                // Hardware Metadata Binding Check
+                if (trustedDeviceManager.isTrusted(client.id)) {
+                    val storedMetadata = trustedDeviceManager.getMetadata(client.id)
+                    if (storedMetadata != null && storedMetadata != metadata) {
+                        val oldParts = storedMetadata.split("|")
+                        val newParts = metadata.split("|")
+                        
+                        // Allow graceful update if Manufacturer and Model match. 
+                        // This handles OS updates (FINGERPRINT change) and our own format changes.
+                        val isSameDeviceType = oldParts.size >= 2 && newParts.size >= 2 &&
+                                              oldParts[0] == newParts[0] && oldParts[1] == newParts[1]
+
+                        if (isSameDeviceType) {
+                            logger.info("Hardware Metadata update detected for {}. Updating stable record. ({} -> {})", client.id, storedMetadata, metadata)
+                            trustedDeviceManager.addTrustedDevice(client.id, client.name, metadata)
+                        } else {
+                            logger.error("Security Alert: Hardware Mismatch for {}. Expected {}, received {}. Potential Identity Cloning!", client.id, storedMetadata, metadata)
+                            client.session.send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "Hardware Mismatch - Re-pairing Required")).toBytes()))
+                            client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Hardware Mismatch"))
+                            return
+                        }
+                    }
+                }
+
                 client.authStatus = AuthStatus.AUTHENTICATED
                 client.pendingChallenge = null
                 client.lastSeen = System.currentTimeMillis()
-                // Do not call onClientConnected(client.id, client.name) here as it was already called in handleSession or approveDevice
+
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
                 onMessageReceived(client.id, getMacrosRequest())
             } else {
                 logger.warn("Authentication failed for {}", client.id)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
             }
+        } else if (!trustedDeviceManager.isTrusted(client.id)) {
+            // New device pairing flow: we received AUTH_RESPONSE (metadata), now notify UI
+            onPairingRequest(client.id, client.name)
         }
     }
 
@@ -355,7 +399,7 @@ class MacroKtorServer(
         runBlocking {
             currentClients.forEach { client ->
                 try {
-                    disconnectClient(client.id)
+                    disconnectClient(client)
                 } catch (e: Exception) {}
             }
         }
@@ -368,13 +412,18 @@ class MacroKtorServer(
     }
 
     suspend fun disconnectClient(clientId: String, reason: String = "Disconnected by server") {
-        clients[clientId]?.let { client ->
-            try {
-                client.session.send(Frame.Binary(true, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)).toBytes()))
-                client.session.close(CloseReason(CloseReason.Codes.NORMAL, reason))
-            } catch (e: Exception) {}
-            // Explicitly remove and notify since the session closure might take a moment 
-            // to trigger the 'finally' block in handleSession
+        clients[clientId]?.let { disconnectClient(it, reason) }
+    }
+
+    suspend fun disconnectClient(client: ConnectedClient, reason: String = "Disconnected by server") {
+        val clientId = client.id
+        try {
+            client.session.send(Frame.Binary(true, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)).toBytes()))
+            client.session.close(CloseReason(CloseReason.Codes.NORMAL, reason))
+        } catch (e: Exception) {}
+        
+        // Explicitly remove and notify ONLY if this is still the active session for this ID
+        if (clients[clientId] === client) {
             clients.remove(clientId)
             temporaryTrustedDevices.remove(clientId)
             onClientDisconnected(clientId)

@@ -60,4 +60,11 @@ actual object DeviceInfo {
                 "ext"
             }
         }
+
+    actual val hardwareMetadata: String
+        get() {
+            // FINGERPRINT is too volatile (changes on security updates). 
+            // We use a combination of stable hardware identifiers.
+            return "${Build.MANUFACTURER}|${Build.MODEL}|${Build.BOARD}|${Build.HARDWARE}"
+        }
 }

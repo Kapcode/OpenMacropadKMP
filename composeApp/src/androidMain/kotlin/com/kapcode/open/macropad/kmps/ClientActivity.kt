@@ -217,8 +217,14 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
             val uiState by clientViewModel.uiState.collectAsState()
             
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
+                val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
+                val tokenBalance by tokenManager.tokenBalance.collectAsState()
+
+                LaunchedEffect(tokenBalance) {
+                    client?.send(dataMessage("currency_update", tokenBalance.toLong().toString().encodeToByteArray()).toBytes())
+                }
+
                 LaunchedEffect(Unit) {
-                    val tokenManager = TokenManager.getInstance(this@ClientActivity)
                     connectToServer(
                         ipAddress,
                         port,
@@ -231,7 +237,11 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                         onExecutionStart = { macro ->
                             clientViewModel.onMacroExecutionStart(macro)
                             // Deduct tokens on start
-                            tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                            if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+                                activityScope.launch {
+                                    client?.send(dataMessage("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toLong().toString().encodeToByteArray()).toBytes())
+                                }
+                            }
                         },
                         onExecutionComplete = { macro ->
                             clientViewModel.onMacroExecutionComplete(macro)
@@ -249,6 +259,7 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                     uiState = uiState,
                     settingsViewModel = settingsViewModel,
                     clientViewModel = clientViewModel,
+                    currency = tokenBalance.toLong(),
                     onQrScannerToggle = { show ->
                         if (show) {
                             // HARD BLOCK: Never show QR if connected or if not in pairing state
@@ -355,6 +366,10 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                     var lastHeartbeat = System.currentTimeMillis()
                     var currentVerificationCode: String? = null
 
+                    // Send initial currency balance
+                    val tokenManager = TokenManager.getInstance(this@ClientActivity)
+                    tempClient.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+
                     clientJob = activityScope.launch {
                         while (isActive) {
                             val msg = getMacrosRequest().toBytes()
@@ -453,6 +468,16 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                     },
                                     onHeartbeat = {
                                         lastHeartbeat = System.currentTimeMillis()
+                                    },
+                                    onData = { key, value ->
+                                        if (key == "currency_update") {
+                                            try {
+                                                val balance = value.decodeToString().toLong()
+                                                clientViewModel.updateCurrency(balance)
+                                            } catch (e: Exception) {
+                                                Log.e("ClientActivity", "Failed to parse currency_update", e)
+                                            }
+                                        }
                                     }
                                 )
                             } catch (e: Exception) {
@@ -952,6 +977,7 @@ fun ClientScreen(
     uiState: ClientUiState,
     settingsViewModel: SettingsViewModel,
     clientViewModel: ClientViewModel,
+    currency: Long = 0,
     onGetMacros: () -> Unit,
     onMacroClick: (String) -> Unit,
     onPairingCodeEntered: (String) -> Unit,
@@ -1027,6 +1053,7 @@ fun ClientScreen(
             CommonAppBar(
                 title = if (showSettings) "Settings" else "Open Macropad",
                 onSettingsClick = { showSettings = !showSettings },
+                currency = uiState.currency,
                 isQrScannerActive = showQrScanner && !showSettings,
                 isAutoZoomEnabled = isAutoZoomEnabled_State,
                 onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
@@ -1199,6 +1226,7 @@ fun ClientScreen(
                             macros = macros, 
                             executingMacros = executingMacros,
                             failedMacros = failedMacros,
+                            currency = uiState.currency,
                             onMacroClick = onMacroClick
                         )
                     } else if (showQrScanner) {

@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.ServerDiscoveryAnnouncer
 import switchdektoptocompose.model.*
 import java.net.Inet4Address
@@ -28,7 +29,9 @@ data class DesktopUiState(
     val pendingPairingRequests: List<ClientInfo> = emptyList(),
     val serverError: String? = null,
     val bannedDevices: Map<String, String> = emptyMap(),
-    val trustedDevices: Map<String, String> = emptyMap()
+    val trustedDevices: Map<String, String> = emptyMap(),
+    val connectionHistory: List<ConnectionHistoryManager.ConnectionEvent> = emptyList(),
+    val totalCurrencySpent: Long = 0
 )
 
 /**
@@ -58,6 +61,7 @@ class DesktopViewModel(
 
     init {
         findLocalIpAddresses()
+        updateHistoryState()
         _uiState.update { it.copy(
             bannedDevices = TrustedDeviceManager.getBannedDevices(),
             trustedDevices = TrustedDeviceManager.getTrustedDevices()
@@ -178,6 +182,8 @@ class DesktopViewModel(
             }
             state.copy(connectedDevices = updatedDevices)
         }
+        ConnectionHistoryManager.logEvent(clientId, clientName, "Connected")
+        updateHistoryState()
         consoleViewModel.addLog(LogLevel.Info, "Client connected: $clientName ($clientId)")
     }
 
@@ -189,15 +195,28 @@ class DesktopViewModel(
                 pendingPairingRequests = state.pendingPairingRequests.filterNot { it.id == clientId }
             )
         }
+        client?.let {
+            ConnectionHistoryManager.logEvent(it.id, it.name, "Disconnected")
+            updateHistoryState()
+        }
         consoleViewModel.addLog(LogLevel.Info, "Client disconnected: ${client?.name ?: clientId}")
     }
 
     private fun onPairingRequest(clientId: String, clientName: String) {
         val verificationCode = (100000..999999).random().toString()
+        val metadata = server.getMetadata(clientId)
         _uiState.update { state ->
             if (state.pendingPairingRequests.any { it.id == clientId }) state
-            else state.copy(pendingPairingRequests = state.pendingPairingRequests + ClientInfo(id = clientId, name = clientName, verificationCode = verificationCode))
+            else state.copy(pendingPairingRequests = state.pendingPairingRequests + ClientInfo(
+                id = clientId, 
+                name = clientName, 
+                verificationCode = verificationCode,
+                metadata = metadata
+            ))
         }
+        
+        ConnectionHistoryManager.logEvent(clientId, clientName, "Pairing Request", metadata = metadata)
+        updateHistoryState()
         
         viewModelScope.launch {
             server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
@@ -215,11 +234,18 @@ class DesktopViewModel(
 
         val finalPersistent = if (settingsViewModel.allowOnceOnly.value) false else persistent
         if (finalPersistent) {
-            TrustedDeviceManager.addTrustedDevice(clientId, clientName)
+            // Get the metadata from the server session instead of the initial pairing request
+            // to ensure it's not null (as it arrives after the initial pairing request)
+            val metadata = server.getMetadata(clientId) ?: request?.metadata
+
+            TrustedDeviceManager.addTrustedDevice(clientId, clientName, metadata)
             _uiState.update { it.copy(trustedDevices = TrustedDeviceManager.getTrustedDevices()) }
+            ConnectionHistoryManager.logEvent(clientId, clientName, "Permanently Approved", metadata = metadata)
         } else {
             server.approveTemporaryDevice(clientId)
+            ConnectionHistoryManager.logEvent(clientId, clientName, "Temporarily Approved")
         }
+        updateHistoryState()
         
         server.authenticateClient(clientId)
         
@@ -240,7 +266,10 @@ class DesktopViewModel(
     }
 
     fun rejectDevice(clientId: String) {
+        val clientName = _uiState.value.pendingPairingRequests.find { it.id == clientId }?.name ?: "Unknown"
         _uiState.update { it.copy(pendingPairingRequests = it.pendingPairingRequests.filterNot { it.id == clientId }) }
+        ConnectionHistoryManager.logEvent(clientId, clientName, "Rejected")
+        updateHistoryState()
         viewModelScope.launch {
             server.sendToClient(clientId, pairingRejectedMessage("Pairing rejected by user"))
         }
@@ -270,6 +299,8 @@ class DesktopViewModel(
                 connectedDevices = state.connectedDevices.filterNot { it.id == clientId }
             )
         }
+        ConnectionHistoryManager.logEvent(clientId, clientName, "Banned")
+        updateHistoryState()
         
         viewModelScope.launch {
             try {
@@ -288,6 +319,7 @@ class DesktopViewModel(
     }
 
     fun removeTrustedDevice(clientId: String) {
+        val clientName = TrustedDeviceManager.getTrustedDevices()[clientId] ?: "Unknown"
         TrustedDeviceManager.removeTrustedDevice(clientId)
         _uiState.update { state ->
             state.copy(
@@ -295,6 +327,8 @@ class DesktopViewModel(
                 connectedDevices = state.connectedDevices.filterNot { it.id == clientId }
             )
         }
+        ConnectionHistoryManager.logEvent(clientId, clientName, "Untrusted")
+        updateHistoryState()
         viewModelScope.launch {
             try {
                 server.disconnectClient(clientId, "The server has removed this device from its trusted list.")
@@ -310,9 +344,12 @@ class DesktopViewModel(
     }
 
     fun disconnectClient(clientId: String) {
+        val clientName = _uiState.value.connectedDevices.find { it.id == clientId }?.name ?: "Unknown"
         viewModelScope.launch {
             try {
                 server.disconnectClient(clientId)
+                ConnectionHistoryManager.logEvent(clientId, clientName, "Force Disconnect")
+                updateHistoryState()
                 consoleViewModel.addLog(LogLevel.Info, "Disconnected client: $clientId")
             } catch (e: Exception) {
                 consoleViewModel.addLog(LogLevel.Error, "Failed to disconnect $clientId: ${e.message}")
@@ -322,6 +359,30 @@ class DesktopViewModel(
 
     private fun onDataReceived(clientId: String, dataModel: DataModel) {
         dataModel.handle(
+            onData = { key, value ->
+                if (key == "currency_update") {
+                    try {
+                        val amount = value.decodeToString().toLong()
+                        _uiState.update { state ->
+                            val updatedDevices = state.connectedDevices.map { 
+                                if (it.id == clientId) it.copy(currency = amount) else it 
+                            }
+                            state.copy(connectedDevices = updatedDevices)
+                        }
+                        consoleViewModel.addLog(LogLevel.Verbose, "Currency update from $clientId: $amount")
+                    } catch (e: Exception) {
+                        consoleViewModel.addLog(LogLevel.Error, "Invalid currency update from $clientId")
+                    }
+                } else if (key == "currency_spent") {
+                    try {
+                        val amount = value.decodeToString().toLong()
+                        _uiState.update { it.copy(totalCurrencySpent = it.totalCurrencySpent + amount) }
+                        consoleViewModel.addLog(LogLevel.Info, "Currency spent by $clientId: $amount (Total: ${_uiState.value.totalCurrencySpent})")
+                    } catch (e: Exception) {
+                        consoleViewModel.addLog(LogLevel.Error, "Invalid currency spent from $clientId")
+                    }
+                }
+            },
             onControl = { cmd, params ->
                 consoleViewModel.addLog(LogLevel.Debug, "Control received from $clientId: $cmd")
                 when (cmd) {
@@ -407,5 +468,14 @@ class DesktopViewModel(
 
     fun onError(error: String) {
         consoleViewModel.addLog(LogLevel.Error, "SERVER ERROR: $error")
+    }
+
+    private fun updateHistoryState() {
+        _uiState.update { it.copy(connectionHistory = ConnectionHistoryManager.getHistory()) }
+    }
+
+    fun clearConnectionHistory() {
+        ConnectionHistoryManager.clearHistory()
+        updateHistoryState()
     }
 }

@@ -11,8 +11,12 @@ object TrustedDeviceManager {
     
     // Map of Fingerprint -> DeviceName
     private val trustedDevices = ConcurrentHashMap<String, String>()
+    // Map of Fingerprint -> HardwareMetadata
+    private val deviceMetadata = ConcurrentHashMap<String, String>()
     // Map of Fingerprint -> DeviceName
     private val bannedDevices = ConcurrentHashMap<String, String>()
+
+    private val metadataFile = File(workingDir, "device_metadata.json")
 
     init {
         if (!workingDir.exists()) {
@@ -24,6 +28,7 @@ object TrustedDeviceManager {
     private fun load() {
         loadMap(trustedDevicesFile, trustedDevices)
         loadMap(bannedDevicesFile, bannedDevices)
+        loadMap(metadataFile, deviceMetadata)
     }
 
     private fun loadMap(file: File, map: ConcurrentHashMap<String, String>) {
@@ -43,6 +48,7 @@ object TrustedDeviceManager {
     private fun save() {
         saveMap(trustedDevicesFile, trustedDevices)
         saveMap(bannedDevicesFile, bannedDevices)
+        saveMap(metadataFile, deviceMetadata)
     }
 
     private fun saveMap(file: File, map: ConcurrentHashMap<String, String>) {
@@ -65,10 +71,17 @@ object TrustedDeviceManager {
         return bannedDevices.containsKey(fingerprint)
     }
 
-    fun addTrustedDevice(fingerprint: String, name: String) {
+    fun addTrustedDevice(fingerprint: String, name: String, metadata: String? = null) {
         bannedDevices.remove(fingerprint) // Remove from ban list if adding to trusted
         trustedDevices[fingerprint] = name
+        if (metadata != null) {
+            deviceMetadata[fingerprint] = metadata
+        }
         save()
+    }
+
+    fun getMetadata(fingerprint: String): String? {
+        return deviceMetadata[fingerprint]
     }
 
     fun removeTrustedDevice(fingerprint: String) {

@@ -277,6 +277,7 @@ fun DesktopApp(
             Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
                 val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
+                val leftVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
 
                 VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
                     first(minSize = 100.dp) {
@@ -443,29 +444,64 @@ fun DesktopApp(
                     second(minSize = 200.dp) {
                         HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
                             first(minSize = 250.dp) {
-                               Column {
-                                   Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-                                       ConnectedDevicesScreen(
-                                           devices = connectedDevices,
-                                           onDisconnect = { desktopViewModel.disconnectClient(it) },
-                                           onUnpair = { desktopViewModel.unpairDevice(it) },
-                                           onBan = { desktopViewModel.banDevice(it.id, it.name) }
-                                       )
-                                   }
-                                   Box(modifier = Modifier.weight(1f).fillMaxWidth().background(MaterialTheme.colorScheme.surfaceVariant).padding(8.dp)) {
-                                       Console(viewModel = consoleViewModel)
-                                   }
-                               }
+                                VerticalSplitPane(splitPaneState = leftVerticalSplitter) {
+                                    first(minSize = 150.dp) {
+                                        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
+                                            ConnectedDevicesScreen(
+                                                devices = connectedDevices,
+                                                history = uiState.connectionHistory,
+                                                totalCurrencySpent = uiState.totalCurrencySpent,
+                                                onDisconnect = { desktopViewModel.disconnectClient(it) },
+                                                onUnpair = { desktopViewModel.unpairDevice(it) },
+                                                onBan = { desktopViewModel.banDevice(it.id, it.name) },
+                                                onClearHistory = { desktopViewModel.clearConnectionHistory() }
+                                            )
+                                        }
+                                    }
+                                    second(minSize = 100.dp) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize()
+                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                .padding(8.dp)
+                                        ) {
+                                            Console(viewModel = consoleViewModel)
+                                        }
+                                    }
+                                    splitter {
+                                        visiblePart {
+                                            Box(Modifier.fillMaxSize()) {
+                                                Box(
+                                                    Modifier
+                                                        .width(48.dp)
+                                                        .height(4.dp)
+                                                        .background(
+                                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                                            shape = MaterialTheme.shapes.extraSmall
+                                                        )
+                                                        .align(Alignment.Center)
+                                                )
+                                            }
+                                        }
+                                        handle {
+                                            Box(
+                                                Modifier
+                                                    .markAsHandle()
+                                                    .fillMaxWidth()
+                                                    .height(8.dp)
+                                            )
+                                        }
+                                    }
+                                }
                             }
                             second(minSize = 500.dp) {
-        MacroEditingArea(
-            macroManagerViewModel = macroManagerViewModel,
-            macroEditorViewModel = macroEditorViewModel,
-            macroTimelineViewModel = macroTimelineViewModel,
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            selectedTheme = selectedTheme,
-            onAddEventClicked = {
+                                MacroEditingArea(
+                                    macroManagerViewModel = macroManagerViewModel,
+                                    macroEditorViewModel = macroEditorViewModel,
+                                    macroTimelineViewModel = macroTimelineViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    consoleViewModel = consoleViewModel,
+                                    selectedTheme = selectedTheme,
+                                    onAddEventClicked = {
                                         newEventViewModel.reset()
                                         showNewEventDialog = true
                                     },
@@ -475,6 +511,54 @@ fun DesktopApp(
                                     }
                                 )
                             }
+                            splitter {
+                                visiblePart {
+                                    Box(Modifier.fillMaxSize()) {
+                                        Box(
+                                            Modifier
+                                                .width(4.dp)
+                                                .height(48.dp)
+                                                .background(
+                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                                    shape = MaterialTheme.shapes.extraSmall
+                                                )
+                                                .align(Alignment.Center)
+                                        )
+                                    }
+                                }
+                                handle {
+                                    Box(
+                                        Modifier
+                                            .markAsHandle()
+                                            .fillMaxHeight()
+                                            .width(8.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    splitter {
+                        visiblePart {
+                            Box(Modifier.fillMaxSize()) {
+                                Box(
+                                    Modifier
+                                        .width(48.dp)
+                                        .height(4.dp)
+                                        .background(
+                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                                            shape = MaterialTheme.shapes.extraSmall
+                                        )
+                                        .align(Alignment.Center)
+                                )
+                            }
+                        }
+                        handle {
+                            Box(
+                                Modifier
+                                    .markAsHandle()
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                            )
                         }
                     }
                 }

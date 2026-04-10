@@ -66,11 +66,26 @@ This document tracks identified security risks that have not yet been fully miti
 - **Description**: No limit on active screenshots in the Inspector.
 - **Status**: ✅ **Fixed**. Implemented a configurable screenshot limit (default 10) in `InspectorViewModel`.
 
+### 15. UDP Discovery Flooding
+- **Description**: A malicious actor could flood the network with fake server discovery packets to confuse the client UI or cause a Denial of Service on the discovery listener.
+- **Status**: ✅ **Fixed**. Implemented multi-stage rate limiting in `ClientDiscovery.kt` (Android):
+    - Global rate limit (500ms) for all discovery packets.
+    - Per-IP rate limit (2s) to prevent single-source flooding.
+    - 5-minute temporary blacklist for IPs sending malformed or invalid discovery packets.
+
+### 16. Identity Cloning (Hardware Metadata Binding)
+- **Description**: If an attacker clones a trusted device's Identity Key (e.g., via root access), they could potentially impersonate that device from different hardware.
+- **Status**: ✅ **Fixed**. Implemented Hardware Metadata Binding. The Client ID is now cryptographically bound to specific hardware attributes (`Manufacturer|Model|Fingerprint`). The JVM server verifies this metadata during the `AUTH_RESPONSE` handshake and rejects connections if the hardware profile does not match the registered device.
+
+### 17. Lack of Connection Auditing
+- **Description**: Users lacked a way to audit previous connection attempts, rejections, or disconnections, making it harder to spot unauthorized access attempts.
+- **Status**: ✅ **Fixed**. Implemented persistent "Recent Connections" logs. The server now records all connection-related events (Connect, Disconnect, Approve, Reject, Ban) with timestamps, client IDs, device names, and hardware metadata in a local `connection_history.json` file, accessible via the "Connected Devices" screen in the Desktop console.
+
 ---
 
 ## 🟢 Monitoring
 
-### 15. Security Rating & Human Risk
+### 18. Security Rating & Human Risk
 - **Current Security Rating**: **High**. 
 - **Analysis**: This project uses **TLS with Pinning**, **Hardware-backed EC Keys**, and **Cryptographic Challenge-Response Authentication**.
 - **Primary Remaining Risk (User Error)**: The biggest vulnerability is accidental or social-engineered approval of a malicious device. If an attacker triggers a pairing request while the user is actively interacting with the Desktop UI, the user may inadvertently click "Allow" without verifying the device details.
@@ -78,9 +93,5 @@ This document tracks identified security risks that have not yet been fully miti
     - **Remote Command Execution**: Running terminal commands or scripts.
     - **Data Exfiltration**: Typing commands to upload files or leak sensitive information.
     - **Credential Theft**: Using simulated keystrokes to interact with password managers or login prompts.
-- **Mitigation**: Users must strictly verify that the **Device Name** and **6-digit Pairing Code** displayed on their phone exactly match the Desktop prompt before approving. Future updates will include "Recent Connections" logs to help users audit device activity.
-
-- **Client ID Spoofing**: We assume the Identity Key provided during the handshake is unique. If an attacker clones a trusted device's Identity Key (requires root/physical access to the phone), they can impersonate that device.
-    - **Future Mitigation**: Implement public/private key challenge-response during each session initiation to ensure the client possesses the private key corresponding to the registered ID.
-- **UDP Discovery Flooding**: A malicious actor could flood the network with fake server discovery packets to confuse the client UI.
-    - **Future Mitigation**: Implement rate-limiting and a "cooldown" period for processing incoming discovery packets in the `DiscoveryViewModel`.
+- **Mitigation**: Users must strictly verify that the **Device Name** and **6-digit Pairing Code** displayed on their phone exactly match the Desktop prompt before approving.
+- **Auditing**: Implemented "Recent Connections" logs in `DesktopViewModel` and `ConnectionHistoryManager` to help users audit device activity, including successes, rejections, and bans with hardware metadata.

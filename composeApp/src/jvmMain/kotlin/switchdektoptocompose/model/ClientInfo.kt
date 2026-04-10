@@ -5,5 +5,7 @@ data class ClientInfo(
     val name: String,
     val isTrusted: Boolean = false,
     val verificationCode: String? = null,
-    val codeMatched: Boolean = false
+    val codeMatched: Boolean = false,
+    val metadata: String? = null,
+    val currency: Long = 0
 )
