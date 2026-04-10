@@ -137,6 +137,12 @@ class MacroKtorServer(
                             return@webSocket
                         }
                         onPairingRequest(clientId, clientName)
+                        
+                        // Send current server's fingerprint to help client with pinning
+                        val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+                        val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
+                        val fingerprint = KeystoreUtils.getCertificateFingerprint(keystore)
+                        send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("fingerprint" to fingerprint)).toBytes()))
                     }
 
                     try {
@@ -154,27 +160,40 @@ class MacroKtorServer(
                                     } else {
                                         // Handle Auth and Pairing while not fully authenticated
                                         dataModel.handle(
-                                            onControl = { cmd, params ->
+                                            onControl = onControl@{ cmd, params ->
                                                 when (cmd) {
                                                     ControlCommand.AUTH_RESPONSE -> {
                                                         val challenge = pendingAuthChallenges[clientId]
                                                         val signature = params["signature"]
-                                                        val publicKey = params["publicKey"] // In a real app, we'd verify against stored publicKey for this clientId
+                                                        val publicKeyBase64 = params["publicKey"]
                                                         
-                                                        if (challenge != null && signature != null && publicKey != null) {
+                                                        if (challenge != null && signature != null && publicKeyBase64 != null) {
+                                                            // SECURITY FIX: Ensure the public key matches the claimed clientId (fingerprint)
+                                                            if (publicKeyBase64 != clientId) {
+                                                                println("Security Alert: Authentication attempted with mismatched public key for clientId $clientId")
+                                                                this@webSocket.launch {
+                                                                    this@webSocket.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
+                                                                }
+                                                                return@onControl
+                                                            }
+
                                                             // Verify signature of the challenge using the public key
                                                             val isValid = com.kapcode.open.macropad.kmps.IdentityManager.verifySignature(
                                                                 challenge.toByteArray(),
                                                                 com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(signature),
-                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKey)
+                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKeyBase64)
                                                             )
                                                             
                                                             if (isValid) {
                                                                 pendingAuthChallenges.remove(clientId)
                                                                 onClientConnected(clientId, clientName)
-                                                                send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                                                                this@webSocket.launch {
+                                                                    send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                                                                }
                                                             } else {
-                                                                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
+                                                                this@webSocket.launch {
+                                                                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
+                                                                }
                                                             }
                                                         }
                                                     }

@@ -19,6 +19,7 @@ data class DiscoveredServer(
     val address: String, // e.g., "192.168.1.10:8443"
     val host: InetAddress,
     val isSecure: Boolean,
+    val fingerprint: String? = null,
     val lastSeen: Long = System.currentTimeMillis()
 )
 
@@ -97,9 +98,10 @@ class ClientDiscovery {
                         val serverName = json.getString("serverName")
                         val port = json.getInt("port")
                         val isSecure = json.getBoolean("isSecure")
+                        val fingerprint = if (json.has("fingerprint")) json.getString("fingerprint") else null
                         val serverAddress = "$hostIp:$port"
 
-                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure, now)
+                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure, fingerprint, now)
 
                         // 3. Update the list of found servers
                         val currentServers = foundServers.value.toMutableList()

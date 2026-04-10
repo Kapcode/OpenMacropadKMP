@@ -129,6 +129,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - The server issues a random UUID challenge upon connection.
     - The client signs this challenge using its platform-specific private EC key (Hardware-backed on Android, password-protected PKCS12 on JVM).
     - The server verifies the signature against the stored public key for that `clientId`.
+    - **Identity Mismatch Fix**: ✅ **Fixed**. The server now strictly verifies that the public key provided in the `AUTH_RESPONSE` exactly matches the `clientId` used to establish the session. This prevents an attacker from signing a challenge with their own key while claiming to be a different, trusted user.
 
 ### Challenge: Pairing Code Interception (Vulnerability 3)
 - **Problem**: The 6-digit verification code was sent over the network to the client, allowing a passive attacker to see it.
@@ -137,6 +138,13 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Challenge: Authentication Bypass via Raw Frames
 - **Problem**: Ktor's `webSocket` route processed both `Frame.Binary` and `Frame.Text`, allowing attackers to bypass the secure `DataModel` handler.
 - **Solution**: Hardened `MacroKtorServer` and `MacroKtorClient` to **explicitly ignore `Frame.Text`**. All communication is now strictly binary, containing serialized JSON `DataModel` objects.
+
+### Challenge: Man-in-the-Middle (MITM) via Unsafe SSL
+- **Problem**: To support the server's self-signed certificate, the Android client was previously configured to trust all SSL certificates, leaving it vulnerable to MITM attacks.
+- **Solution**: Implemented **Certificate Pinning**.
+    - **Fingerprint Calculation**: The Desktop server calculates the SHA-256 fingerprint of its own certificate (`KeystoreUtils.kt`).
+    - **Fingerprint Sharing**: The fingerprint is shared with the client via UDP discovery and the initial pairing handshake.
+    - **Pinned Client**: The Android client now uses a custom `X509TrustManager` that verifies the server's certificate against the stored fingerprint. This replaces the "unsafe" client with a cryptographically hardened one for all subsequent connections.
 
 ## 12. UI Modernization & Code Standards
 

@@ -16,6 +16,7 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     - The server issues a random UUID challenge upon connection.
     - The client signs this challenge using its platform-specific private EC key (secp256r1).
     - The server verifies the signature against the stored public key for that `clientId`. Trust is only granted if the signature is valid.
+    - **Security Fix (Identity Mismatch):** ✅ **Fixed**. The server now strictly verifies that the public key provided in the `AUTH_RESPONSE` exactly matches the `clientId` used to establish the session. This prevents an attacker from signing a challenge with their own key but claiming to be a different, trusted user.
 
 ### 3. Pairing Code Interception
 *   **Status:** ✅ **Fixed**
@@ -69,6 +70,15 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     *   **Global Lockdown (Device Discovery):** A "Device Discovery" toggle in Settings controls whether the server's presence is broadcast via UDP. Disabling this makes the server invisible to mobile app scans, though manual connections by IP are still possible (but still subject to pairing approval).
     *   **One-Time Approvals ONLY:** An "Ask Every Time (One-Time Approvals ONLY)" mode can be enabled to force all new connections to be non-persistent. In this mode, the "Always Allow" option is removed from the pairing dialog, ensuring no new devices are added to the trusted list and a human must approve every session.
     *   **UI Safety:** All security-critical dialogs (Pairing, Settings, Ban) use `alwaysOnTop = true` to ensure they remain visible over other application windows.
+
+### 9. Man-in-the-Middle (MITM) via Unsafe SSL
+*   **Status:** ✅ **Fixed**
+*   **Description:** The Android client previously trusted all SSL certificates to support the server's self-signed certificate, leaving it vulnerable to MITM attacks.
+*   **Mitigation:** Implemented **Certificate Pinning**.
+    - The Desktop server calculates its unique SHA-256 certificate fingerprint.
+    - This fingerprint is shared with the client during UDP discovery and the initial pairing handshake.
+    - Upon successful pairing, the client saves this fingerprint in secure storage (`ServerStorage`).
+    - Every subsequent connection uses a hardened `OkHttpClient` that validates the server's certificate against the pinned fingerprint. If the fingerprints do not match, the connection is immediately terminated.
 
 ## Reporting a Vulnerability
 

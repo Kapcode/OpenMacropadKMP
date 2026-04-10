@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermission
 import java.security.spec.ECGenParameterSpec
 import java.text.SimpleDateFormat
+import java.security.MessageDigest
 
 class KeystorePasswordException(message: String, cause: Throwable? = null) : Exception(message, cause)
 
@@ -107,6 +108,13 @@ object KeystoreUtils {
         setSecurePermissions(keystoreFile)
 
         return keyStore
+    }
+
+    fun getCertificateFingerprint(keyStore: KeyStore): String {
+        val cert = keyStore.getCertificate(ALIAS) as X509Certificate
+        val digest = MessageDigest.getInstance("SHA-256")
+        val fingerprint = digest.digest(cert.encoded)
+        return fingerprint.joinToString(":") { "%02X".format(it) }
     }
 
     private fun generateKeyPair(): KeyPair {

@@ -25,6 +25,12 @@ class ServerDiscoveryAnnouncer {
                     put("serverName", serverName)
                     put("port", port)
                     put("isSecure", isSecure)
+                    if (isSecure) {
+                        val workingDir = java.io.File(System.getProperty("user.home"), ".openmacropad")
+                        val keystore = com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getOrCreateKeystore(workingDir)
+                        val fingerprint = com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getCertificateFingerprint(keystore)
+                        put("fingerprint", fingerprint)
+                    }
                 }.toString()).toByteArray()
 
                 val packet = DatagramPacket(message, message.size, broadcastAddress, 9998)

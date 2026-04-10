@@ -80,7 +80,12 @@ fun MainUI(
                 } else {
                     val serverInfos = remember(foundServers) {
                         foundServers.map {
-                            ServerInfo(name = it.name, address = it.address, isSecure = it.isSecure)
+                            ServerInfo(
+                                name = it.name,
+                                address = it.address,
+                                isSecure = it.isSecure,
+                                fingerprint = it.fingerprint
+                            )
                         }
                     }
                     App(

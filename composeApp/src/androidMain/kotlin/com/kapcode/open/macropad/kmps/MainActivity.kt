@@ -114,7 +114,7 @@ class MainActivity : ComponentActivity() {
                     MainUI(
                         settingsViewModel = settingsViewModel,
                         clientDiscovery = clientDiscovery,
-                        onLaunchClient = { serverInfo, deviceName ->
+                        onLaunchClient = { serverInfo: ServerInfo, deviceName: String ->
                             Log.d(
                                 TAG,
                                 "Launching ClientActivity for: ${serverInfo.address} with device name: $deviceName (Secure: ${serverInfo.isSecure})"
@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
                                 putExtra("SERVER_ADDRESS", serverInfo.address)
                                 putExtra("DEVICE_NAME", deviceName)
                                 putExtra("IS_SECURE", serverInfo.isSecure)
+                                putExtra("SERVER_FINGERPRINT", serverInfo.fingerprint)
                             }
                             startActivity(intent)
                         }

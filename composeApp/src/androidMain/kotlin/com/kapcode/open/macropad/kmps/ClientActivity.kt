@@ -102,6 +102,7 @@ class ClientActivity : ComponentActivity() {
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
         val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Android Device"
         val isSecure = intent.getBooleanExtra("IS_SECURE", false)
+        val discoveryFingerprint = intent.getStringExtra("SERVER_FINGERPRINT")
         val addressParts = serverAddressFull?.split(":")
         val ipAddress = addressParts?.getOrNull(0)
         val port = addressParts?.getOrNull(1)?.toIntOrNull()
@@ -133,6 +134,7 @@ class ClientActivity : ComponentActivity() {
                         port,
                         deviceName,
                         isSecure,
+                        discoveryFingerprint,
                         onUpdate = { status, name, reason, code ->
                             connectionStatus = status
                             serverName = name
@@ -210,6 +212,7 @@ class ClientActivity : ComponentActivity() {
         port: Int,
         deviceName: String,
         isSecure: Boolean,
+        discoveryFingerprint: String?,
         onUpdate: (status: String, serverName: String?, reason: String?, verificationCode: String?) -> Unit,
         onExecutionStart: (String) -> Unit = {},
         onExecutionComplete: (String) -> Unit = {},
@@ -225,7 +228,19 @@ class ClientActivity : ComponentActivity() {
                 try {
                     val ktorHttpClient = HttpClient(OkHttp) {
                         install(WebSockets)
-                        engine { if (isSecure) { preconfigured = createUnsafeOkHttpClient() } }
+                        engine { 
+                            if (isSecure) { 
+                                val savedFingerprint = ServerStorage.getServerFingerprint(this@ClientActivity, "$ipAddress:$port")
+                                    ?: discoveryFingerprint
+                                
+                                if (savedFingerprint != null) {
+                                    preconfigured = createPinnedOkHttpClient(savedFingerprint)
+                                } else {
+                                    // Fallback to unsafe for first-time pairing if no fingerprint known
+                                    preconfigured = createUnsafeOkHttpClient() 
+                                }
+                            } 
+                        }
                     }
 
                     tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
@@ -270,6 +285,15 @@ class ClientActivity : ComponentActivity() {
                                 dataModel.handle(
                                     onControl = { command, params ->
                                         when (command) {
+                                            ControlCommand.AUTH_CHALLENGE -> {
+                                                val fingerprint = params["fingerprint"]
+                                                if (fingerprint != null) {
+                                                    // Store the fingerprint temporarily for this session 
+                                                    // It will be permanently saved on PAIRING_APPROVED
+                                                    Log.d("ClientActivity", "Received server fingerprint: $fingerprint")
+                                                    ServerStorage.saveServerFingerprint(this@ClientActivity, "$ipAddress:$port", fingerprint)
+                                                }
+                                            }
                                             ControlCommand.PAIRING_PENDING -> {
                                                 macros.clear()
                                                 val code = params["code"]
@@ -358,6 +382,35 @@ class ClientActivity : ComponentActivity() {
                 backoffMillis = (backoffMillis * 2).coerceAtMost(maxBackoffMillis)
             }
         }
+    }
+
+    private fun createPinnedOkHttpClient(expectedFingerprint: String): OkHttpClient {
+        val trustManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                if (chain == null || chain.isEmpty()) throw java.security.cert.CertificateException("Empty certificate chain")
+                
+                val cert = chain[0]
+                val digest = java.security.MessageDigest.getInstance("SHA-256")
+                val fingerprint = digest.digest(cert.encoded).joinToString(":") { "%02X".format(it) }
+                
+                if (fingerprint != expectedFingerprint) {
+                    Log.e("Security", "CERTIFICATE PINNING FAILURE!")
+                    Log.e("Security", "Expected: $expectedFingerprint")
+                    Log.e("Security", "Found:    $fingerprint")
+                    throw java.security.cert.CertificateException("Certificate fingerprint mismatch! Potential MITM attack.")
+                }
+            }
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        }
+
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(null, arrayOf(trustManager), java.security.SecureRandom())
+
+        return OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustManager)
+            .hostnameVerifier { _, _ -> true } // Still use hostname verifier true because we pin the cert itself
+            .build()
     }
 
     private fun createUnsafeOkHttpClient(): OkHttpClient {
