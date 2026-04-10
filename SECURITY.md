@@ -28,21 +28,6 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Description:** Ktor's `webSocket` route processed both `Frame.Binary` and `Frame.Text`, allowing an attacker to send unencrypted text commands to bypass security checks.
 *   **Mitigation:** Both `MacroKtorServer` and `MacroKtorClient` have been hardened to **explicitly ignore `Frame.Text`**. All communication is strictly binary, containing serialized JSON `DataModel` objects.
 
-### 5. RSA 2048 and "Marvin" Timing Attacks
-
-### 4. Hardcoded Keystore Credentials
-*   **Status:** ✅ **Fixed**
-*   **Description:** Keystore credentials were previously hardcoded in the source code.
-*   **Mitigation:** 
-    *   **Android:** Migrated to the hardware-backed **Android Keystore System**. Keys are now non-exportable and protected by the TEE/StrongBox.
-    *   **JVM:** 
-        *   **Local Storage:** Migrated to an automatic, local-only keystore generation in `KeystoreUtils.kt`. The keystore is stored in `~/.openmacropad/` and is never committed to Git.
-        *   **Secret Management:** ✅ **Fixed**. Passwords are now managed via OS-native secure storage (**Windows Credential Manager**, **macOS Keychain**, and **Gnome Keyring**) using the `java-keyring` library. This ensures the "Golden Key" is never stored in plain text on the filesystem. Auto-generated passwords now have 64 bytes of entropy (Base64 encoded).
-        *   **Safety Net:** Implemented a non-destructive recovery path. If the password fails (e.g., after a hardware change), the app prompts the user for consent. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
-        *   **File Permissions:** The application automatically attempts to set the keystore file permissions to `600` (Owner Read/Write only) on POSIX-compliant systems (Linux/macOS) to prevent local privilege escalation.
-        *   **Handshake Unification:** The server's SSL certificate and its long-term identity keys are now unified within the same password-protected keystore.
-        *   **Next Steps:** Full integration with OS-level secret storage (Windows Credential Manager / macOS Keychain) is planned for production releases.
-
 ### 5. Lack of Input Validation on DH Public Keys
 *   **Status:** ✅ **Fixed**
 *   **Description:** Peer public keys were not validated before use.

@@ -245,7 +245,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - **User Notification**: Created a dedicated `MinimizeToTrayDialog` with high-visibility Material 3 typography to inform the user when the application is continuing to run in the background. Included a "Don't show again" option that persists in `AppSettings`.
     - **High-Quality Assets**: Switched to a 512px icon to eliminate white fringing artifacts on dark system taskbars.
 
-## 20. Comprehensive UI Theming & Accessibility
+## 19. Comprehensive UI Theming & Accessibility
 
 ### Challenge: Inconsistent Component Theming (Swing + Compose)
 - **Problem**: The JSON code editor (based on `RSyntaxTextArea`) did not follow the Compose application's theme, and dialogs often lacked proper visual affordances for scrolling.
@@ -255,7 +255,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Persistent Scrollbars**: Added thick (`8.dp`), high-visibility `VerticalScrollbar` components to all major dialogs (Settings, New Event, Record Macro). This ensures users can clearly see scrollable areas, especially on touchscreens or with hidden system scrollbars.
     - **Tooltip Optimization**: Removed the tooltip from the `SettingsDialog` close button to prevent it from obstructing the button itself during quick interactions.
 
-## 21. Console Enhancements & Security
+## 20. Console Enhancements & Security
 
 ### Challenge: Debugging Macro Execution and Client Interaction
 - **Problem**: The standard console log was hard to read due to lack of timing information and often scrolled past important events too quickly.
@@ -270,7 +270,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Informed Consent**: Implemented a mandatory security warning dialog that users must acknowledge before "Log to File" can be enabled.
     - **Temporary Nature**: The UI emphasizes that file logging should only be used temporarily for debugging and not left on during normal operation.
 
-## 22. Desktop Architectural Refactoring
+## 21. Desktop Architectural Refactoring
 
 ### Challenge: Maintainability and Dependency Sprawl
 - **Problem**: As the desktop application grew, `ui/DesktopApp.kt` and `viewmodel/` were becoming cluttered with tightly coupled logic and duplicate declarations (e.g., `DesktopViewModels`).
@@ -285,7 +285,7 @@ Automated macros could cause loss of system control if they ran too long or went
     3.  **Refined Visibility**: Moved models like `ClientInfo` and `MacroFileState` to a common `model` package to resolve visibility issues across UI and ViewModel layers.
     4.  **Compose Optimization**: Cleaned up imports and property delegates across 20+ files to ensure consistent use of `by` and `collectAsState()`.
 
-## 23. Repository Structure & Branching Strategy
+## 22. Repository Structure & Branching Strategy
 
 ### Challenge: Mental Load and Release Management
 - **Problem**: Maintaining a single branch for both active development and stable releases made it difficult to track what code was "shippable" versus "experimental."
@@ -294,7 +294,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Dev Branch**: Created as the primary workspace for all ongoing development. This allows for rapid iteration and testing without affecting the stability of the `main` branch.
     - **Protected Branches**: Enabled GitHub branch protection on `main` to prevent accidental force-pushes or deletions.
 
-## 24. To-Do List & Future Improvements
+## 23. To-Do List & Future Improvements
 
 ### Android Client
 - [x] **Optimize Dependency Initialization**: Transitioned from synchronous `ContentProvider`-based initialization to lazy, background-thread initialization for Firebase and AdMob.
@@ -309,6 +309,8 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
 - [x] **Taskbar/Tray Polish**: Overhauled the system tray implementation with dynamic context menus, primary click toggling, and a user notification dialog on first minimize.
+### 24. Physical Consent Pairing & QR Support
+
 ### Challenge: Physical Consent Pairing & QR Support
 - **Problem**: Manually typing 6-digit PINs on a mobile device is error-prone and tedious, especially in landscape mode where the keyboard covers most of the UI.
 - **Solution**: 
