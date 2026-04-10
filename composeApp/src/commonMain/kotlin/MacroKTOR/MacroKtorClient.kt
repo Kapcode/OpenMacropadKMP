@@ -1,5 +1,6 @@
 package MacroKTOR
 
+import com.kapcode.open.macropad.kmps.network.sockets.model.handle
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
@@ -58,8 +59,35 @@ class MacroKtorClient(
         // Launch a separate coroutine to listen for messages.
         clientScope.launch {
             try {
-                session?.let {
-                    for (frame in it.incoming) {
+                session?.let { s ->
+                    for (frame in s.incoming) {
+                        if (frame is Frame.Binary) {
+                            try {
+                                val dataModel = com.kapcode.open.macropad.kmps.network.sockets.model.DataModel.fromBytes(frame.readBytes())
+                                dataModel.handle(
+                                    onControl = { cmd: com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand, params: Map<String, String> ->
+                                        if (cmd == com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_CHALLENGE) {
+                                            val challenge = params["challenge"]
+                                            if (challenge != null) {
+                                                launch {
+                                                    val sig = identityManager.signMessage(challenge.encodeToByteArray())
+                                                    val response = com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(
+                                                        com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_RESPONSE,
+                                                        mapOf(
+                                                            "signature" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(sig),
+                                                            "publicKey" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey)
+                                                        )
+                                                    )
+                                                    send(response.toBytes())
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                e.printStackTrace()
+                            }
+                        }
                         incomingMessages.send(frame)
                     }
                 }
@@ -73,10 +101,6 @@ class MacroKtorClient(
 
     suspend fun send(bytes: ByteArray) {
         session?.send(Frame.Binary(true, bytes))
-    }
-
-    suspend fun send(message: String) {
-        session?.send(Frame.Text(message))
     }
 
     fun close() {

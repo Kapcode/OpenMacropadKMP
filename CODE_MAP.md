@@ -53,11 +53,13 @@ The client and server communicate using **DataModel** objects serialized as JSON
 - **Common Message Types**:
     - `Text`: Raw string messages (Legacy support).
     - `Command`: Application-specific commands (e.g., `getMacros`, `play:[MacroName]`).
-    - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `BANNED`, `DISCONNECT`).
+    - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `AUTH_CHALLENGE`, `AUTH_RESPONSE`, `BANNED`, `DISCONNECT`).
+    - `Response`: Success/Failure acknowledgments with optional data (`String?`).
     - `Heartbeat`: Connection health checks.
 - **Security Handshake**:
-    - Authenticated Handshake with EC (secp256r1) and AES-GCM encryption.
-    - Physical Consent Pairing: Untrusted devices must be manually approved on the server UI.
+    - **Challenge-Response**: Servers issue a random challenge that clients must sign using their private EC key to prove identity and prevent `clientId` spoofing.
+    - **Physical Consent Pairing**: Untrusted devices must be manually approved on the server UI. Verification codes are displayed on the server and must be entered on the client (or scanned via QR) to prevent pairing code leakage.
+    - **Binary-Only Protocol**: Raw `Frame.Text` messages are ignored; all communication must use the serialized `DataModel` over `Frame.Binary`.
 
 ## 🛠️ Key Technologies
 - **Kotlin Multiplatform (KMP)**

@@ -1,34 +1,30 @@
 package com.kapcode.open.macropad.kmps.network.sockets.model
 
-import com.kapcode.open.macropad.kmps.utils.Base64Utils
-import java.io.*
-import java.security.*
+import kotlinx.serialization.*
+import kotlinx.serialization.json.*
+import java.util.*
 import javax.crypto.*
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
-import java.util.*
-import kotlin.jvm.JvmField
+import java.security.*
 
 /**
  * Sealed class representing different types of messages that can be sent
  * between client and server
  */
-sealed class MessageType : Serializable {
-    companion object {
-        @JvmField
-        val serialVersionUID = 1L
-    }
+@Serializable
+sealed class MessageType {
+    @Serializable
+    @SerialName("text")
+    data class Text(val content: String) : MessageType()
     
-    data class Text(val content: String) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
-    }
+    @Serializable
+    @SerialName("command")
+    data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType()
     
-    data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
-    }
-    
+    @Serializable
+    @SerialName("data")
     data class Data(val key: String, val value: ByteArray) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is Data) return false
@@ -44,22 +40,23 @@ sealed class MessageType : Serializable {
         }
     }
     
-    data class Response(val success: Boolean, val message: String, val data: Any? = null) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
-    }
+    @Serializable
+    @SerialName("response")
+    data class Response(val success: Boolean, val message: String, val data: String? = null) : MessageType()
     
-    data class Control(val command: ControlCommand, val parameters: Map<String, String> = emptyMap()) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
-    }
+    @Serializable
+    @SerialName("control")
+    data class Control(val command: ControlCommand, val parameters: Map<String, String> = emptyMap()) : MessageType()
     
-    data class Heartbeat(val timestamp: Long = System.currentTimeMillis()) : MessageType() {
-        companion object { @JvmField val serialVersionUID = 1L }
-    }
+    @Serializable
+    @SerialName("heartbeat")
+    data class Heartbeat(val timestamp: Long = System.currentTimeMillis()) : MessageType()
 }
 
 /**
  * Commands specifically for connection lifecycle and security
  */
+@Serializable
 enum class ControlCommand {
     PAIRING_REQUEST,
     PAIRING_PENDING,
@@ -67,6 +64,8 @@ enum class ControlCommand {
     PAIRING_CODE_MATCHED,
     PAIRING_APPROVED,
     PAIRING_REJECTED,
+    AUTH_CHALLENGE,
+    AUTH_RESPONSE,
     BANNED,
     DISCONNECT,
     EXECUTION_START,
@@ -77,21 +76,25 @@ enum class ControlCommand {
 /**
  * Main data model for encrypted communication between server and client
  */
+@Serializable
 data class DataModel(
     val id: String = UUID.randomUUID().toString(),
     val timestamp: Long = System.currentTimeMillis(),
     val messageType: MessageType,
     val metadata: Map<String, String> = emptyMap(),
     val priority: Priority = Priority.NORMAL
-) : Serializable {
+) {
 
     enum class Priority {
         LOW, NORMAL, HIGH, CRITICAL
     }
 
     companion object {
-        @JvmField
-        val serialVersionUID = 1L
+        private val json = Json { 
+            ignoreUnknownKeys = true
+            encodeDefaults = true
+        }
+
         private const val ALGORITHM = "AES"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"
         private const val GCM_TAG_LENGTH = 128
@@ -107,22 +110,6 @@ data class DataModel(
         }
 
         /**
-         * Convert a key to Base64 string for storage/transmission
-         */
-        @Deprecated("Leaks sensitive data in RAM as a String. Use keyToBytes or similar.", ReplaceWith("Base64Utils.encode(key.encoded)"))
-        fun keyToString(key: SecretKey): String {
-            return Base64Utils.encode(key.encoded)
-        }
-
-        /**
-         * Restore a key from Base64 string
-         */
-        fun stringToKey(keyString: String): SecretKey {
-            val keyBytes = Base64Utils.decode(keyString)
-            return SecretKeySpec(keyBytes, ALGORITHM)
-        }
-
-        /**
          * Deserialize an encrypted DataModel
          */
         fun fromEncryptedBytes(encryptedData: ByteArray, key: SecretKey): DataModel {
@@ -131,14 +118,10 @@ data class DataModel(
         }
 
         /**
-         * Deserialize a DataModel from bytes
+         * Deserialize a DataModel from bytes (JSON)
          */
         fun fromBytes(bytes: ByteArray): DataModel {
-            ByteArrayInputStream(bytes).use { bais ->
-                ObjectInputStream(bais).use { ois ->
-                    return ois.readObject() as DataModel
-                }
-            }
+            return json.decodeFromString(bytes.decodeToString())
         }
 
         /**
@@ -167,16 +150,10 @@ data class DataModel(
     }
 
     /**
-     * Serialize the DataModel to bytes
+     * Serialize the DataModel to bytes (JSON)
      */
     fun toBytes(): ByteArray {
-        ByteArrayOutputStream().use { baos ->
-            ObjectOutputStream(baos).use { oos ->
-                oos.writeObject(this)
-                oos.flush()
-                return baos.toByteArray()
-            }
-        }
+        return json.encodeToString(this).encodeToByteArray()
     }
 
     /**
@@ -208,7 +185,7 @@ data class DataModel(
     /**
      * Create a response DataModel based on this message
      */
-    fun createResponse(success: Boolean, message: String, data: Any? = null): DataModel {
+    fun createResponse(success: Boolean, message: String, data: String? = null): DataModel {
         return DataModel(
             messageType = MessageType.Response(success, message, data),
             metadata = mapOf("responseToId" to id)
@@ -240,7 +217,7 @@ class DataModelBuilder {
         this.messageType = MessageType.Data(key, value)
     }
     
-    fun response(success: Boolean, message: String, data: Any? = null) = apply {
+    fun response(success: Boolean, message: String, data: String? = null) = apply {
         this.messageType = MessageType.Response(success, message, data)
     }
 

@@ -4,20 +4,30 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 
 ## Status of Vulnerability Mitigations
 
-### 1. Unauthenticated Key Exchange (MitM)
+### 1. Unsafe Deserialization (RCE)
 *   **Status:** ✅ **Fixed**
-*   **Description:** The Diffie-Hellman (DH) exchange was previously unauthenticated.
-*   **Mitigation:** Implemented an authenticated handshake in `SecureSocket.kt`. Both client and server now sign their DH public keys using their long-term identity keys (EC secp256r1). The peer verifies the signature before completing the exchange, preventing Man-in-the-Middle (MitM) attacks.
+*   **Description:** The network protocol previously used Java `ObjectInputStream`, which is vulnerable to remote code execution (RCE) through malicious serialized objects.
+*   **Mitigation:** Migrated the entire `DataModel` to **`kotlinx.serialization` (JSON)**. This provides a type-safe, multiplatform-compatible way to handle data without the risks associated with Java serialization. All communication now uses binary-wrapped JSON over WebSockets.
 
-### 2. Weak DH Key Size (Logjam Risk)
+### 2. ClientId Spoofing
 *   **Status:** ✅ **Fixed**
-*   **Description:** Previously used a 1024-bit key size for DH.
-*   **Mitigation:** Increased `KEY_SIZE` to 2048-bit in `EncryptionManager.kt` to protect against discrete logarithm attacks.
+*   **Description:** The server previously relied on a self-reported `clientId` for authentication, allowing any connected client to impersonate a trusted device.
+*   **Mitigation:** Implemented **Cryptographic Challenge-Response** authentication.
+    - The server issues a random UUID challenge upon connection.
+    - The client signs this challenge using its platform-specific private EC key (secp256r1).
+    - The server verifies the signature against the stored public key for that `clientId`. Trust is only granted if the signature is valid.
 
-### 3. RSA 2048 and "Marvin" Timing Attacks
+### 3. Pairing Code Interception
 *   **Status:** ✅ **Fixed**
-*   **Description:** `IdentityManager.kt` used RSA 2048 for client identity.
-*   **Mitigation:** Migrated from RSA to Elliptic Curve (ECDSA with `secp256r1`) in `IdentityManager.kt`. This provides better security with smaller keys and improved resistance to certain timing attacks.
+*   **Description:** The 6-digit verification code was previously sent over the network to the client, making it visible to passive network attackers.
+*   **Mitigation:** **Out-of-band Verification**. The pairing code is now strictly displayed on the server's physical screen (Desktop UI). The user must manually enter it on the client or scan it via QR code. The server never sends the code to the client; it only acknowledges if the client-submitted code matches.
+
+### 4. Authentication Bypass via Raw WebSocket Frames
+*   **Status:** ✅ **Fixed**
+*   **Description:** Ktor's `webSocket` route processed both `Frame.Binary` and `Frame.Text`, allowing an attacker to send unencrypted text commands to bypass security checks.
+*   **Mitigation:** Both `MacroKtorServer` and `MacroKtorClient` have been hardened to **explicitly ignore `Frame.Text`**. All communication is strictly binary, containing serialized JSON `DataModel` objects.
+
+### 5. RSA 2048 and "Marvin" Timing Attacks
 
 ### 4. Hardcoded Keystore Credentials
 *   **Status:** ✅ **Fixed**

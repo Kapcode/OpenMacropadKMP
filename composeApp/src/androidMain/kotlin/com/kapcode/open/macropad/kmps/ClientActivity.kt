@@ -330,10 +330,6 @@ class ClientActivity : ComponentActivity() {
                             } catch (e: Exception) {
                                 Log.e("ClientActivity", "Error parsing DataModel", e)
                             }
-                        } else if (frame is Frame.Text) {
-                            lastHeartbeat = System.currentTimeMillis()
-                            val receivedText = frame.readText()
-                            Log.d("ClientActivity", "Received legacy text from server: $receivedText")
                         }
                     }
                     watchdogJob.cancel()

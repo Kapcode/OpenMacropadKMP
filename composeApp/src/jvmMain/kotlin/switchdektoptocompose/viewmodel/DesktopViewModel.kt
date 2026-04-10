@@ -200,8 +200,10 @@ class DesktopViewModel(
             else currentList + ClientInfo(id = clientId, name = clientName, verificationCode = verificationCode)
         }
         
+        // VULNERABILITY FIX 3: Do NOT send the code to the client.
+        // The user must read it from the desktop screen and enter it on the client.
         viewModelScope.launch {
-            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("code" to verificationCode)))
+            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
         }
         
         consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Displaying verification code and QR.")

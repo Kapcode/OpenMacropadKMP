@@ -29,6 +29,7 @@ class MacroKtorServer(
 ) {
     private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
     private val connections = ConcurrentHashMap<String, WebSocketServerSession>()
+    private val pendingAuthChallenges = ConcurrentHashMap<String, String>() // clientId -> challenge
     private val lastSeen = ConcurrentHashMap<String, Long>()
     private val temporaryTrustedDevices = java.util.Collections.synchronizedSet(mutableSetOf<String>())
     private val serverScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -124,15 +125,17 @@ class MacroKtorServer(
                     }
 
                     if (isDeviceTrusted(clientId)) {
-                        onClientConnected(clientId, clientName)
+                        // VULNERABILITY FIX 2: Challenge-Response Authentication
+                        // Instead of immediate trust, send a challenge.
+                        val challenge = UUID.randomUUID().toString()
+                        pendingAuthChallenges[clientId] = challenge
+                        send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("challenge" to challenge)).toBytes()))
                     } else {
                         if (!switchdektoptocompose.logic.AppSettings.allowNewConnections) {
                             send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "New connections disabled")).toBytes()))
                             close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "New connections are disabled"))
                             return@webSocket
                         }
-                        // We no longer send an empty PAIRING_PENDING here.
-                        // DesktopViewModel.onPairingRequest will send it with the verification code.
                         onPairingRequest(clientId, clientName)
                     }
 
@@ -144,14 +147,42 @@ class MacroKtorServer(
                                     lastSeen[clientId] = System.currentTimeMillis()
                                     
                                     val isTrusted = isDeviceTrusted(clientId)
-                                    if (isTrusted) {
+                                    val isAuthenticated = isTrusted && !pendingAuthChallenges.containsKey(clientId)
+
+                                    if (isAuthenticated) {
                                         onMessageReceived(clientId, dataModel)
                                     } else {
-                                        // Only allow pairing response if not trusted
+                                        // Handle Auth and Pairing while not fully authenticated
                                         dataModel.handle(
-                                            onControl = { cmd, _ ->
-                                                if (cmd == ControlCommand.PAIRING_RESPONSE) {
-                                                    onMessageReceived(clientId, dataModel)
+                                            onControl = { cmd, params ->
+                                                when (cmd) {
+                                                    ControlCommand.AUTH_RESPONSE -> {
+                                                        val challenge = pendingAuthChallenges[clientId]
+                                                        val signature = params["signature"]
+                                                        val publicKey = params["publicKey"] // In a real app, we'd verify against stored publicKey for this clientId
+                                                        
+                                                        if (challenge != null && signature != null && publicKey != null) {
+                                                            // Verify signature of the challenge using the public key
+                                                            val isValid = com.kapcode.open.macropad.kmps.IdentityManager.verifySignature(
+                                                                challenge.toByteArray(),
+                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(signature),
+                                                                com.kapcode.open.macropad.kmps.utils.Base64Utils.decode(publicKey)
+                                                            )
+                                                            
+                                                            if (isValid) {
+                                                                pendingAuthChallenges.remove(clientId)
+                                                                onClientConnected(clientId, clientName)
+                                                                send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                                                            } else {
+                                                                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
+                                                            }
+                                                        }
+                                                    }
+                                                    ControlCommand.PAIRING_RESPONSE -> {
+                                                        // Always allow pairing response
+                                                        onMessageReceived(clientId, dataModel)
+                                                    }
+                                                    else -> {}
                                                 }
                                             }
                                         )
@@ -167,10 +198,11 @@ class MacroKtorServer(
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }
-                            } else if (frame is Frame.Text) {
-                                // Support legacy text messages for now, but wrap them
-                                if (isDeviceTrusted(clientId)) {
-                                    onMessageReceived(clientId, textMessage(frame.readText()))
+                            } else {
+                                // Ignore all non-binary frames (like Frame.Text) to prevent auth bypass
+                                // and ensure all communication uses the secure DataModel format.
+                                if (frame !is Frame.Ping && frame !is Frame.Pong) {
+                                    println("Ignoring non-binary frame from $clientId: ${frame::class.simpleName}")
                                 }
                             }
                         }

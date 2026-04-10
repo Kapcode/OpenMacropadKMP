@@ -117,36 +117,26 @@ Automated macros could cause loss of system control if they ran too long or went
 ./gradlew :composeApp:packageDistributionForCurrentOS
 ```
 
-## 11. Security Hardening & KMP Cryptography
+## 11. Security Hardening & Vulnerability Fixes
 
-### Challenge: Authenticating the Handshake (MitM Protection)
-- **Problem**: The initial Diffie-Hellman exchange was anonymous, making it vulnerable to interception.
-- **Solution**: Implemented an authenticated handshake in `SecureSocket.kt`. 
-    - **Identity**: Migrated from RSA-2048 to **Elliptic Curve (secp256r1)** for faster and more secure signatures.
-    - **Signature**: During the handshake, both parties sign their ephemeral DH public keys. The peer verifies the signature using the other party's long-term public identity key before deriving the shared AES secret.
+### Challenge: Unsafe Deserialization (Vulnerability 1)
+- **Problem**: Use of Java `ObjectInputStream` for network communication was vulnerable to arbitrary code execution.
+- **Solution**: Migrated the entire `DataModel` to **`kotlinx.serialization` (JSON)**. This provides a type-safe, multiplatform-compatible way to handle data without the risks associated with Java serialization.
 
-### Challenge: Platform-Specific Key Storage
-- **Problem**: Storing private keys securely across different platforms.
-- **Solution**: 
-    - **Android**: Integrated with the **Android Keystore System**. Private keys are generated within the hardware-backed TEE (Trusted Execution Environment) or StrongBox, ensuring they cannot be exported even if the device is rooted.
-    - **JVM**: 
-        - **Local Storage**: Migrated to an automatic, local-only keystore generation in `KeystoreUtils.kt`. The keystore is stored in `~/.openmacropad/` and is never committed to Git.
-        - **Secret Management**: Passwords are now managed via `local.properties` (machine-local) and injected at build time via JVM System Properties (`-Dkeystore.password`).
-        - **Auto-Recovery & Safety**: The system detects password mismatches and prompts the user for consent before recreating the keystore. If the user chooses to reset, the old keystore is backed up with a timestamp (e.g., `server_keystore.p12.20231027_120000.bak`) instead of being deleted.
-        - **File Permissions**: The app automatically sets the keystore file to `600` (Owner Read/Write only) on POSIX-compliant systems (Linux/macOS) on every startup to prevent local access by other users.
-        - **Handshake Unification**: The server's SSL certificate and its long-term identity keys are now unified within the same password-protected keystore.
-        - **Next Steps**: Full integration with OS-level secret storage (Windows Credential Manager / macOS Keychain) is planned for production releases.
+### Challenge: ClientId Spoofing (Vulnerability 2)
+- **Problem**: The server relied on a self-reported `clientId` for authentication, allowing an attacker to impersonate any trusted device.
+- **Solution**: Implemented **Cryptographic Challenge-Response** authentication.
+    - The server issues a random UUID challenge upon connection.
+    - The client signs this challenge using its platform-specific private EC key (Hardware-backed on Android, password-protected PKCS12 on JVM).
+    - The server verifies the signature against the stored public key for that `clientId`.
 
-### Challenge: Android 7.0 (API 24) Compatibility
-- **Problem**: `java.util.Base64` was introduced in API 26, causing crashes on older Android devices.
-- **Solution**: Created a KMP-safe `Base64Utils` object.
-    - `androidMain` uses `android.util.Base64`.
-    - `jvmMain` uses `java.util.Base64`.
-    - This allows `commonMain` code (like `DataModel`) to remain platform-agnostic while supporting older Android versions.
+### Challenge: Pairing Code Interception (Vulnerability 3)
+- **Problem**: The 6-digit verification code was sent over the network to the client, allowing a passive attacker to see it.
+- **Solution**: **Out-of-band Verification**. The code is now strictly displayed on the server UI (Desktop). The user must manually enter it on the client or scan it via QR code. The server never sends the code to the client; it only acknowledges if the client-submitted code is correct.
 
-### Challenge: Memory Security (Fix 6)
-- **Problem**: Sensitive cryptographic keys persisting in RAM.
-- **Solution**: Updated `EncryptionManager.kt` to explicitly call `.fill(0)` on `ByteArray` objects containing keys and IVs immediately after their use in cryptographic operations.
+### Challenge: Authentication Bypass via Raw Frames
+- **Problem**: Ktor's `webSocket` route processed both `Frame.Binary` and `Frame.Text`, allowing attackers to bypass the secure `DataModel` handler.
+- **Solution**: Hardened `MacroKtorServer` and `MacroKtorClient` to **explicitly ignore `Frame.Text`**. All communication is now strictly binary, containing serialized JSON `DataModel` objects.
 
 ## 12. UI Modernization & Code Standards
 

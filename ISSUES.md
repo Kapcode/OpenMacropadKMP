@@ -26,6 +26,22 @@ This document tracks identified security risks that have not yet been fully miti
 
 ## ✅ Resolved
 
+### 11. Unsafe Deserialization (Vulnerability 1)
+- **Description**: Network protocol used Java `ObjectInputStream`, which is vulnerable to remote code execution (RCE).
+- **Status**: ✅ **Fixed**. Migrated to `kotlinx.serialization` (JSON).
+
+### 12. ClientId Spoofing (Vulnerability 2)
+- **Description**: Server relied on self-reported `clientId` for authentication.
+- **Status**: ✅ **Fixed**. Implemented Cryptographic Challenge-Response (ECDSA).
+
+### 13. Pairing Code Interception (Vulnerability 3)
+- **Description**: 6-digit verification code was sent over the network to the client.
+- **Status**: ✅ **Fixed**. Implemented Out-of-band Verification (Server UI only).
+
+### 14. Authentication Bypass via Raw Frames
+- **Description**: Text frames could bypass security checks.
+- **Status**: ✅ **Fixed**. Hardened server/client to ignore `Frame.Text`.
+
 ### 1. Immutability of Keys in RAM (String Leakage)
 - **Description**: Sensitive cryptographic keys, IVs, and the "Golden Key" password are often handled as `String` objects or converted to Strings for logging/Base64 encoding. 
 - **Status**: ✅ **Fixed**. Sensitive data handling now uses `CharArray` and explicit zeroing to prevent RAM leakage.

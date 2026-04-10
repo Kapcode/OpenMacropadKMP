@@ -42,7 +42,7 @@ fun dataMessage(
 fun responseMessage(
     success: Boolean,
     message: String,
-    data: Any? = null,
+    data: String? = null,
     metadata: Map<String, String> = emptyMap()
 ): DataModel {
     return DataModelBuilder()
@@ -119,7 +119,7 @@ inline fun DataModel.handle(
     onText: (String) -> Unit = {},
     onCommand: (String, Map<String, String>) -> Unit = { _, _ -> },
     onData: (String, ByteArray) -> Unit = { _, _ -> },
-    onResponse: (Boolean, String, Any?) -> Unit = { _, _, _ -> },
+    onResponse: (Boolean, String, String?) -> Unit = { _, _, _ -> },
     onControl: (ControlCommand, Map<String, String>) -> Unit = { _, _ -> },
     onHeartbeat: (Long) -> Unit = {}
 ) {
@@ -140,7 +140,7 @@ inline fun DataModel.process(
     onText: (String, DataModel) -> Unit = { _, _ -> },
     onCommand: (String, Map<String, String>, DataModel) -> Unit = { _, _, _ -> },
     onData: (String, ByteArray, DataModel) -> Unit = { _, _, _ -> },
-    onResponse: (Boolean, String, Any?, DataModel) -> Unit = { _, _, _, _ -> },
+    onResponse: (Boolean, String, String?, DataModel) -> Unit = { _, _, _, _ -> },
     onControl: (ControlCommand, Map<String, String>, DataModel) -> Unit = { _, _, _ -> },
     onHeartbeat: (Long, DataModel) -> Unit = { _, _ -> }
 ) {
