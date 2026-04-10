@@ -19,8 +19,9 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
-*   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, hardware-backed keystore management, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
-*   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a dynamic multi-QR grid (up to 4x4) that synchronizes with the visible device list, allowing rapid setup of multiple mobile clients.
+*   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, **native OS keyring integration** (via `SecretManager`) for identity protection, hardware-backed keystore management on Android, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
+*   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a **Smart Multi-QR Grid** that automatically calculates optimal row/column density based on window size and visibility toggles to prevent UI overlap. Includes a **Spatial Grid Selector** to persistently enable/disable specific grid positions (Corners and Centers).
+*   **Lifecycle Management**: Support for in-app application restarts (via `ProcessBuilder`) and a standardized `ExitConfirmDialog` for graceful shutdowns.
 *   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger.
     *   **Single Slam**: Execute a primary macro or "OK" action.
     *   **Double Slam**: Execute a secondary macro or "Cancel/Back" action with configurable timing thresholds.

@@ -26,6 +26,7 @@ import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 import javax.swing.SwingUtilities
 import javax.swing.UIManager
+import java.io.File
 import androidx.compose.ui.tooling.preview.Preview
 import switchdektoptocompose.di.DesktopViewModels
 import switchdektoptocompose.viewmodel.*
@@ -134,6 +135,33 @@ fun DesktopApp(
     var showSettingsToSecurity by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
     var showRecordDialog by remember { mutableStateOf(false) }
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    if (showExitDialog) {
+        ExitConfirmDialog(
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onExitNow = onExit,
+            onRestart = {
+                val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
+                val jarFile = File(System.getProperty("java.class.path"))
+                
+                if (jarFile.extension == "jar") {
+                    try {
+                        ProcessBuilder(javaBin, "-jar", jarFile.absolutePath).start()
+                        onExit()
+                    } catch (e: Exception) {
+                        e.printStackTrace()
+                        onExit()
+                    }
+                } else {
+                    // Fallback if not running from a JAR (e.g., during development)
+                    onExit()
+                }
+            },
+            onDismiss = { showExitDialog = false }
+        )
+    }
 
     if (showSettingsDialog) {
         val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
@@ -278,7 +306,7 @@ fun DesktopApp(
                                 HorizontalDivider()
                                 DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
                                 HorizontalDivider()
-                                DropdownMenuItem(text = { Text("Exit") }, onClick = onExit, leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) })
+                                DropdownMenuItem(text = { Text("Exit") }, onClick = { showExitDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) })
                             }
                             
                             Spacer(Modifier.width(16.dp))

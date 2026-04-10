@@ -121,6 +121,14 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun handleSlamFire(isDouble: Boolean) {
+        // If disconnected, any slam (single or double) returns to server list
+        val uiState = clientViewModel.uiState.value
+        if (uiState.disconnectReason != null) {
+            showSlamToast("Disconnected: Returning to list")
+            finish()
+            return
+        }
+
         onSlamTriggered?.invoke(isDouble)
         
         if (isDouble) {
@@ -390,12 +398,18 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                                 val code = params["code"]
                                                 currentVerificationCode = code
                                                 onUpdate("Pending Approval", null, null, code)
+                                                
+                                                val preferredMode = params["preferredMode"]
+                                                if (preferredMode == "QR") {
+                                                    clientViewModel.setQrScannerVisible(true)
+                                                }
                                             }
                                             ControlCommand.PAIRING_CODE_MATCHED -> {
                                                 onUpdate("Code Matched", null, null, currentVerificationCode)
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
                                                 onUpdate("Connected", ipAddress, null, null)
+                                                clientViewModel.setQrScannerVisible(false)
                                                 activityScope.launch {
                                                     tempClient.send(textMessage("getMacros").toBytes())
                                                 }
@@ -703,7 +717,10 @@ fun QrCodeScanner(
                             .addOnSuccessListener { barcodes ->
                                 for (barcode in barcodes) {
                                     barcode.rawValue?.let { code ->
-                                        currentOnCodeScanned(code)
+                                        // Only accept 6-digit numeric codes to prevent accidental triggers from environmental QRs
+                                        if (code.length == 6 && code.all { it.isDigit() }) {
+                                            currentOnCodeScanned(code)
+                                        }
                                     }
                                 }
                             }
@@ -817,7 +834,24 @@ fun QrCodeScanner(
                 .size(250.dp)
                 .align(Alignment.Center)
                 .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
-        )
+        ) {
+            // Target reticle / Corner accents
+            val cornerSize = 40.dp
+            val cornerWidth = 4.dp
+            val color = Color.White
+            
+            // Top Left
+            Box(Modifier.size(cornerSize).align(Alignment.TopStart).border(width = cornerWidth, color = color, shape = RoundedCornerShape(topStart = 12.dp)))
+            // Top Right
+            Box(Modifier.size(cornerSize).align(Alignment.TopEnd).border(width = cornerWidth, color = color, shape = RoundedCornerShape(topEnd = 12.dp)))
+            // Bottom Left
+            Box(Modifier.size(cornerSize).align(Alignment.BottomStart).border(width = cornerWidth, color = color, shape = RoundedCornerShape(bottomStart = 12.dp)))
+            // Bottom Right
+            Box(Modifier.size(cornerSize).align(Alignment.BottomEnd).border(width = cornerWidth, color = color, shape = RoundedCornerShape(bottomEnd = 12.dp)))
+            
+            // Center Dot
+            Box(Modifier.size(8.dp).align(Alignment.Center).background(color.copy(alpha = 0.5f), CircleShape))
+        }
 
         // Focus & Zoom Controls Overlay
         Column(
@@ -1349,19 +1383,65 @@ fun ClientScreen(
                                     }
                                 }
                             } else if (disconnectReason != null) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack, 
-                                    contentDescription = null, 
-                                    modifier = Modifier.size(64.dp),
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                                Spacer(Modifier.height(16.dp))
-                                Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
-                                Spacer(Modifier.height(8.dp))
-                                Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
-                                Spacer(Modifier.height(32.dp))
-                                Button(onClick = onBackToMain) {
-                                    Text("Back to Server List")
+                                val configuration = LocalConfiguration.current
+                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                
+                                if (isLandscape) {
+                                    Row(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.ArrowBack, 
+                                                contentDescription = null, 
+                                                modifier = Modifier.size(64.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                        Spacer(Modifier.width(32.dp))
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
+                                            Spacer(Modifier.height(16.dp))
+                                            Button(onClick = onBackToMain) {
+                                                Text("Back to Server List")
+                                            }
+                                            if (slamFireEnabled) {
+                                                Spacer(Modifier.height(8.dp))
+                                                Text(
+                                                    "Tip: You can slam to go back",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack, 
+                                        contentDescription = null, 
+                                        modifier = Modifier.size(64.dp),
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                    Spacer(Modifier.height(16.dp))
+                                    Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                    Spacer(Modifier.height(8.dp))
+                                    Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
+                                    Spacer(Modifier.height(32.dp))
+                                    Button(onClick = onBackToMain) {
+                                        Text("Back to Server List")
+                                    }
+                                    if (slamFireEnabled) {
+                                        Spacer(Modifier.height(16.dp))
+                                        Text(
+                                            "Tip: You can slam to go back",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             } else {
                                 CircularProgressIndicator()

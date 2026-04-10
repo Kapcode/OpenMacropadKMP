@@ -87,7 +87,9 @@ fun PairingRequestDialog(
                     onBan = onBan,
                     isAlwaysAllowAvailable = isAlwaysAllowAvailable,
                     onClose = onCancelAll,
-                    settingsViewModel = desktopSettingsViewModel
+                    settingsViewModel = desktopSettingsViewModel,
+                    maxWidth = maxWidth,
+                    maxHeight = maxHeight
                 )
             }
         }
@@ -107,7 +109,7 @@ fun SmallPairingLayout(
     val fleetMode by settingsViewModel.fleetModeEnabled.collectAsState()
     val qrBitmaps = remember(requests) {
         requests.associate { request ->
-            request.id to QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 300)
+            request.id to QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400)
         }
     }
 
@@ -156,7 +158,7 @@ fun SmallPairingLayout(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Small QR for the specific device
-                        Box(modifier = Modifier.size(120.dp).background(Color.White, MaterialTheme.shapes.small).padding(4.dp)) {
+                        Box(modifier = Modifier.size(150.dp).background(Color.White, MaterialTheme.shapes.small).padding(4.dp)) {
                             qrBitmaps[request.id]?.let {
                                 Image(it, "QR", modifier = Modifier.fillMaxSize())
                             }
@@ -233,7 +235,7 @@ fun QrGridBox(
 fun QrItem(request: ClientInfo?, bitmaps: Map<String, ImageBitmap>) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         QrImage(request?.let { bitmaps[it.id] })
-        Box(modifier = Modifier.width(100.dp).height(24.dp), contentAlignment = Alignment.Center) {
+        Box(modifier = Modifier.width(150.dp).height(24.dp), contentAlignment = Alignment.Center) {
             if (request != null) {
                 Text(
                     text = request.name.uppercase(),
@@ -250,7 +252,7 @@ fun QrItem(request: ClientInfo?, bitmaps: Map<String, ImageBitmap>) {
 
 @Composable
 fun QrImage(bitmap: ImageBitmap?) {
-    Box(modifier = Modifier.size(100.dp)) {
+    Box(modifier = Modifier.size(150.dp)) {
         if (bitmap != null) {
             Image(bitmap, "QR", modifier = Modifier.fillMaxSize())
         } else {
@@ -267,12 +269,63 @@ fun UnifiedPairingLayout(
     onBan: (String, String) -> Unit,
     isAlwaysAllowAvailable: Boolean,
     onClose: () -> Unit,
-    settingsViewModel: DesktopSettingsViewModel
+    settingsViewModel: DesktopSettingsViewModel,
+    maxWidth: androidx.compose.ui.unit.Dp,
+    maxHeight: androidx.compose.ui.unit.Dp
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val fleetMode by settingsViewModel.fleetModeEnabled.collectAsState()
-    var gridRows by remember { mutableIntStateOf(3) }
-    var gridCols by remember { mutableIntStateOf(3) }
+    val gridVisibility by settingsViewModel.fleetGridVisibility.collectAsState()
+
+    // Identify if we have active grids in the side gutters vs center column
+    val sideGridsVisible = remember(gridVisibility) {
+        gridVisibility.getOrElse(0) { true } || gridVisibility.getOrElse(1) { true } ||
+        gridVisibility.getOrElse(2) { true } || gridVisibility.getOrElse(3) { true }
+    }
+    val centerGridsVisible = remember(gridVisibility) {
+        gridVisibility.getOrElse(4) { true } || gridVisibility.getOrElse(5) { true }
+    }
+
+    // Smart Grid Calculation: Find max rows/cols that fit without overlapping the 900dp center area
+    val smartMaxCols = remember(maxWidth, sideGridsVisible) {
+        if (sideGridsVisible) {
+            // Space available on each side of the 900dp center area, minus the 16dp outer padding
+            val sideSpace = (maxWidth.value - 900) / 2 - 16
+            // gridWidth(c) = 158*c + 8. So 158*c + 8 <= sideSpace
+            ((sideSpace - 8) / 158).toInt().coerceIn(1, 4)
+        } else {
+            // If only center grids are visible, they can span much wider (up to full window)
+            val fullSpace = maxWidth.value - 32
+            ((fullSpace - 8) / 158).toInt().coerceIn(1, 10)
+        }
+    }
+
+    val smartMaxRows = remember(maxHeight, centerGridsVisible) {
+        if (centerGridsVisible) {
+            // Must fit in the vertical gutter above/below the center area
+            // centerAreaHeight(r) = 400 + 40*r. 
+            // (maxHeight - (400 + 40*r)) / 2 - 16 >= 182*r + 8
+            // 404*r <= maxHeight - 448
+            ((maxHeight.value - 448) / 404).toInt().coerceIn(1, 4)
+        } else {
+            // If no center grids, side grids only need to not overlap their vertical counterpart
+            // 2 * (182*r + 8) <= maxHeight - 32
+            // 364*r + 16 <= maxHeight - 32 -> 364*r <= maxHeight - 48
+            ((maxHeight.value - 48) / 364).toInt().coerceIn(1, 6)
+        }
+    }
+
+    var gridRows by remember(smartMaxRows) { mutableIntStateOf(smartMaxRows.coerceAtLeast(1)) }
+    var gridCols by remember(smartMaxCols) { mutableIntStateOf(smartMaxCols.coerceAtLeast(1)) }
+    
+    // Ensure manual adjustments stay within "Safe" bounds for the current window size
+    LaunchedEffect(smartMaxRows) {
+        if (gridRows > smartMaxRows && smartMaxRows > 0) gridRows = smartMaxRows
+    }
+    LaunchedEffect(smartMaxCols) {
+        if (gridCols > smartMaxCols && smartMaxCols > 0) gridCols = smartMaxCols
+    }
+
     val totalGridSize = gridRows * gridCols
 
     // Dynamically identify which devices are visible in the scrollable list
@@ -285,7 +338,7 @@ fun UnifiedPairingLayout(
     // Pre-generate bitmaps and link them to IDs
     val qrBitmaps = remember(requests) {
         requests.associate { request ->
-            request.id to QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 300)
+            request.id to QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400)
         }
     }
 
@@ -313,15 +366,15 @@ fun UnifiedPairingLayout(
             // Adjust padding based on grid size to avoid edge crowding
             val gridPadding = 16.dp
             
-            // Corners
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopStart).padding(gridPadding))
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopEnd).padding(gridPadding))
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomStart).padding(gridPadding))
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomEnd).padding(gridPadding))
+            // Corners: TL=0, TR=1, BL=2, BR=3, TC=4, BC=5
+            if (gridVisibility.getOrElse(0) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopStart).padding(gridPadding))
+            if (gridVisibility.getOrElse(1) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopEnd).padding(gridPadding))
+            if (gridVisibility.getOrElse(2) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomStart).padding(gridPadding))
+            if (gridVisibility.getOrElse(3) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomEnd).padding(gridPadding))
             
             // Centers
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopCenter).padding(gridPadding))
-            QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomCenter).padding(gridPadding))
+            if (gridVisibility.getOrElse(4) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.TopCenter).padding(gridPadding))
+            if (gridVisibility.getOrElse(5) { true }) QrGridBox(displayRequests, qrBitmaps, gridRows, gridCols, modifier = Modifier.align(Alignment.BottomCenter).padding(gridPadding))
         }
 
         // Center control area - Scrollable list of all devices
@@ -360,7 +413,11 @@ fun UnifiedPairingLayout(
                             IconButton(onClick = { if (gridRows > 1) gridRows-- }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.Default.KeyboardArrowDown, "Less Rows")
                             }
-                            IconButton(onClick = { if (gridRows < 4) gridRows++ }, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = { if (gridRows < smartMaxRows) gridRows++ }, 
+                                enabled = gridRows < smartMaxRows,
+                                modifier = Modifier.size(24.dp)
+                            ) {
                                 Icon(Icons.Default.KeyboardArrowUp, "More Rows")
                             }
                             Text("R", style = MaterialTheme.typography.labelSmall)
@@ -368,10 +425,53 @@ fun UnifiedPairingLayout(
                             IconButton(onClick = { if (gridCols > 1) gridCols-- }, modifier = Modifier.size(24.dp)) {
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Less Cols")
                             }
-                            IconButton(onClick = { if (gridCols < 4) gridCols++ }, modifier = Modifier.size(24.dp)) {
+                            IconButton(
+                                onClick = { if (gridCols < smartMaxCols) gridCols++ }, 
+                                enabled = gridCols < smartMaxCols,
+                                modifier = Modifier.size(24.dp)
+                            ) {
                                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "More Cols")
                             }
                             Text("C", style = MaterialTheme.typography.labelSmall)
+                            
+                            Spacer(Modifier.width(24.dp))
+                            
+                            // Grid Selector (6 checkboxes in a small rectangle oriented like the grids)
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                shape = MaterialTheme.shapes.small,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("GRIDS", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+                                    Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+                                        // Top Row: TL=0, TC=4, TR=1
+                                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                                            listOf(0, 4, 1).forEach { idx ->
+                                                Checkbox(
+                                                    checked = gridVisibility.getOrElse(idx) { true },
+                                                    onCheckedChange = { settingsViewModel.setFleetGridVisibility(idx, it) },
+                                                    modifier = Modifier.size(20.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                        // Bottom Row: BL=2, BC=5, BR=3
+                                        Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                                            listOf(2, 5, 3).forEach { idx ->
+                                                Checkbox(
+                                                    checked = gridVisibility.getOrElse(idx) { true },
+                                                    onCheckedChange = { settingsViewModel.setFleetGridVisibility(idx, it) },
+                                                    modifier = Modifier.size(20.dp).padding(2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     

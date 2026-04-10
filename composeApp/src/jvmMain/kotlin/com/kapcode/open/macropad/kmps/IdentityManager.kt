@@ -1,6 +1,7 @@
 package com.kapcode.open.macropad.kmps
 
 import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
+import com.kapcode.open.macropad.kmps.utils.SecretManager
 import java.io.File
 import java.security.*
 import java.security.cert.X509Certificate
@@ -47,7 +48,7 @@ actual class IdentityManager actual constructor() {
     }
 
     private fun getPassword(): CharArray {
-        return (System.getProperty("keystore.password") ?: "temporary-dev-password").toCharArray()
+        return SecretManager.getOrCreatePassword()
     }
 
     private fun clearPassword(password: CharArray) {

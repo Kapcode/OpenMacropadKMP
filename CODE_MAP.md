@@ -36,8 +36,8 @@ This document serves as a guide for AI assistants to navigate the project effect
 
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
-| **IdentityManager** | Provides persistent, platform-specific identity keys (Hardware-backed Android Keystore / Encrypted JVM Keystore). | `commonMain/com/.../IdentityManager.kt` |
-| **KeystoreUtils** | Manages JVM-local EC keystores with automated backup, password rotation handling, and 600 file permissions. | `jvmMain/com/.../utils/KeystoreUtils.kt` |
+| **IdentityManager** | Provides persistent, platform-specific identity keys. Android uses Hardware-backed Keystore; JVM integrates with **native OS keyrings** (macOS Keychain, Windows Credential Manager, Linux Libsecret) via `SecretManager`. | `commonMain/com/.../IdentityManager.kt` |
+| **KeystoreUtils** | Manages JVM-local EC keystores with automated backup, password rotation, and 600 permissions. Works with `SecretManager` for secure password retrieval. | `jvmMain/com/.../utils/KeystoreUtils.kt` |
 | **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/com/.../network/sockets/` |
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |

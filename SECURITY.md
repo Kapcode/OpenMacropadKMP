@@ -65,6 +65,7 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
     - Upon successful pairing, the client saves this fingerprint in secure storage (`ServerStorage`).
     - Every subsequent connection uses a hardened `OkHttpClient` that validates the server's certificate against the pinned fingerprint. If the fingerprints do not match, the connection is immediately terminated.
 
-## Reporting a Vulnerability
-
-If you discover a security vulnerability, please open an issue or contact the maintainers directly.
+### 10. Native OS Keyring Protection (JVM)
+*   **Status:** ✅ **Fixed**
+*   **Description:** The JVM identity keystore password was previously stored in plain text or relied on user input, which was either insecure or prone to data loss.
+*   **Mitigation:** Integrated **`SecretManager`** to leverage native OS keyrings (macOS Keychain, Windows Credential Manager, and Linux Libsecret via `libsecret-1`). `IdentityManager` now automatically retrieves or generates a secure **64-character Base64 password** (derived from a `SecureRandom` 64-byte seed) stored in the system's encrypted vault. This provides hardware-level security semantics on Desktop, ensuring that identity keys cannot be decrypted even if the local file system is compromised, as the password remains locked behind the user's OS login.

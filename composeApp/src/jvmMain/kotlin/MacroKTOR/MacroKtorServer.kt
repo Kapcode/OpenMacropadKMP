@@ -209,7 +209,13 @@ class MacroKtorServer(
                 val workingDir = File(System.getProperty("user.home"), ".openmacropad")
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
                 val fingerprint = KeystoreUtils.getCertificateFingerprint(keystore)
-                send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("fingerprint" to fingerprint)).toBytes()))
+                
+                val params = mutableMapOf("fingerprint" to fingerprint)
+                if (appSettings.defaultPairingModeQr) {
+                    params["preferredMode"] = "QR"
+                }
+
+                send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_PENDING, params).toBytes()))
             }
 
             for (frame in incoming) {
@@ -367,7 +373,11 @@ class MacroKtorServer(
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)).toBytes()))
                 client.session.close(CloseReason(CloseReason.Codes.NORMAL, reason))
             } catch (e: Exception) {}
+            // Explicitly remove and notify since the session closure might take a moment 
+            // to trigger the 'finally' block in handleSession
             clients.remove(clientId)
+            temporaryTrustedDevices.remove(clientId)
+            onClientDisconnected(clientId)
         }
     }
 

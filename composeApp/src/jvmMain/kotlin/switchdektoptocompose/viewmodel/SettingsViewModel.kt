@@ -50,6 +50,12 @@ class SettingsViewModel {
     private val _multiQrEnabled = MutableStateFlow(false) // Default to false
     val multiQrEnabled = _multiQrEnabled.asStateFlow()
 
+    private val _fleetGridVisibility = MutableStateFlow(AppSettings.fleetGridVisibility.split(",").map { it == "1" })
+    val fleetGridVisibility = _fleetGridVisibility.asStateFlow()
+
+    private val _defaultPairingModeQr = MutableStateFlow(AppSettings.defaultPairingModeQr)
+    val defaultPairingModeQr = _defaultPairingModeQr.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -139,6 +145,20 @@ class SettingsViewModel {
 
     fun setMultiQrEnabled(enabled: Boolean) {
         _multiQrEnabled.value = enabled
+    }
+
+    fun setFleetGridVisibility(index: Int, visible: Boolean) {
+        val current = _fleetGridVisibility.value.toMutableList()
+        if (index in current.indices) {
+            current[index] = visible
+            _fleetGridVisibility.value = current
+            AppSettings.fleetGridVisibility = current.map { if (it) "1" else "0" }.joinToString(",")
+        }
+    }
+
+    fun setDefaultPairingModeQr(enabled: Boolean) {
+        _defaultPairingModeQr.value = enabled
+        AppSettings.defaultPairingModeQr = enabled
     }
 
     fun selectTheme(theme: String) {

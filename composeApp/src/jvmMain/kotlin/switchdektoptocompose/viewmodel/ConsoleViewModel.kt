@@ -20,6 +20,46 @@ class ConsoleViewModel {
     private val _logMessages = MutableStateFlow<List<LogEntry>>(emptyList())
     val logMessages = _logMessages.asStateFlow()
 
+    private val _selectionStartId = MutableStateFlow<Long?>(null)
+    val selectionStartId = _selectionStartId.asStateFlow()
+
+    private val _selectionEndId = MutableStateFlow<Long?>(null)
+    val selectionEndId = _selectionEndId.asStateFlow()
+
+    fun updateSelection(id: Long, isShiftPressed: Boolean) {
+        if (isShiftPressed && _selectionStartId.value != null) {
+            _selectionEndId.value = id
+        } else {
+            _selectionStartId.value = id
+            _selectionEndId.value = id
+        }
+    }
+
+    fun extendSelectionToId(id: Long) {
+        if (_selectionStartId.value != null) {
+            _selectionEndId.value = id
+        }
+    }
+
+    fun clearSelection() {
+        _selectionStartId.value = null
+        _selectionEndId.value = null
+    }
+
+    fun getSelectedText(): String {
+        val startId = _selectionStartId.value ?: return ""
+        val endId = _selectionEndId.value ?: return ""
+
+        val messages = _logMessages.value
+        val startIndex = messages.indexOfFirst { it.id == startId }
+        val endIndex = messages.indexOfFirst { it.id == endId }
+
+        if (startIndex == -1 || endIndex == -1) return ""
+
+        val range = if (startIndex <= endIndex) startIndex..endIndex else endIndex..startIndex
+        return messages.slice(range).joinToString("\n") { it.formatted }
+    }
+
     private val _logLevel = MutableStateFlow(LogLevel.Info)
     val logLevel = _logLevel.asStateFlow()
 

@@ -339,7 +339,7 @@ Automated macros could cause loss of system control if they ran too long or went
     3.  **Explicit Promotion**: Modified `authenticateClient` to explicitly trigger `onClientConnected` and reset the heartbeat timer. This ensures the UI updates immediately and the device gets a fresh timeout window the moment "Approve" is clicked.
     4.  **Heartbeat Relaxation**: Heartbeats are no longer strictly required to keep the socket alive during the PIN entry phase.
 
-## 25. Pairing UI Optimization for Mobile
+## 26. Pairing UI Optimization for Mobile
 
 ### Challenge: Visibility and Focus in Landscape Mode
 - **Problem**: In landscape orientation, the software keyboard would often cover the 6-digit input field or the instructions, leading to a "guessing game" for the user.
@@ -349,9 +349,32 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Focus Management**: Implemented `FocusRequester` and `LocalSoftwareKeyboardController` to ensure the input field is automatically focused when the pairing screen appears, and that the keyboard can be toggled manually via a dedicated button.
     - **Unified Iconography**: Standardized on concise Material icons (`Close` for cancel, `Done` for submit, `QrCodeScanner` for QR mode, and `KeyboardArrowUp/Down` for keyboard toggle) to maximize horizontal space.
 
+## 27. Advanced JVM Security & UI Standardization
+
+### Challenge: Identity Key Protection on Desktop
+- **Problem**: The JVM identity keystore password was previously stored in plain text or relied on user memory, which is either insecure or prone to data loss.
+- **Solution**: Integrated **`SecretManager`** to leverage native OS keyrings (macOS Keychain, Windows Credential Manager, and Linux Libsecret). `IdentityManager` now automatically retrieves or generates a secure 32-character password stored in the system's encrypted vault, providing hardware-level security semantics on Desktop.
+
+### Challenge: Dialog Consistency and Layout Failures
+- **Problem**: The custom `AppDialog` (built on `BaseDialog.kt`) does not support direct `width`/`height` parameters, leading to compilation errors when migrating legacy dialogs. Additionally, dialogs were often static-sized, causing overflow on smaller screens.
+- **Solution**:
+    - **State-Based Sizing**: Migrated all JVM dialogs (e.g., `ExitConfirmDialog`) to use `rememberWindowState(width = ..., height = ...)` passed into the `DialogWindow` call within `AppDialog`.
+    - **Fleet Mode (Smart QR Grid)**: Implemented a dynamic grid calculation in `PairingRequestDialog`. The "Smart QR Grid" automatically adjusts rows and columns based on the window's aspect ratio and available space, ensuring that even with 10+ simultaneous pairing requests, the QR codes remain legible and do not overlap the central control area.
+
+### Challenge: Redundant UI and Clutter
+- **Problem**: `SettingsDialog.kt` contained four duplicate blocks of the "Default to QR Scanning" toggle due to copy-paste errors, confusing users.
+- **Solution**: Conducted a "UI Hygiene" pass, removing all redundant toggles and ensuring the Security & Privacy section is concise and accurate.
+
+## 28. Lifecycle Management
+
+### Challenge: Application Restart Logic
+- **Problem**: Users needed a way to restart the application after changing critical settings (like Identity reset) without manually closing and re-opening the binary.
+- **Solution**: Implemented a `ProcessBuilder` based restart mechanism in `DesktopApp.kt`. The app identifies its own launch command (via `System.getProperty("sun.java.command")`) and spawns a new process before exiting the current one.
+
 
 - [x] **Physical Consent & QR Support**: Implemented a "Physical Consent Pairing" security feature with **QR code scanning** for seamless setup. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
-- [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
+- [x] **OS-Level Secret Vault**: Integrated native secure storage for identity keys using macOS Keychain, Windows Credential Manager, and Linux Libsecret via `SecretManager`.
+- [x] **Smart QR Grid**: Implemented "Fleet Mode" for dynamic scaling of pairing requests.
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 

@@ -51,6 +51,7 @@ fun SettingsDialog(
     val fleetModeEnabled by settingsViewModel.fleetModeEnabled.collectAsState()
     val enableWebsocketPings by settingsViewModel.enableWebsocketPings.collectAsState()
     val multiQrEnabled by sharedSettingsViewModel.multiQrEnabled.collectAsState()
+    val defaultPairingModeQr by settingsViewModel.defaultPairingModeQr.collectAsState()
 
     // Scroll state management
     val scrollState = rememberScrollState()
@@ -173,6 +174,33 @@ fun SettingsDialog(
                                 securitySectionOffset = coordinates.positionInParent().y
                             }
                         )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "Sets whether the Android client defaults to QR scanning (On) or PIN entry (Off) when starting a pairing request.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Default to QR Scanning", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = defaultPairingModeQr,
+                                    onCheckedChange = { settingsViewModel.setDefaultPairingModeQr(it) }
+                                )
+                            }
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         TooltipArea(
                             tooltip = {

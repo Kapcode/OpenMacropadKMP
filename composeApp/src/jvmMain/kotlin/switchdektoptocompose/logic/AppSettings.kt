@@ -23,6 +23,8 @@ object AppSettings {
     private const val ALLOW_ONCE_ONLY_KEY = "allowOnceOnly"
     private const val FLEET_MODE_ENABLED_KEY = "fleetModeEnabled"
     private const val ENABLE_WEBSOCKET_PINGS_KEY = "enableWebsocketPings"
+    private const val FLEET_GRID_VISIBILITY_KEY = "fleetGridVisibility"
+    private const val DEFAULT_PAIRING_MODE_QR_KEY = "defaultPairingModeQr"
 
     init {
         if (!configDir.exists()) {
@@ -132,6 +134,20 @@ object AppSettings {
         get() = properties.getProperty(ENABLE_WEBSOCKET_PINGS_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(ENABLE_WEBSOCKET_PINGS_KEY, value.toString())
+            save()
+        }
+
+    var fleetGridVisibility: String
+        get() = properties.getProperty(FLEET_GRID_VISIBILITY_KEY, "1,1,1,1,1,1")
+        set(value) {
+            properties.setProperty(FLEET_GRID_VISIBILITY_KEY, value)
+            save()
+        }
+
+    var defaultPairingModeQr: Boolean
+        get() = properties.getProperty(DEFAULT_PAIRING_MODE_QR_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(DEFAULT_PAIRING_MODE_QR_KEY, value.toString())
             save()
         }
 
