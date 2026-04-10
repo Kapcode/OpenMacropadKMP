@@ -33,7 +33,9 @@ class ClientViewModel : ViewModel() {
             connectionStatus = status,
             serverName = server ?: it.serverName,
             disconnectReason = reason,
-            verificationCode = code
+            verificationCode = code,
+            // If we're newly connected, reset currency to 0 until first update
+            currency = if (status == "Connected") 0L else it.currency
         ) }
     }
 

@@ -67,6 +67,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.content.Context
+import androidx.camera.core.ExperimentalGetImage
 import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
 
 const val TAG = "MainActivity"
@@ -146,6 +147,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         }
     }
 
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
     private fun launchClient(serverInfo: ServerInfo, deviceName: String) {
         Log.d(
             TAG,

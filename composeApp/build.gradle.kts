@@ -127,9 +127,8 @@ android {
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         getByName("debug") {
-            // Enable minimal shrinking to remove heavy Ktor-Server classes from the APK
-            // This drastically reduces ART verification time at startup.
-            isMinifyEnabled = true
+            // Disable R8 for debug to fix build errors and speed up development
+            isMinifyEnabled = false
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

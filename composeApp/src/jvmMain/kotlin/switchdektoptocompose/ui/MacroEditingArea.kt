@@ -48,7 +48,7 @@ fun MacroEditingArea(
                         Box(Modifier.fillMaxSize()) {
                             Box(
                                 Modifier
-                                    .width(4.dp)
+                                    .width(8.dp)
                                     .height(48.dp)
                                     .background(
                                         color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
@@ -63,7 +63,7 @@ fun MacroEditingArea(
                             Modifier
                                 .markAsHandle()
                                 .fillMaxHeight()
-                                .width(8.dp)
+                                .width(16.dp)
                         )
                     }
                 }
@@ -83,7 +83,7 @@ fun MacroEditingArea(
                     Box(
                         Modifier
                             .width(48.dp)
-                            .height(4.dp)
+                            .height(8.dp)
                             .background(
                                 color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                                 shape = MaterialTheme.shapes.extraSmall
@@ -97,7 +97,7 @@ fun MacroEditingArea(
                     Modifier
                         .markAsHandle()
                         .fillMaxWidth()
-                        .height(8.dp)
+                        .height(16.dp)
                 )
             }
         }

@@ -113,6 +113,7 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     private var triggerPending = false
     private var pendingTriggerType: String? = null // "BUTTON" or "PROXIMITY"
     private var lastToast: Toast? = null
+    private var isHandlingSlam = false
 
     private fun showSlamToast(message: String) {
         lastToast?.cancel()
@@ -121,11 +122,15 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun handleSlamFire(isDouble: Boolean) {
+        if (isHandlingSlam) return
+        isHandlingSlam = true
+        
         // If disconnected, any slam (single or double) returns to server list
         val uiState = clientViewModel.uiState.value
         if (uiState.disconnectReason != null) {
             showSlamToast("Disconnected: Returning to list")
             finish()
+            isHandlingSlam = false
             return
         }
 
@@ -150,6 +155,11 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                 onOkayPressed?.invoke()
                 showSlamToast("Slam Fire Triggered")
             }
+        }
+        
+        activityScope.launch {
+            delay(500) // Cooldown period
+            isHandlingSlam = false
         }
     }
 
@@ -233,13 +243,20 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                         discoveryFingerprint,
                         onUpdate = { status, name, reason, code ->
                             clientViewModel.updateConnection(status, name, reason, code)
+                            // On successful connection (macros received), sync balance
+                            if (status == "Connected" && clientViewModel.uiState.value.macros.isNotEmpty()) {
+                                activityScope.launch {
+                                    client?.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+                                }
+                            }
                         },
                         onExecutionStart = { macro ->
                             clientViewModel.onMacroExecutionStart(macro)
-                            // Deduct tokens on start
+                            // Deduct tokens ONLY after confirmed execution start
                             if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
                                 activityScope.launch {
                                     client?.send(dataMessage("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toLong().toString().encodeToByteArray()).toBytes())
+                                    client?.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
                                 }
                             }
                         },
@@ -250,6 +267,11 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                             clientViewModel.onMacroExecutionFailed(macro)
                             // Refund tokens on failure
                             tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                            // Notify server of refund
+                            activityScope.launch {
+                                client?.send(dataMessage("currency_spent", (-BillingConstants.TOKENS_PER_MACRO_PRESS).toLong().toString().encodeToByteArray()).toBytes())
+                                client?.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+                            }
                             Toast.makeText(this@ClientActivity, "Macro '$macro' failed: $error", Toast.LENGTH_SHORT).show()
                         }
                     )
@@ -306,13 +328,8 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     }
 
     private fun sendMacro(macroName: String) {
-        val tokenManager = TokenManager.getInstance(this)
-        if (tokenManager.tokenBalance.value >= BillingConstants.TOKENS_PER_MACRO_PRESS) {
-            activityScope.launch {
-                client?.send(commandMessage("play:$macroName").toBytes())
-            }
-        } else {
-            Toast.makeText(this, "Not enough tokens! Watch an ad to get more.", Toast.LENGTH_SHORT).show()
+        activityScope.launch {
+            client?.send(commandMessage("play:$macroName").toBytes())
         }
     }
 

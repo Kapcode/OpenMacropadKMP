@@ -64,7 +64,8 @@ class DesktopViewModel(
         updateHistoryState()
         _uiState.update { it.copy(
             bannedDevices = TrustedDeviceManager.getBannedDevices(),
-            trustedDevices = TrustedDeviceManager.getTrustedDevices()
+            trustedDevices = TrustedDeviceManager.getTrustedDevices(),
+            totalCurrencySpent = AppSettings.totalCurrencySpent
         ) }
         consoleViewModel.addLog(LogLevel.Info, "DesktopViewModel Initialized")
     }
@@ -376,7 +377,8 @@ class DesktopViewModel(
                 } else if (key == "currency_spent") {
                     try {
                         val amount = value.decodeToString().toLong()
-                        _uiState.update { it.copy(totalCurrencySpent = it.totalCurrencySpent + amount) }
+                        AppSettings.totalCurrencySpent += amount
+                        _uiState.update { it.copy(totalCurrencySpent = AppSettings.totalCurrencySpent) }
                         consoleViewModel.addLog(LogLevel.Info, "Currency spent by $clientId: $amount (Total: ${_uiState.value.totalCurrencySpent})")
                     } catch (e: Exception) {
                         consoleViewModel.addLog(LogLevel.Error, "Invalid currency spent from $clientId")

@@ -161,9 +161,18 @@ fun CommonAppBar(
                     modifier = Modifier.clickable { showGetTokensDialog = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(imageVector = Icons.Default.MonetizationOn, contentDescription = "Tokens")
+                    Icon(
+                        imageVector = Icons.Default.CurrencyExchange,
+                        contentDescription = "Tokens",
+                        tint = GoldCurrencyColor,
+                        modifier = Modifier.size(20.dp)
+                    )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = tokenBalance.toString())
+                    Text(
+                        text = tokenBalance.toString(),
+                        color = GoldCurrencyColor,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         )
@@ -179,7 +188,6 @@ fun CommonAppBar(
             },
             navigationIcon = navigationIcon,
             actions = {
-                actions()
                 if (currency > 0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -205,16 +213,21 @@ fun CommonAppBar(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.MonetizationOn,
+                        imageVector = Icons.Default.CurrencyExchange,
                         contentDescription = "Tokens",
+                        tint = GoldCurrencyColor,
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = tokenBalance.toString(),
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GoldCurrencyColor,
+                        fontWeight = FontWeight.Bold
                     )
                 }
+                // Wrap actions in a Box with weight or limited width if needed, but for now just put them after
+                actions()
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,

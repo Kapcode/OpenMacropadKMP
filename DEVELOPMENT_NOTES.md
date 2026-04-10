@@ -295,6 +295,30 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Dev Branch**: Created as the primary workspace for all ongoing development. This allows for rapid iteration and testing without affecting the stability of the `main` branch.
     - **Protected Branches**: Enabled GitHub branch protection on `main` to prevent accidental force-pushes or deletions.
 
+## 29. De-bouncing and Token Sync Reliability
+
+### Challenge: Multiple Token Deductions per Macro
+- **Problem**: Users reported 2 to 4 tokens being removed for a single macro press.
+- **Root Causes**:
+    1.  **UI Ghost Touches**: Rapid accidental taps or proximity sensor fluctuations triggered multiple commands.
+    2.  **Duplicate Logic**: Tokens were being deducted both in the initial `sendMacro` call AND in the `onExecutionStart` callback.
+- **Solution**:
+    1.  **Button De-bouncing**: Added a 1000ms cooldown to `MacroButton` in `MacroButtonsScreen.kt`.
+    2.  **Slam Fire De-bouncing**: Added an `isHandlingSlam` flag with a 500ms cooldown in `ClientActivity.kt`.
+    3.  **Single-Source Truth**: Moved all token deduction logic strictly to the `onExecutionStart` callback. The `sendMacro` function now only sends the request; tokens are only spent once the server confirms the macro has actually started.
+    4.  **Automatic Refunds**: If a macro fails after starting, the client now automatically refunds the tokens and notifies the server to decrement the global "Total Spent" metric.
+
+### Challenge: Currency Balance Not Syncing on Connection
+- **Problem**: The Desktop console would show "0" tokens for a connected client until they executed a macro, even if they had a balance.
+- **Solution**:
+    - Updated `ClientActivity.kt` to send an initial `currency_update` message as soon as the connection transitions to the `"Connected"` state (specifically after the macro list is received). This ensures the server's global ledger is immediately populated with the correct local balance.
+
+## 30. Build System Stability
+
+### Challenge: R8 InterruptedException in Debug Builds
+- **Problem**: Enabling R8 minification for debug builds (to strip Ktor-Server bloat) caused sporadic `java.lang.InterruptedException` and hung builds due to resource exhaustion during the shrinking phase.
+- **Solution**: Disabled `isMinifyEnabled` for the `debug` build type in `composeApp/build.gradle.kts`. While this increases the debug APK size, it restores build reliability and developer velocity. Minification remains enabled for `release` builds to ensure production APKs are optimized.
+
 ## 23. To-Do List & Future Improvements
 
 ### Android Client

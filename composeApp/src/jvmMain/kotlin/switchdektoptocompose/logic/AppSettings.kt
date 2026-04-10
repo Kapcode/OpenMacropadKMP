@@ -25,6 +25,7 @@ object AppSettings {
     private const val ENABLE_WEBSOCKET_PINGS_KEY = "enableWebsocketPings"
     private const val FLEET_GRID_VISIBILITY_KEY = "fleetGridVisibility"
     private const val DEFAULT_PAIRING_MODE_QR_KEY = "defaultPairingModeQr"
+    private const val TOTAL_CURRENCY_SPENT_KEY = "totalCurrencySpent"
 
     init {
         if (!configDir.exists()) {
@@ -148,6 +149,13 @@ object AppSettings {
         get() = properties.getProperty(DEFAULT_PAIRING_MODE_QR_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(DEFAULT_PAIRING_MODE_QR_KEY, value.toString())
+            save()
+        }
+
+    var totalCurrencySpent: Long
+        get() = properties.getProperty(TOTAL_CURRENCY_SPENT_KEY, "0").toLongOrNull() ?: 0L
+        set(value) {
+            properties.setProperty(TOTAL_CURRENCY_SPENT_KEY, value.toString())
             save()
         }
 

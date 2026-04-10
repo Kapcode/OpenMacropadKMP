@@ -32,6 +32,7 @@ fun MacroButton(
     currency: Long = 0,
     onClick: () -> Unit
 ) {
+    var lastClickTime by remember { mutableStateOf(0L) }
     val feedbackAlpha = remember { Animatable(0f) }
 
     LaunchedEffect(isExecuting) {
@@ -44,7 +45,13 @@ fun MacroButton(
 
     Box(modifier = Modifier.padding(4.dp)) {
         Button(
-            onClick = onClick,
+            onClick = {
+                val currentTime = System.currentTimeMillis()
+                if (currentTime - lastClickTime > 1000) {
+                    lastClickTime = currentTime
+                    onClick()
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(90.dp),
