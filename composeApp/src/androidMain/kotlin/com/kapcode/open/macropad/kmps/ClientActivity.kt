@@ -293,6 +293,7 @@ class ClientActivity : ComponentActivity() {
                                                     Log.d("ClientActivity", "Received server fingerprint: $fingerprint")
                                                     ServerStorage.saveServerFingerprint(this@ClientActivity, "$ipAddress:$port", fingerprint)
                                                 }
+                                                // Note: 'challenge' for authentication is handled internally by MacroKtorClient
                                             }
                                             ControlCommand.PAIRING_PENDING -> {
                                                 macros.clear()
@@ -716,7 +717,8 @@ fun ClientScreen(
         bottomBar = {
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            if (!showSettings && !isLandscape) {
+            val isConnected = connectionStatus == "Connected" && macros.isNotEmpty()
+            if (!showSettings && !isLandscape && isConnected) {
                 BottomAppBar { AdmobBanner() }
             }
         }

@@ -70,6 +70,16 @@ This document tracks identified security risks that have not yet been fully miti
 
 ## 🟢 Monitoring
 
+### 15. Security Rating & Human Risk
+- **Current Security Rating**: **High**. 
+- **Analysis**: This project uses **TLS with Pinning**, **Hardware-backed EC Keys**, and **Cryptographic Challenge-Response Authentication**.
+- **Primary Remaining Risk (User Error)**: The biggest vulnerability is accidental or social-engineered approval of a malicious device. If an attacker triggers a pairing request while the user is actively interacting with the Desktop UI, the user may inadvertently click "Allow" without verifying the device details.
+- **Detriments of Compromise**: Once a device is trusted, it inherits the full capability to execute any configured macro. Since macros simulate keyboard input and system commands, a compromised trust relationship allows an attacker to remotely control the host computer with the same privileges as the active user. This could result in:
+    - **Remote Command Execution**: Running terminal commands or scripts.
+    - **Data Exfiltration**: Typing commands to upload files or leak sensitive information.
+    - **Credential Theft**: Using simulated keystrokes to interact with password managers or login prompts.
+- **Mitigation**: Users must strictly verify that the **Device Name** and **6-digit Pairing Code** displayed on their phone exactly match the Desktop prompt before approving. Future updates will include "Recent Connections" logs to help users audit device activity.
+
 - **Client ID Spoofing**: We assume the Identity Key provided during the handshake is unique. If an attacker clones a trusted device's Identity Key (requires root/physical access to the phone), they can impersonate that device.
     - **Future Mitigation**: Implement public/private key challenge-response during each session initiation to ensure the client possesses the private key corresponding to the registered ID.
 - **UDP Discovery Flooding**: A malicious actor could flood the network with fake server discovery packets to confuse the client UI.

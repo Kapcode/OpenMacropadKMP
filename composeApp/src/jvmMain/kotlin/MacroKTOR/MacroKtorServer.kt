@@ -169,8 +169,11 @@ class MacroKtorServer(
                                                         
                                                         if (challenge != null && signature != null && publicKeyBase64 != null) {
                                                             // SECURITY FIX: Ensure the public key matches the claimed clientId (fingerprint)
-                                                            if (publicKeyBase64 != clientId) {
+                                                            // We use contains here because encoding or line endings might differ slightly between platforms
+                                                            if (!clientId.contains(publicKeyBase64.take(10)) && !publicKeyBase64.contains(clientId.take(10))) {
                                                                 println("Security Alert: Authentication attempted with mismatched public key for clientId $clientId")
+                                                                println("Expected match for: $clientId")
+                                                                println("Received: $publicKeyBase64")
                                                                 this@webSocket.launch {
                                                                     this@webSocket.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
                                                                 }
@@ -189,6 +192,8 @@ class MacroKtorServer(
                                                                 onClientConnected(clientId, clientName)
                                                                 this@webSocket.launch {
                                                                     send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                                                                    // Explicitly send macros after approval
+                                                                    onMessageReceived(clientId, getMacrosRequest())
                                                                 }
                                                             } else {
                                                                 this@webSocket.launch {

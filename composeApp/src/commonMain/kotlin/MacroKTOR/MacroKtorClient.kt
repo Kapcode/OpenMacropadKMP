@@ -33,15 +33,22 @@ class MacroKtorClient(
         val publicKey = identityManager.getIdentityPublicKey()
         val fingerprint = com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey)
 
-        // This function now suspends until the WebSocket session is created.
+        println("MacroKtorClient: Connecting to $host:$port (Secure: $isSecure) with id: $fingerprint")
+
+        // Use safe URL builder to ensure parameters are properly encoded (e.g., '+' in Base64)
         session = client.webSocketSession {
-            url(
-                scheme = if (isSecure) "wss" else "ws",
-                host = this@MacroKtorClient.host,
-                port = this@MacroKtorClient.port,
-                path = "/?name=$deviceName&deviceName=$deviceName&id=$fingerprint"
-            )
+            url {
+                protocol = if (isSecure) URLProtocol.WSS else URLProtocol.WS
+                this.host = this@MacroKtorClient.host
+                this.port = this@MacroKtorClient.port
+                path("/")
+                parameters.append("name", deviceName)
+                parameters.append("deviceName", deviceName)
+                parameters.append("id", fingerprint)
+            }
         }
+
+        println("MacroKtorClient: WebSocket session established")
 
         // Start heartbeat sender
         heartbeatJob?.cancel()
@@ -69,7 +76,8 @@ class MacroKtorClient(
                                         if (cmd == com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_CHALLENGE) {
                                             val challenge = params["challenge"]
                                             if (challenge != null) {
-                                                launch {
+                                                clientScope.launch {
+                                                    println("MacroKtorClient: Received challenge, signing...")
                                                     val sig = identityManager.signMessage(challenge.encodeToByteArray())
                                                     val response = com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(
                                                         com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_RESPONSE,
@@ -79,6 +87,7 @@ class MacroKtorClient(
                                                         )
                                                     )
                                                     send(response.toBytes())
+                                                    println("MacroKtorClient: Auth response sent")
                                                 }
                                             }
                                         }

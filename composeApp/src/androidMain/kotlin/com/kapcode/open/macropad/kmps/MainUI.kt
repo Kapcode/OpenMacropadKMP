@@ -58,7 +58,10 @@ fun MainUI(
                 )
             },
             bottomBar = { 
-                if (showAd) {
+                val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+                val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+                val isGlobalLoading by settingsViewModel.isGlobalLoading.collectAsState()
+                if (showAd && !isLandscape && !isGlobalLoading && !showSettings) {
                     BottomAppBar { AdmobBanner() }
                 }
             }
