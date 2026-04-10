@@ -311,7 +311,26 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Platform Identifiers**: Implemented `DeviceInfo` (expect/actual) to provide stable, unique, and privacy-safe device names and IDs across Android and JVM.
 - [x] **Amazon Tablet Fix**: Specifically improved device naming for Fire tablets by querying `Global` and `Secure` settings for `device_name`.
 - [x] **Taskbar/Tray Polish**: Overhauled the system tray implementation with dynamic context menus, primary click toggling, and a user notification dialog on first minimize.
-- [x] **Physical Consent & Banning**: Implemented a "Physical Consent Pairing" security feature. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
+### Challenge: Physical Consent Pairing & QR Support
+- **Problem**: Manually typing 6-digit PINs on a mobile device is error-prone and tedious, especially in landscape mode where the keyboard covers most of the UI.
+- **Solution**: 
+    - **QR Generation**: Integrated `ZXing` on the JVM to generate a QR code from the pairing PIN.
+    - **QR Scanning**: Implemented `CameraX` and `ML Kit` on Android to scan and automatically submit the pairing code.
+    - **Advanced Camera Controls**: Added pinch-to-zoom, tap-to-focus, and auto-exposure to the `QrCodeScanner` to improve reliability in various lighting conditions and distances.
+    - **Protocol Hardening**: Removed the PIN from the initial `PAIRING_PENDING` network message. The client must now obtain the PIN out-of-band (QR/Manual) to prevent passive interception. Added a `PAIRING_CODE_MATCHED` state to notify the client that the PIN was accepted and it is now waiting for the user to click "Approve" on the desktop.
+
+## 25. Pairing UI Optimization for Mobile
+
+### Challenge: Visibility and Focus in Landscape Mode
+- **Problem**: In landscape orientation, the software keyboard would often cover the 6-digit input field or the instructions, leading to a "guessing game" for the user.
+- **Solution**:
+    - **Top-Pinned Instructions**: Used `Modifier.weight(1f)` for the central status area (QR scanner or success icons), allowing instructions to stay pinned at the top and the input row to stay pinned at the absolute bottom.
+    - **Keyboard Detection**: Utilized `WindowInsets.ime.getBottom` via `LocalDensity` to detect keyboard visibility and dynamically adjust the UI (e.g., hiding instructions or shrinking the text field) to keep critical elements visible.
+    - **Focus Management**: Implemented `FocusRequester` and `LocalSoftwareKeyboardController` to ensure the input field is automatically focused when the pairing screen appears, and that the keyboard can be toggled manually via a dedicated button.
+    - **Unified Iconography**: Standardized on concise Material icons (`Close` for cancel, `Done` for submit, `QrCodeScanner` for QR mode, and `KeyboardArrowUp/Down` for keyboard toggle) to maximize horizontal space.
+
+
+- [x] **Physical Consent & QR Support**: Implemented a "Physical Consent Pairing" security feature with **QR code scanning** for seamless setup. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
 - [ ] **OS-Level Secret Vault**: Implement native secure storage for identity keys using Gnome Keyring (Linux), Keychain (macOS), and Credential Manager (Windows).
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.

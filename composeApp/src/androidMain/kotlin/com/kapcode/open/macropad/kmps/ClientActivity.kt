@@ -7,18 +7,55 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.result.contract.ActivityResultContracts
+import android.view.MotionEvent
+import androidx.camera.core.*
+import androidx.camera.core.FocusMeteringAction
+import androidx.camera.core.MeteringPointFactory
+import androidx.camera.core.SurfaceOrientedMeteringPointFactory
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.common.InputImage
+import java.util.concurrent.Executors
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
@@ -40,6 +77,7 @@ import javax.net.ssl.SSLContext
 import javax.net.ssl.X509TrustManager
 import kotlin.coroutines.cancellation.CancellationException
 
+@ExperimentalGetImage
 @OptIn(ExperimentalMaterial3Api::class)
 class ClientActivity : ComponentActivity() {
 
@@ -49,6 +87,16 @@ class ClientActivity : ComponentActivity() {
     private val macros = mutableStateListOf<String>()
     private val settingsViewModel = SettingsViewModel()
     private val MAX_RETRIES = 5
+
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            // Permission granted, will be handled by UI state change
+        } else {
+            Toast.makeText(this, "Camera permission is required for QR scanning", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -75,10 +123,13 @@ class ClientActivity : ComponentActivity() {
                 var serverName by remember { mutableStateOf<String?>(null) }
                 var disconnectReason by remember { mutableStateOf<String?>(null) }
                 var verificationCode by remember { mutableStateOf<String?>(null) }
+                var isWaitingForDesktopApproval by remember { mutableStateOf(false) }
+                var showQrScanner by remember { mutableStateOf(false) }
                 val executingMacros = remember { mutableStateOf(setOf<String>()) }
                 val failedMacros = remember { mutableStateOf(setOf<String>()) }
 
                 LaunchedEffect(Unit) {
+                    val tokenManager = TokenManager.getInstance(this@ClientActivity)
                     connectToServer(
                         ipAddress,
                         port,
@@ -93,6 +144,8 @@ class ClientActivity : ComponentActivity() {
                         onExecutionStart = { macro ->
                             executingMacros.value += macro
                             failedMacros.value -= macro
+                            // Deduct tokens on start
+                            tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
                         },
                         onExecutionComplete = { macro ->
                             executingMacros.value -= macro
@@ -100,6 +153,8 @@ class ClientActivity : ComponentActivity() {
                         onExecutionFailed = { macro, error ->
                             executingMacros.value -= macro
                             failedMacros.value += macro
+                            // Refund tokens on failure
+                            tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
                             Toast.makeText(this@ClientActivity, "Macro '$macro' failed: $error", Toast.LENGTH_SHORT).show()
                         }
                     )
@@ -114,8 +169,27 @@ class ClientActivity : ComponentActivity() {
                     executingMacros = executingMacros.value,
                     failedMacros = failedMacros.value,
                     settingsViewModel = settingsViewModel,
-                    onGetMacros = { activityScope.launch { client?.send("getMacros") } },
+                    showQrScanner = showQrScanner,
+                    onQrScannerToggle = { show ->
+                        if (show) {
+                            requestPermissionLauncher.launch(android.Manifest.permission.CAMERA)
+                        }
+                        showQrScanner = show
+                    },
+                    onGetMacros = { 
+                        Log.d("ClientActivity", "Requesting macros...")
+                        activityScope.launch { 
+                            client?.send(getMacrosRequest().toBytes()) 
+                        } 
+                    },
                     onMacroClick = ::sendMacro,
+                    onPairingCodeEntered = { code ->
+                        Log.d("ClientActivity", "Submitting pairing code: $code")
+                        activityScope.launch {
+                            val msg = controlMessage(ControlCommand.PAIRING_RESPONSE, mapOf("code" to code))
+                            client?.send(msg.toBytes())
+                        }
+                    },
                     onBackToMain = { finish() }
                 )
             }
@@ -124,7 +198,7 @@ class ClientActivity : ComponentActivity() {
 
     private fun sendMacro(macroName: String) {
         val tokenManager = TokenManager.getInstance(this)
-        if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+        if (tokenManager.tokenBalance.value >= BillingConstants.TOKENS_PER_MACRO_PRESS) {
             activityScope.launch {
                 client?.send(commandMessage("play:$macroName").toBytes())
             }
@@ -168,7 +242,16 @@ class ClientActivity : ComponentActivity() {
                     backoffMillis = 1000L // Reset backoff on success
                     retryCount = 0
                     var lastHeartbeat = System.currentTimeMillis()
-                    tempClient.send(textMessage("getMacros").toBytes()) // Request macros on successful connection
+                    var currentVerificationCode: String? = null
+
+                    clientJob = activityScope.launch {
+                        while (isActive) {
+                            val msg = getMacrosRequest().toBytes()
+                            client?.send(msg)
+                            delay(5000)
+                            if (macros.isNotEmpty()) break
+                        }
+                    }
 
                     val watchdogJob = activityScope.launch {
                         while (isActive) {
@@ -192,7 +275,11 @@ class ClientActivity : ComponentActivity() {
                                             ControlCommand.PAIRING_PENDING -> {
                                                 macros.clear()
                                                 val code = params["code"]
+                                                currentVerificationCode = code
                                                 onUpdate("Pending Approval", null, null, code)
+                                            }
+                                            ControlCommand.PAIRING_CODE_MATCHED -> {
+                                                onUpdate("Code Matched", null, null, currentVerificationCode)
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
                                                 onUpdate("Connected", ipAddress, null, null)
@@ -310,8 +397,169 @@ class ClientActivity : ComponentActivity() {
     }
 }
 
+@ExperimentalGetImage
+@Composable
+fun QrCodeScanner(
+    onCodeScanned: (String) -> Unit,
+    onClose: () -> Unit
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    var cameraSelector by remember { mutableStateOf(CameraSelector.DEFAULT_BACK_CAMERA) }
+    var camera by remember { mutableStateOf<Camera?>(null) }
+    
+    val previewView = remember { 
+        PreviewView(context).apply {
+            implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
+    val currentOnCodeScanned by rememberUpdatedState(onCodeScanned)
+
+    val scanner = remember {
+        val options = BarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+        BarcodeScanning.getClient(options)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraExecutor.shutdown()
+            try {
+                ProcessCameraProvider.getInstance(context).get().unbindAll()
+            } catch (e: Exception) {
+                Log.e("QrCodeScanner", "Error unbinding on dispose", e)
+            }
+        }
+    }
+
+    LaunchedEffect(cameraSelector) {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            
+            try {
+                cameraProvider.unbindAll()
+
+                val preview = Preview.Builder().build().also {
+                    it.setSurfaceProvider(previewView.surfaceProvider)
+                }
+
+                val imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+
+                imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                    val mediaImage = imageProxy.image
+                    if (mediaImage != null) {
+                        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                        scanner.process(image)
+                            .addOnSuccessListener { barcodes ->
+                                for (barcode in barcodes) {
+                                    barcode.rawValue?.let { code ->
+                                        currentOnCodeScanned(code)
+                                    }
+                                }
+                            }
+                            .addOnFailureListener {
+                                Log.e("QrCodeScanner", "Barcode scanning failed", it)
+                            }
+                            .addOnCompleteListener {
+                                imageProxy.close()
+                            }
+                    } else {
+                        imageProxy.close()
+                    }
+                }
+
+                camera = cameraProvider.bindToLifecycle(
+                    lifecycleOwner,
+                    cameraSelector,
+                    preview,
+                    imageAnalysis
+                )
+                Log.d("QrCodeScanner", "Camera bound successfully")
+            } catch (e: Exception) {
+                Log.e("QrCodeScanner", "Use case binding failed", e)
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .pointerInput(Unit) {
+            detectTransformGestures { _, _, zoom, _ ->
+                camera?.let { cam ->
+                    val zoomState = cam.cameraInfo.zoomState.value
+                    val currentZoomRatio = zoomState?.zoomRatio ?: 1f
+                    val minZoomRatio = zoomState?.minZoomRatio ?: 1f
+                    val maxZoomRatio = zoomState?.maxZoomRatio ?: 1f
+                    
+                    val newZoomRatio = (currentZoomRatio * zoom).coerceIn(minZoomRatio, maxZoomRatio)
+                    cam.cameraControl.setZoomRatio(newZoomRatio)
+                }
+            }
+        }
+    ) {
+        AndroidView(
+            factory = { previewView },
+            modifier = Modifier.fillMaxSize(),
+            update = { view ->
+                view.setOnTouchListener { _, event ->
+                    if (event.action == MotionEvent.ACTION_UP) {
+                        val factory = view.meteringPointFactory
+                        val point = factory.createPoint(event.x, event.y)
+                        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
+                            .addPoint(point, FocusMeteringAction.FLAG_AE)
+                            .build()
+                        camera?.cameraControl?.startFocusAndMetering(action)
+                    }
+                    true
+                }
+            }
+        )
+        
+        // Overlay
+        Row(
+            modifier = Modifier.fillMaxWidth().align(Alignment.TopEnd).padding(16.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = {
+                    cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                        CameraSelector.DEFAULT_FRONT_CAMERA
+                    } else {
+                        CameraSelector.DEFAULT_BACK_CAMERA
+                    }
+                }
+            ) {
+                Icon(
+                    Icons.Default.Refresh,
+                    contentDescription = "Switch Camera",
+                    tint = Color.White
+                )
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            IconButton(
+                onClick = onClose
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White
+                )
+            }
+        }
+    }
+}
+
 
 @OptIn(ExperimentalMaterial3Api::class)
+@ExperimentalGetImage
 @Composable
 fun ClientScreen(
     connectionStatus: String,
@@ -324,7 +572,10 @@ fun ClientScreen(
     settingsViewModel: SettingsViewModel,
     onGetMacros: () -> Unit,
     onMacroClick: (String) -> Unit,
-    onBackToMain: () -> Unit
+    onPairingCodeEntered: (String) -> Unit,
+    onBackToMain: () -> Unit,
+    showQrScanner: Boolean = false,
+    onQrScannerToggle: (Boolean) -> Unit = {}
 ) {
     var showSettings by remember { mutableStateOf(false) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -398,24 +649,165 @@ fun ClientScreen(
                             onMacroClick = onMacroClick
                         )
                     } else {
+                        val scrollState = rememberScrollState()
                         Column(
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(16.dp)
+                                .verticalScroll(scrollState),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            if (connectionStatus == "Pending Approval") {
-                                CircularProgressIndicator()
-                                Spacer(Modifier.height(16.dp))
-                                Text("Please approve this device on your Desktop.")
-                                verificationCode?.let { code ->
-                                    Spacer(Modifier.height(24.dp))
-                                    Text("Verification Code:", style = MaterialTheme.typography.labelLarge)
-                                    Text(
-                                        code,
-                                        style = MaterialTheme.typography.displayMedium,
-                                        fontWeight = FontWeight.Bold,
-                                        letterSpacing = 8.sp
+                            if (showQrScanner) {
+                                Box(modifier = Modifier.fillMaxSize().aspectRatio(1f)) {
+                                    QrCodeScanner(
+                                        onCodeScanned = { code: String ->
+                                            onPairingCodeEntered(code)
+                                            onQrScannerToggle(false)
+                                        },
+                                        onClose = { onQrScannerToggle(false) }
                                     )
+                                }
+                            } else if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
+                                var enteredCode by remember { mutableStateOf("") }
+                                val focusRequester = remember { FocusRequester() }
+                                val keyboardController = LocalSoftwareKeyboardController.current
+                                val focusManager = LocalFocusManager.current
+                                val configuration = LocalConfiguration.current
+                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
+                                LaunchedEffect(Unit) {
+                                    if (connectionStatus == "Pending Approval") {
+                                        focusRequester.requestFocus()
+                                    }
+                                }
+
+                                Column(
+                                    modifier = Modifier.fillMaxSize(),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Bottom
+                                ) {
+                                    if (connectionStatus == "Code Matched") {
+                                        Column(
+                                            modifier = Modifier.weight(1f),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Color(0xFF008000),
+                                                modifier = Modifier.size(64.dp)
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                            Text(
+                                                "Code Matched!",
+                                                style = MaterialTheme.typography.headlineSmall,
+                                                color = Color(0xFF008000)
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Text(
+                                                "Please click 'Allow' on your Desktop to finish pairing.",
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                            )
+                                        }
+                                    } else {
+                                        if (!isKeyboardOpen) {
+                                            Column(
+                                                modifier = Modifier.weight(1f),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center
+                                            ) {
+                                                Text(
+                                                    "Please enter the 6-digit code shown on your Desktop:",
+                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                )
+                                                Spacer(Modifier.height(16.dp))
+                                                CircularProgressIndicator()
+                                                Spacer(Modifier.height(24.dp))
+                                                OutlinedButton(
+                                                    onClick = { onQrScannerToggle(true) }
+                                                ) {
+                                                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text("Scan QR Code")
+                                                }
+                                            }
+                                        }
+
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.Center,
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                        ) {
+                                            IconButton(onClick = onBackToMain) {
+                                                Icon(Icons.Default.Close, contentDescription = "Cancel")
+                                            }
+
+                                            OutlinedTextField(
+                                                value = enteredCode,
+                                                onValueChange = {
+                                                    if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                                        enteredCode = it
+                                                    }
+                                                },
+                                                label = { if (!isKeyboardOpen) Text("6-Digit Code") },
+                                                placeholder = { if (isKeyboardOpen) Text("Code") },
+                                                singleLine = true,
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                modifier = Modifier
+                                                    .width(if (isLandscape && isKeyboardOpen) 120.dp else 180.dp)
+                                                    .focusRequester(focusRequester)
+                                            )
+
+                                            IconButton(
+                                                onClick = {
+                                                    if (isKeyboardOpen) {
+                                                        keyboardController?.hide()
+                                                        focusManager.clearFocus()
+                                                    } else {
+                                                        focusRequester.requestFocus()
+                                                        keyboardController?.show()
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(
+                                                    if (isKeyboardOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                                    contentDescription = "Toggle Keyboard"
+                                                )
+                                            }
+
+                                            if (!isKeyboardOpen) {
+                                                IconButton(onClick = { onQrScannerToggle(true) }) {
+                                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
+                                                }
+                                            }
+
+                                            Button(
+                                                onClick = { onPairingCodeEntered(enteredCode) },
+                                                enabled = enteredCode.length == 6,
+                                                contentPadding = PaddingValues(0.dp),
+                                                modifier = Modifier.size(48.dp)
+                                            ) {
+                                                Icon(Icons.Default.Done, contentDescription = "Submit")
+                                            }
+                                        }
+
+                                        if (isKeyboardOpen) {
+                                            LaunchedEffect(Unit) {
+                                                focusRequester.requestFocus()
+                                            }
+                                        }
+                                    }
+
+                                    if (!isKeyboardOpen) {
+                                        Text(
+                                            "Verification required to secure the connection.",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            modifier = Modifier.padding(bottom = 8.dp)
+                                        )
+                                    }
                                 }
                             } else if (disconnectReason != null) {
                                 Icon(

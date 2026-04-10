@@ -65,6 +65,19 @@ To assist users on touchscreens or with hidden system scrollbars, all major scro
 - **Splash Screen**: Follows the Android 12+ standard using `androidx.core:core-splashscreen`.
 - **Adaptive Icons**: 512px source wrapped in a 192dp container to fit within the OS-enforced "safe circle" without clipping or "black ring" artifacts.
 
+### Mobile Pairing & QR Scanning
+To ensure secure and ergonomic device pairing on mobile:
+- **Keyboard-Aware Layout**: Use `WindowInsets.ime` to detect keyboard state. Pinned instructions are placed at the top, and critical action fields (like Manual IP entry) are pinned to the bottom. Central content (QR Scanner) uses `Modifier.weight(1f)` to shrink gracefully when the keyboard is visible.
+- **CameraX Interactions**:
+    - **Pinch-to-Zoom**: Enabled for scanning at a distance.
+    - **Tap-to-Focus**: Allows users to manually focus on poorly lit or distant screens.
+    - **Auto-Exposure**: Continuously adjusts to varying monitor brightness levels.
+- **Standardized Icons**:
+    - `Icons.Default.QrCodeScanner`: Toggle QR scanning mode.
+    - `Icons.Default.KeyboardArrowUp/Down`: Toggle manual entry keyboard.
+    - `Icons.Default.Done`: Confirm/Submit pairing.
+    - `Icons.Default.Close`: Cancel/Exit pairing.
+
 ### Desktop (Swing/Compose Bridge)
 - **JSON Editor**: The `RSyntaxTextArea` (Swing) component is dynamically themed to match the Compose UI.
   - Dark Blue Theme -> `dark.xml`

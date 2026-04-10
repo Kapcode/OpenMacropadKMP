@@ -201,13 +201,19 @@ class DesktopViewModel(
         }
         
         viewModelScope.launch {
-            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("code" to verificationCode)))
+            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
         }
         
-        consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Verification code: $verificationCode")
+        consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Displaying verification code and QR.")
     }
 
     fun approveDevice(clientId: String, clientName: String, persistent: Boolean = true) {
+        val request = _pendingPairingRequests.value.find { it.id == clientId }
+        if (request != null && !request.codeMatched) {
+            consoleViewModel.addLog(LogLevel.Warn, "Attempted to approve $clientName ($clientId) before code was correctly entered.")
+            return
+        }
+
         val finalPersistent = if (settingsViewModel.allowOnceOnly.value) false else persistent
         if (finalPersistent) {
             switchdektoptocompose.logic.TrustedDeviceManager.addTrustedDevice(clientId, clientName)
@@ -294,14 +300,42 @@ class DesktopViewModel(
 
     private fun onDataReceived(clientId: String, dataModel: DataModel) {
         dataModel.handle(
+            onControl = { cmd, params ->
+                consoleViewModel.addLog(LogLevel.Debug, "Control received from $clientId: $cmd")
+                when (cmd) {
+                    ControlCommand.PAIRING_RESPONSE -> {
+                        val enteredCode = params["code"]
+                        val pendingRequest = _pendingPairingRequests.value.find { it.id == clientId }
+                        if (pendingRequest != null && pendingRequest.verificationCode == enteredCode) {
+                            consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
+                            _pendingPairingRequests.update { currentList ->
+                                currentList.map { 
+                                    if (it.id == clientId) it.copy(codeMatched = true) else it
+                                }
+                            }
+                            // Notify client that code matched and they should wait for desktop approval
+                            viewModelScope.launch {
+                                server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_CODE_MATCHED))
+                            }
+                        } else {
+                            consoleViewModel.addLog(LogLevel.Warn, "Incorrect pairing code entered from $clientId.")
+                        }
+                    }
+                    else -> {}
+                }
+            },
             onText = { message ->
                 consoleViewModel.addLog(LogLevel.Debug, "Text received from $clientId: $message")
                 if (message == "getMacros") {
-                    val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-                    viewModelScope.launch {
-                        server.sendToClient(clientId, macroListMessage(macroNames))
+                    if (server.isDeviceTrusted(clientId)) {
+                        val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+                        viewModelScope.launch {
+                            server.sendToClient(clientId, macroListMessage(macroNames))
+                        }
+                        consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
+                    } else {
+                        consoleViewModel.addLog(LogLevel.Warn, "Untrusted device $clientId requested macro list. Ignored.")
                     }
-                    consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
                 }
             },
             onCommand = { cmd, _ ->

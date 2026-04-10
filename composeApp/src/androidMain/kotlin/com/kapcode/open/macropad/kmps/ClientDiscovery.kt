@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
@@ -17,18 +18,29 @@ data class DiscoveredServer(
     val name: String,
     val address: String, // e.g., "192.168.1.10:8443"
     val host: InetAddress,
-    val isSecure: Boolean
+    val isSecure: Boolean,
+    val lastSeen: Long = System.currentTimeMillis()
 )
 
 class ClientDiscovery {
 
     private val discoveryScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var discoveryJob: Job? = null
+    private var cleanupJob: Job? = null
     private var socket: DatagramSocket? = null
 
     val foundServers = MutableStateFlow<List<DiscoveredServer>>(emptyList())
     private val _isScanning = MutableStateFlow(false)
     val isScanning = _isScanning.asStateFlow()
+
+    private val lastProcessedFromIp = mutableMapOf<String, Long>()
+
+    private companion object {
+        const val DISCOVERY_PREFIX = "OMP_DISCOVERY_V1:"
+        const val RATE_LIMIT_MS = 2000L
+        const val STALE_TIMEOUT_MS = 15000L
+        const val MAX_SERVERS = 20
+    }
 
     fun isDiscovering(): Boolean {
         return discoveryJob?.isActive == true
@@ -38,6 +50,20 @@ class ClientDiscovery {
         if (isDiscovering()) return
         
         _isScanning.value = true
+        
+        // Cleanup job to remove stale servers
+        cleanupJob = discoveryScope.launch {
+            while (isActive) {
+                delay(5000)
+                val now = System.currentTimeMillis()
+                val currentList = foundServers.value
+                val filteredList = currentList.filter { now - it.lastSeen < STALE_TIMEOUT_MS }
+                if (filteredList.size != currentList.size) {
+                    foundServers.value = filteredList
+                }
+            }
+        }
+
         discoveryJob = discoveryScope.launch {
             try {
                 socket = DatagramSocket(null).apply {
@@ -51,23 +77,44 @@ class ClientDiscovery {
                 while (isActive) {
                     try {
                         socket?.receive(packet)
-                        val jsonString = String(packet.data, 0, packet.length)
+                        val rawData = String(packet.data, 0, packet.length)
+                        
+                        // 1. Prefix Validation
+                        if (!rawData.startsWith(DISCOVERY_PREFIX)) continue
+                        
+                        val hostAddress = packet.address
+                        val hostIp = hostAddress?.hostAddress ?: continue
+                        val now = System.currentTimeMillis()
+
+                        // 2. Rate Limiting (per IP)
+                        val lastSeenTime = lastProcessedFromIp[hostIp] ?: 0L
+                        if (now - lastSeenTime < RATE_LIMIT_MS) continue
+                        lastProcessedFromIp[hostIp] = now
+
+                        val jsonString = rawData.removePrefix(DISCOVERY_PREFIX)
                         val json = JSONObject(jsonString)
 
                         val serverName = json.getString("serverName")
                         val port = json.getInt("port")
                         val isSecure = json.getBoolean("isSecure")
-                        val hostAddress = packet.address
-                        val serverAddress = "${hostAddress.hostAddress}:$port"
+                        val serverAddress = "$hostIp:$port"
 
-                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure)
+                        val newServer = DiscoveredServer(serverName, serverAddress, hostAddress, isSecure, now)
 
-                        // Update the list of found servers
-                        val currentServers = foundServers.value
-                        if (currentServers.none { it.host == newServer.host && it.address == newServer.address && it.name == newServer.name && it.isSecure == newServer.isSecure }) {
-                            val newList = currentServers.filterNot { it.host == newServer.host } + newServer
-                            foundServers.value = newList
+                        // 3. Update the list of found servers
+                        val currentServers = foundServers.value.toMutableList()
+                        val existingIndex = currentServers.indexOfFirst { it.host == newServer.host && it.address == newServer.address }
+                        
+                        if (existingIndex != -1) {
+                            currentServers[existingIndex] = newServer
+                        } else {
+                            // 4. Capacity Limit
+                            if (currentServers.size < MAX_SERVERS) {
+                                currentServers.add(newServer)
+                            }
                         }
+                        foundServers.value = currentServers
+                        
                     } catch (e: Exception) {
                         if (isActive) {
                             println("Error receiving discovery packet: ${e.message}")
@@ -88,9 +135,13 @@ class ClientDiscovery {
 
     fun stop() {
         discoveryJob?.cancel()
+        cleanupJob?.cancel()
         _isScanning.value = false
         socket?.close()
         socket = null
         discoveryJob = null
+        cleanupJob = null
+        lastProcessedFromIp.clear()
+        foundServers.value = emptyList()
     }
 }

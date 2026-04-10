@@ -40,7 +40,7 @@ class MacroKtorServer(
         temporaryTrustedDevices.add(clientId)
     }
 
-    private fun isDeviceTrusted(clientId: String): Boolean {
+    fun isDeviceTrusted(clientId: String): Boolean {
         return temporaryTrustedDevices.contains(clientId) ||
                 switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)
     }
@@ -142,25 +142,28 @@ class MacroKtorServer(
                                 try {
                                     val dataModel = DataModel.fromBytes(frame.readBytes())
                                     lastSeen[clientId] = System.currentTimeMillis()
-                                    if (isDeviceTrusted(clientId)) {
-                                        dataModel.handle(
-                                            onHeartbeat = { /* Already handled by Ktor or just ignore */ },
-                                            onControl = { cmd, _ ->
-                                                if (cmd == ControlCommand.DISCONNECT) {
-                                                    close(CloseReason(CloseReason.Codes.NORMAL, "Client requested disconnect"))
-                                                }
-                                            },
-                                            onText = { _ -> onMessageReceived(clientId, dataModel) },
-                                            onCommand = { _, _ -> onMessageReceived(clientId, dataModel) }
-                                        )
+                                    
+                                    val isTrusted = isDeviceTrusted(clientId)
+                                    if (isTrusted) {
+                                        onMessageReceived(clientId, dataModel)
                                     } else {
-                                        // Still handle heartbeats to update lastSeen, but drop other messages
+                                        // Only allow pairing response if not trusted
                                         dataModel.handle(
-                                            onHeartbeat = { /* Already updated lastSeen */ },
-                                            onText = { _ -> /* Dropped */ },
-                                            onCommand = { _, _ -> /* Dropped */ }
+                                            onControl = { cmd, _ ->
+                                                if (cmd == ControlCommand.PAIRING_RESPONSE) {
+                                                    onMessageReceived(clientId, dataModel)
+                                                }
+                                            }
                                         )
                                     }
+                                    
+                                    dataModel.handle(
+                                        onControl = { cmd, _ ->
+                                            if (cmd == ControlCommand.DISCONNECT) {
+                                                close(CloseReason(CloseReason.Codes.NORMAL, "Client requested disconnect"))
+                                            }
+                                        }
+                                    )
                                 } catch (e: Exception) {
                                     e.printStackTrace()
                                 }

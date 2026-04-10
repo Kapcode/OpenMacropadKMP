@@ -41,6 +41,12 @@ kotlin {
             implementation(libs.google.play.services.ads)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.analytics)
+
+            // QR Scanning
+            implementation(libs.barcode.scanning)
+            implementation(libs.androidx.camera.camera2)
+            implementation(libs.androidx.camera.lifecycle)
+            implementation(libs.androidx.camera.view)
         }
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -89,6 +95,9 @@ kotlin {
             
             implementation(libs.bouncycastle.bcpkix)
             implementation(libs.bouncycastle.bcprov)
+
+            implementation(libs.zxing.core)
+            implementation(libs.zxing.javase)
         }
     }
 }

@@ -63,6 +63,8 @@ sealed class MessageType : Serializable {
 enum class ControlCommand {
     PAIRING_REQUEST,
     PAIRING_PENDING,
+    PAIRING_RESPONSE,
+    PAIRING_CODE_MATCHED,
     PAIRING_APPROVED,
     PAIRING_REJECTED,
     BANNED,

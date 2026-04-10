@@ -21,11 +21,11 @@ class ServerDiscoveryAnnouncer {
                 socket?.broadcast = true
                 val broadcastAddress = InetAddress.getByName("255.255.255.255")
 
-                val message = JSONObject().apply {
+                val message = ("OMP_DISCOVERY_V1:" + JSONObject().apply {
                     put("serverName", serverName)
                     put("port", port)
                     put("isSecure", isSecure)
-                }.toString().toByteArray()
+                }.toString()).toByteArray()
 
                 val packet = DatagramPacket(message, message.size, broadcastAddress, 9998)
 

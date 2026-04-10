@@ -31,8 +31,19 @@ svg-salamander = "1.0"
 json = "20251224"
 slf4j = "2.0.17"
 java-keyring = "1.0.4"
+zxing = "3.5.3"
+barcode-scanning = "17.3.0"
+camera-lifecycle = "1.4.1"
+camera-view = "1.4.1"
+camera-camera2 = "1.4.1"
 
 [libraries]
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
+zxing-javase = { module = "com.google.zxing:javase", version.ref = "zxing" }
+barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "barcode-scanning" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "camera-camera2" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camera-lifecycle" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "camera-view" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines-test" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "androidx-core-splashscreen" }

@@ -51,4 +51,6 @@ This document tracks identified security risks that have not yet been fully miti
 ## 🟢 Monitoring
 
 - **Client ID Spoofing**: We assume the Identity Key provided during the handshake is unique. If an attacker clones a trusted device's Identity Key (requires root/physical access to the phone), they can impersonate that device.
+    - **Future Mitigation**: Implement public/private key challenge-response during each session initiation to ensure the client possesses the private key corresponding to the registered ID.
 - **UDP Discovery Flooding**: A malicious actor could flood the network with fake server discovery packets to confuse the client UI.
+    - **Future Mitigation**: Implement rate-limiting and a "cooldown" period for processing incoming discovery packets in the `DiscoveryViewModel`.
