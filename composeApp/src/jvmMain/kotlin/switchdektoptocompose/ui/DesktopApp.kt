@@ -29,12 +29,14 @@ import javax.swing.UIManager
 import androidx.compose.ui.tooling.preview.Preview
 import switchdektoptocompose.di.DesktopViewModels
 import switchdektoptocompose.viewmodel.*
+import switchdektoptocompose.viewmodel.SettingsViewModel as DesktopSettingsViewModel
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 import switchdektoptocompose.di.ViewModelFactory
 
 @Preview
 @Composable
 fun DesktopAppPreview() {
-    val settingsViewModel = remember { SettingsViewModel() }
+    val settingsViewModel = remember { DesktopSettingsViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
     val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
@@ -49,6 +51,7 @@ fun DesktopAppPreview() {
     val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
     val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel) { } }
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+    val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
 
     val viewModels = DesktopViewModels(
@@ -59,6 +62,7 @@ fun DesktopAppPreview() {
         macroEditorViewModel = macroEditorViewModel,
         macroManagerViewModel = macroManagerViewModel,
         settingsViewModel = settingsViewModel,
+        sharedSettingsViewModel = sharedSettingsViewModel,
         macroTimelineViewModel = macroTimelineViewModel,
         newEventViewModel = newEventViewModel
     )
@@ -81,6 +85,7 @@ fun DesktopApp(
     val macroEditorViewModel = viewModels.macroEditorViewModel
     val macroManagerViewModel = viewModels.macroManagerViewModel
     val settingsViewModel = viewModels.settingsViewModel
+    val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
     val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val newEventViewModel = viewModels.newEventViewModel
 
@@ -129,9 +134,11 @@ fun DesktopApp(
     var showRecordDialog by remember { mutableStateOf(false) }
 
     if (showSettingsDialog) {
+        val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
         SettingsDialog(
             desktopViewModel = desktopViewModel,
             settingsViewModel = settingsViewModel,
+            sharedSettingsViewModel = sharedSettingsViewModel,
             consoleViewModel = consoleViewModel,
             onDismissRequest = { 
                 showSettingsDialog = false
@@ -203,15 +210,17 @@ fun DesktopApp(
     }
 
     if (pendingPairingRequests.isNotEmpty()) {
-        val request = pendingPairingRequests.first()
         PairingRequestDialog(
-            request = request,
+            requests = pendingPairingRequests,
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
+            desktopSettingsViewModel = settingsViewModel,
+            sharedSettingsViewModel = sharedSettingsViewModel,
             isAlwaysAllowAvailable = !allowOnceOnly,
-            onApprove = { persistent -> desktopViewModel.approveDevice(request.id, request.name, persistent) },
-            onDeny = { desktopViewModel.rejectDevice(request.id) },
-            onBan = { desktopViewModel.banDevice(request.id, request.name) }
+            onApprove = { id, name, persistent -> desktopViewModel.approveDevice(id, name, persistent) },
+            onDeny = { id -> desktopViewModel.rejectDevice(id) },
+            onBan = { id, name -> desktopViewModel.banDevice(id, name) },
+            onCancelAll = { desktopViewModel.rejectAllPendingDevices() }
         )
     }
 

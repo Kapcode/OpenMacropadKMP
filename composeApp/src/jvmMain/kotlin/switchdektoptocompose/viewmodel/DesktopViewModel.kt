@@ -201,7 +201,7 @@ class DesktopViewModel(
         }
         
         viewModelScope.launch {
-            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
+            server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING, mapOf("code" to verificationCode)))
         }
         
         consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Displaying verification code and QR.")
@@ -244,6 +244,19 @@ class DesktopViewModel(
             server.sendToClient(clientId, pairingRejectedMessage("Pairing rejected by user"))
         }
         consoleViewModel.addLog(LogLevel.Info, "Rejected device: $clientId")
+    }
+
+    fun rejectAllPendingDevices() {
+        val currentRequests = _pendingPairingRequests.value
+        if (currentRequests.isEmpty()) return
+        
+        consoleViewModel.addLog(LogLevel.Warn, "Rejecting all ${currentRequests.size} pending pairing requests.")
+        currentRequests.forEach { request ->
+            viewModelScope.launch {
+                server.sendToClient(request.id, pairingRejectedMessage("Pairing rejected (Mass Cancel)"))
+            }
+        }
+        _pendingPairingRequests.value = emptyList()
     }
 
     fun banDevice(clientId: String, clientName: String) {

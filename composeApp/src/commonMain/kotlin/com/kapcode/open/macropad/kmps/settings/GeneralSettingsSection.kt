@@ -75,5 +75,26 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        val multiQrEnabled by viewModel.multiQrEnabled.collectAsState()
+        Text("Advanced Pairing", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Multi-QR Mode", style = MaterialTheme.typography.bodyLarge)
+                Text("Displays multiple QR codes for easier scanning on desk-mounted devices.", style = MaterialTheme.typography.bodySmall)
+            }
+            Switch(
+                checked = multiQrEnabled,
+                onCheckedChange = { viewModel.setMultiQrEnabled(it) }
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
     }
 }

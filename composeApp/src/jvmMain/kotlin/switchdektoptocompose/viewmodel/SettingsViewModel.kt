@@ -41,6 +41,12 @@ class SettingsViewModel {
     private val _allowOnceOnly = MutableStateFlow(AppSettings.allowOnceOnly)
     val allowOnceOnly = _allowOnceOnly.asStateFlow()
 
+    private val _fleetModeEnabled = MutableStateFlow(AppSettings.fleetModeEnabled)
+    val fleetModeEnabled = _fleetModeEnabled.asStateFlow()
+
+    private val _multiQrEnabled = MutableStateFlow(false) // Default to false
+    val multiQrEnabled = _multiQrEnabled.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -116,6 +122,15 @@ class SettingsViewModel {
     fun setAllowOnceOnly(enabled: Boolean) {
         _allowOnceOnly.value = enabled
         AppSettings.allowOnceOnly = enabled
+    }
+
+    fun setFleetModeEnabled(enabled: Boolean) {
+        _fleetModeEnabled.value = enabled
+        AppSettings.fleetModeEnabled = enabled
+    }
+
+    fun setMultiQrEnabled(enabled: Boolean) {
+        _multiQrEnabled.value = enabled
     }
 
     fun selectTheme(theme: String) {

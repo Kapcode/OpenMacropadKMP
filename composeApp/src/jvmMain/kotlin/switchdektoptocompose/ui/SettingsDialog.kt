@@ -11,6 +11,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 fun SettingsDialog(
     desktopViewModel: DesktopViewModel,
     settingsViewModel: SettingsViewModel,
+    sharedSettingsViewModel: SharedSettingsViewModel,
     consoleViewModel: ConsoleViewModel,
     onDismissRequest: () -> Unit,
     initialScrollToSecurity: Boolean = false
@@ -43,8 +45,10 @@ fun SettingsDialog(
     val hardEstop by settingsViewModel.hardEstop.collectAsState()
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
+    val fleetModeEnabled by settingsViewModel.fleetModeEnabled.collectAsState()
     val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
     val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
+    val multiQrEnabled by sharedSettingsViewModel.multiQrEnabled.collectAsState()
 
     // Scroll state management
     val scrollState = rememberScrollState()
@@ -191,6 +195,60 @@ fun SettingsDialog(
                                 Switch(
                                     checked = allowNewConnections,
                                     onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "When enabled, multiple QR codes can be used for pairing.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Multi-QR Pairing Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = multiQrEnabled,
+                                    onCheckedChange = { sharedSettingsViewModel.setMultiQrEnabled(it) }
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        TooltipArea(
+                            tooltip = {
+                                Surface(
+                                    modifier = Modifier.padding(4.dp),
+                                    shape = MaterialTheme.shapes.small,
+                                    shadowElevation = 4.dp
+                                ) {
+                                    Text(
+                                        "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing.",
+                                        modifier = Modifier.padding(8.dp),
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
+                            }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text("Sync (Fleet) Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                Switch(
+                                    checked = fleetModeEnabled,
+                                    onCheckedChange = { settingsViewModel.setFleetModeEnabled(it) }
                                 )
                             }
                         }

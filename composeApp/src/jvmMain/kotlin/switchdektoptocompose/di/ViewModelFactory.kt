@@ -12,6 +12,7 @@ data class DesktopViewModels(
     val macroEditorViewModel: MacroEditorViewModel,
     val macroManagerViewModel: MacroManagerViewModel,
     val settingsViewModel: SettingsViewModel,
+    val sharedSettingsViewModel: com.kapcode.open.macropad.kmps.settings.SettingsViewModel,
     val macroTimelineViewModel: MacroTimelineViewModel,
     val newEventViewModel: NewEventViewModel
 )
@@ -20,6 +21,7 @@ object ViewModelFactory {
     @Composable
     fun createViewModels(): DesktopViewModels {
         val settingsViewModel = remember { SettingsViewModel() }
+        val sharedSettingsViewModel = remember { com.kapcode.open.macropad.kmps.settings.SettingsViewModel() }
         val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
         val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
@@ -63,6 +65,7 @@ object ViewModelFactory {
             macroEditorViewModel = macroEditorViewModel,
             macroManagerViewModel = macroManagerViewModel,
             settingsViewModel = settingsViewModel,
+            sharedSettingsViewModel = sharedSettingsViewModel,
             macroTimelineViewModel = macroTimelineViewModel,
             newEventViewModel = newEventViewModel
         )

@@ -19,10 +19,13 @@ fun main() = application {
     UIManager.setLookAndFeel(FlatDarkLaf())
 
     val viewModels = ViewModelFactory.createViewModels()
-    val desktopWindowState = rememberDesktopWindowState(settingsViewModel = viewModels.settingsViewModel)
+    val desktopViewModel = viewModels.desktopViewModel
+    val desktopWindowState = rememberDesktopWindowState(
+        settingsViewModel = viewModels.settingsViewModel,
+        onTrayMinimize = { desktopViewModel.rejectAllPendingDevices() }
+    )
     
     val settingsViewModel = viewModels.settingsViewModel
-    val desktopViewModel = viewModels.desktopViewModel
     val consoleViewModel = viewModels.consoleViewModel
     val inspectorViewModel = viewModels.inspectorViewModel
     val macroManagerViewModel = viewModels.macroManagerViewModel
@@ -38,6 +41,7 @@ fun main() = application {
     val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    val pendingPairingRequests by desktopViewModel.pendingPairingRequests.collectAsState()
     val icon = painterResource("macropadIcon512.png")
 
     DisposableEffect(Unit) {
@@ -64,6 +68,10 @@ fun main() = application {
                 Item("Hide to Tray", onClick = { desktopWindowState.animateToTray() })
             } else {
                 Item("Show Main Window", onClick = { desktopWindowState.showWindow() })
+            }
+            if (pendingPairingRequests.isNotEmpty()) {
+                Separator()
+                Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
             }
             Separator()
             Item("Exit", onClick = ::exitApplication)

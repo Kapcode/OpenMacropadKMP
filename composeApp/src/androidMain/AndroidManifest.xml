@@ -60,7 +60,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ClientActivity" />
+        <activity
+            android:name=".ClientActivity"
+            android:theme="@style/Theme.App" />
 
     </application>
 

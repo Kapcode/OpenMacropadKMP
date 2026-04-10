@@ -14,7 +14,8 @@ import java.awt.GraphicsEnvironment
 class DesktopWindowState(
     val windowState: WindowState,
     private val scope: CoroutineScope,
-    private val settingsViewModel: SettingsViewModel
+    private val settingsViewModel: SettingsViewModel,
+    private val onTrayMinimize: () -> Unit = {}
 ) {
     var isWindowVisible by mutableStateOf(true)
         private set
@@ -32,6 +33,7 @@ class DesktopWindowState(
 
     fun animateToTray() {
         if (!isTransitioning && isWindowVisible) {
+            onTrayMinimize()
             if (!settingsViewModel.animateToTray.value) {
                 isWindowVisible = false
                 return
@@ -159,9 +161,10 @@ class DesktopWindowState(
 fun rememberDesktopWindowState(
     windowState: WindowState = rememberWindowState(placement = WindowPlacement.Maximized),
     scope: CoroutineScope = rememberCoroutineScope(),
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    onTrayMinimize: () -> Unit = {}
 ): DesktopWindowState {
-    return remember(windowState, scope, settingsViewModel) {
-        DesktopWindowState(windowState, scope, settingsViewModel)
+    return remember(windowState, scope, settingsViewModel, onTrayMinimize) {
+        DesktopWindowState(windowState, scope, settingsViewModel, onTrayMinimize)
     }
 }

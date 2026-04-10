@@ -7,8 +7,8 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.result.contract.ActivityResultContracts
 import android.view.MotionEvent
+import android.view.ScaleGestureDetector
 import androidx.camera.core.*
 import androidx.camera.core.FocusMeteringAction
 import androidx.camera.core.MeteringPointFactory
@@ -26,9 +26,15 @@ import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -39,15 +45,6 @@ import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -92,13 +89,14 @@ class ClientActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { isGranted: Boolean ->
         if (isGranted) {
-            // Permission granted, will be handled by UI state change
+            // Permission granted
         } else {
             Toast.makeText(this, "Camera permission is required for QR scanning", Toast.LENGTH_SHORT).show()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
@@ -401,7 +399,9 @@ class ClientActivity : ComponentActivity() {
 @Composable
 fun QrCodeScanner(
     onCodeScanned: (String) -> Unit,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    isAutoZoomEnabled: Boolean = false,
+    onCameraReady: (Camera) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
@@ -414,7 +414,27 @@ fun QrCodeScanner(
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
         }
     }
+
+    // Pinch-to-zoom detector
+    val scaleGestureDetector = remember {
+        ScaleGestureDetector(context, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
+            override fun onScale(detector: ScaleGestureDetector): Boolean {
+                camera?.let { cam ->
+                    val zoomState = cam.cameraInfo.zoomState.value
+                    val currentZoomRatio = zoomState?.zoomRatio ?: 1f
+                    val newZoomRatio = currentZoomRatio * detector.scaleFactor
+                    cam.cameraControl.setZoomRatio(newZoomRatio.coerceIn(
+                        zoomState?.minZoomRatio ?: 1f,
+                        zoomState?.maxZoomRatio ?: 1f
+                    ))
+                }
+                return true
+            }
+        })
+    }
+
     val currentOnCodeScanned by rememberUpdatedState(onCodeScanned)
+    val currentOnCameraReady by rememberUpdatedState(onCameraReady)
 
     val scanner = remember {
         val options = BarcodeScannerOptions.Builder()
@@ -473,12 +493,14 @@ fun QrCodeScanner(
                     }
                 }
 
-                camera = cameraProvider.bindToLifecycle(
+                val boundCamera = cameraProvider.bindToLifecycle(
                     lifecycleOwner,
                     cameraSelector,
                     preview,
                     imageAnalysis
                 )
+                camera = boundCamera
+                currentOnCameraReady(boundCamera)
                 Log.d("QrCodeScanner", "Camera bound successfully")
             } catch (e: Exception) {
                 Log.e("QrCodeScanner", "Use case binding failed", e)
@@ -486,28 +508,47 @@ fun QrCodeScanner(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .pointerInput(Unit) {
-            detectTransformGestures { _, _, zoom, _ ->
-                camera?.let { cam ->
-                    val zoomState = cam.cameraInfo.zoomState.value
-                    val currentZoomRatio = zoomState?.zoomRatio ?: 1f
-                    val minZoomRatio = zoomState?.minZoomRatio ?: 1f
-                    val maxZoomRatio = zoomState?.maxZoomRatio ?: 1f
-                    
-                    val newZoomRatio = (currentZoomRatio * zoom).coerceIn(minZoomRatio, maxZoomRatio)
-                    cam.cameraControl.setZoomRatio(newZoomRatio)
-                }
-            }
+    LaunchedEffect(camera, isAutoZoomEnabled) {
+        val cam = camera ?: return@LaunchedEffect
+        if (!isAutoZoomEnabled) {
+            // Reset to min zoom when auto-zoom is disabled
+            val zoomState = cam.cameraInfo.zoomState.value
+            cam.cameraControl.setZoomRatio(zoomState?.minZoomRatio ?: 1f)
+            return@LaunchedEffect
         }
-    ) {
+
+        while(isActive) {
+            val zoomState = cam.cameraInfo.zoomState.value
+            val minZoom = zoomState?.minZoomRatio ?: 1f
+            val maxZoom = (zoomState?.maxZoomRatio ?: 3f).coerceAtMost(4f) // Cap auto-zoom at 4x
+            val midZoom = (minZoom * 2f).coerceAtMost(maxZoom)
+
+            // Dwell times optimized for sensor stabilization
+            val longDwell = 3500L
+            val shortDwell = 2000L
+
+            // Phase 1: Full Zoom Out (Reset/Wide view)
+            cam.cameraControl.setZoomRatio(minZoom)
+            delay(longDwell) // Nice long pause at wide view
+
+            // Phase 2: Moderate Zoom (Common QR distance)
+            cam.cameraControl.setZoomRatio(midZoom)
+            delay(shortDwell)
+
+            // Phase 3: High Zoom (Far distance)
+            cam.cameraControl.setZoomRatio(maxZoom)
+            delay(shortDwell)
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
             factory = { previewView },
             modifier = Modifier.fillMaxSize(),
             update = { view ->
                 view.setOnTouchListener { _, event ->
-                    if (event.action == MotionEvent.ACTION_UP) {
+                    scaleGestureDetector.onTouchEvent(event)
+                    if (event.action == MotionEvent.ACTION_UP && !scaleGestureDetector.isInProgress) {
                         val factory = view.meteringPointFactory
                         val point = factory.createPoint(event.x, event.y)
                         val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
@@ -519,40 +560,31 @@ fun QrCodeScanner(
                 }
             }
         )
+
+        // QR Scanner Overlay (White Square)
+        Box(
+            modifier = Modifier
+                .size(250.dp)
+                .align(Alignment.Center)
+                .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+        )
         
-        // Overlay
-        Row(
-            modifier = Modifier.fillMaxWidth().align(Alignment.TopEnd).padding(16.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(
-                onClick = {
-                    cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
-                        CameraSelector.DEFAULT_FRONT_CAMERA
-                    } else {
-                        CameraSelector.DEFAULT_BACK_CAMERA
-                    }
+        // Overlay for Switch Camera only (Close moved to top bar)
+        IconButton(
+            modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
+            onClick = {
+                cameraSelector = if (cameraSelector == CameraSelector.DEFAULT_BACK_CAMERA) {
+                    CameraSelector.DEFAULT_FRONT_CAMERA
+                } else {
+                    CameraSelector.DEFAULT_BACK_CAMERA
                 }
-            ) {
-                Icon(
-                    Icons.Default.Refresh,
-                    contentDescription = "Switch Camera",
-                    tint = Color.White
-                )
             }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = onClose
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Close",
-                    tint = Color.White
-                )
-            }
+        ) {
+            Icon(
+                Icons.Default.Refresh,
+                contentDescription = "Switch Camera",
+                tint = Color.White
+            )
         }
     }
 }
@@ -578,6 +610,8 @@ fun ClientScreen(
     onQrScannerToggle: (Boolean) -> Unit = {}
 ) {
     var showSettings by remember { mutableStateOf(false) }
+    var activeCamera by remember { mutableStateOf<Camera?>(null) }
+    var isAutoZoomEnabled by remember { mutableStateOf(true) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -590,6 +624,28 @@ fun ClientScreen(
             CommonAppBar(
                 title = if (showSettings) "Settings" else "Open Macropad",
                 onSettingsClick = { showSettings = !showSettings },
+                isQrScannerActive = showQrScanner && !showSettings,
+                isAutoZoomEnabled = isAutoZoomEnabled,
+                onAutoZoomToggle = { isAutoZoomEnabled = it },
+                onZoomIn = {
+                    isAutoZoomEnabled = false
+                    activeCamera?.let { cam ->
+                        val zoomState = cam.cameraInfo.zoomState.value
+                        val currentZoom = zoomState?.zoomRatio ?: 1f
+                        val maxZoom = zoomState?.maxZoomRatio ?: 1f
+                        cam.cameraControl.setZoomRatio((currentZoom + 0.2f).coerceAtMost(maxZoom))
+                    }
+                },
+                onZoomOut = {
+                    isAutoZoomEnabled = false
+                    activeCamera?.let { cam ->
+                        val zoomState = cam.cameraInfo.zoomState.value
+                        val currentZoom = zoomState?.zoomRatio ?: 1f
+                        val minZoom = zoomState?.minZoomRatio ?: 1f
+                        cam.cameraControl.setZoomRatio((currentZoom - 0.2f).coerceAtLeast(minZoom))
+                    }
+                },
+                onCloseScanner = { onQrScannerToggle(false) },
                 navigationIcon = {
                     if (showSettings) {
                         IconButton(onClick = { showSettings = false }) {
@@ -609,7 +665,9 @@ fun ClientScreen(
             )
         },
         bottomBar = {
-            if (!showSettings) {
+            val configuration = LocalConfiguration.current
+            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            if (!showSettings && !isLandscape) {
                 BottomAppBar { AdmobBanner() }
             }
         }
@@ -665,7 +723,9 @@ fun ClientScreen(
                                             onPairingCodeEntered(code)
                                             onQrScannerToggle(false)
                                         },
-                                        onClose = { onQrScannerToggle(false) }
+                                        onClose = { onQrScannerToggle(false) },
+                                        isAutoZoomEnabled = isAutoZoomEnabled,
+                                        onCameraReady = { activeCamera = it }
                                     )
                                 }
                             } else if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
@@ -778,10 +838,8 @@ fun ClientScreen(
                                                 )
                                             }
 
-                                            if (!isKeyboardOpen) {
-                                                IconButton(onClick = { onQrScannerToggle(true) }) {
-                                                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
-                                                }
+                                            IconButton(onClick = { onQrScannerToggle(true) }) {
+                                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
                                             }
 
                                             Button(

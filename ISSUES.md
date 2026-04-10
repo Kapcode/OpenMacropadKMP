@@ -18,6 +18,10 @@ This document tracks identified security risks that have not yet been fully miti
 - **Abuse Scenario**: An attacker guesses the password stored in `local.properties` or a weak user-defined password.
 - **Status**: ✅ **Fixed**. Increased the auto-generated keystore password entropy to 64 bytes (Base64 encoded) and ensured it is stored in the OS-native secure keyring.
 
+### 10. Security Audit of Pairing Process
+- **Description**: With the introduction of "Sync (Fleet)" and multi-QR grids, the pairing process has increased in complexity. A formal security audit is needed to ensure no race conditions or unauthorized bypasses exist in the mass-provisioning flow.
+- **Status**: 🔴 **Planned**.
+
 ---
 
 ## ✅ Resolved

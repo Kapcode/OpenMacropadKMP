@@ -23,6 +23,9 @@ class SettingsViewModel {
     private val _isGlobalLoading = MutableStateFlow(false)
     val isGlobalLoading = _isGlobalLoading.asStateFlow()
 
+    private val _multiQrEnabled = MutableStateFlow(false)
+    val multiQrEnabled = _multiQrEnabled.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -33,5 +36,9 @@ class SettingsViewModel {
 
     fun setGlobalLoading(isLoading: Boolean) {
         _isGlobalLoading.value = isLoading
+    }
+
+    fun setMultiQrEnabled(enabled: Boolean) {
+        _multiQrEnabled.value = enabled
     }
 }

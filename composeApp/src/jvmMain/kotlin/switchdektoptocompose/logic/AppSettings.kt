@@ -21,6 +21,7 @@ object AppSettings {
     private const val HARD_ESTOP_KEY = "hardEstop"
     private const val ALLOW_NEW_CONNECTIONS_KEY = "allowNewConnections"
     private const val ALLOW_ONCE_ONLY_KEY = "allowOnceOnly"
+    private const val FLEET_MODE_ENABLED_KEY = "fleetModeEnabled"
 
     init {
         if (!configDir.exists()) {
@@ -116,6 +117,13 @@ object AppSettings {
         get() = properties.getProperty(ALLOW_ONCE_ONLY_KEY, "false").toBoolean()
         set(value) {
             properties.setProperty(ALLOW_ONCE_ONLY_KEY, value.toString())
+            save()
+        }
+
+    var fleetModeEnabled: Boolean
+        get() = properties.getProperty(FLEET_MODE_ENABLED_KEY, "false").toBoolean()
+        set(value) {
+            properties.setProperty(FLEET_MODE_ENABLED_KEY, value.toString())
             save()
         }
 
