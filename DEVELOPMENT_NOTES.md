@@ -319,6 +319,18 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: Enabling R8 minification for debug builds (to strip Ktor-Server bloat) caused sporadic `java.lang.InterruptedException` and hung builds due to resource exhaustion during the shrinking phase.
 - **Solution**: Disabled `isMinifyEnabled` for the `debug` build type in `composeApp/build.gradle.kts`. While this increases the debug APK size, it restores build reliability and developer velocity. Minification remains enabled for `release` builds to ensure production APKs are optimized.
 
+## 31. Deployment and Distribution
+
+### JAR Packaging
+- **UberJar Strategy**: The project uses the `packageUberJarForCurrentOS` task to bundle all dependencies into a single, executable JAR file.
+- **Signature Stripping**: A custom `stripSignaturesFromUberJar` task is used to remove security signatures from dependency JARs (like `META-INF/*.SF`, `*.DSA`, `*.RSA`) that would otherwise cause `SecurityException` when running the merged UberJar.
+
+### Docker Deployment
+- **Containerization**: The Desktop Server is designed to be containerized using a `Dockerfile` based on an OpenJDK JRE.
+- **Headless Mode Support**: While the primary UI is Compose-based, the server logic is decoupled to allow running in "Headless" or "Service" mode within a Docker container.
+- **Volume Mapping**: Critical data (keystores, settings, macro definitions) is stored in the user's home directory (e.g., `~/.open-macropad/`) and should be mapped to a persistent volume for Docker deployments.
+- **Network Configuration**: Containers require `--net=host` or specific port mapping for UDP Discovery (Port 8888) and WebSocket communication (Port 8080).
+
 ## 23. To-Do List & Future Improvements
 
 ### Android Client

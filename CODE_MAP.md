@@ -42,7 +42,9 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
-| **Client** | Connects to server, spends tokens, and triggers macros. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **Client** | Connects to server, spends tokens, and triggers macros. Moved token deduction to `onExecutionStart` to prevent double-spending. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. | `androidMain/com/.../TokenManager.kt` |
+| **AppSettings** | Persists global metrics like `totalCurrencySpent` and `totalMacrosExecuted`. | `commonMain/com/.../settings/AppSettings.kt` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
 | **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
 
@@ -54,6 +56,7 @@ The client and server communicate using **DataModel** objects serialized as JSON
     - `Text`: Raw string messages (Legacy support).
     - `Command`: Application-specific commands (e.g., `getMacros`, `play:[MacroName]`).
     - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `AUTH_CHALLENGE`, `AUTH_RESPONSE`, `BANNED`, `DISCONNECT`).
+    - `Currency`: Syncs balances and spending metrics (`currency_update`, `currency_spent`).
     - `Response`: Success/Failure acknowledgments with optional data (`String?`).
     - `Heartbeat`: Connection health checks.
 - **Security Handshake**:
