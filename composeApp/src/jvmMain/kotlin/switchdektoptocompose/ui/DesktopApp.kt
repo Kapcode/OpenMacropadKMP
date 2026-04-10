@@ -113,13 +113,15 @@ fun DesktopApp(
     }
 
 
-    val connectedDevices by desktopViewModel.connectedDevices.collectAsState()
-    val pendingPairingRequests by desktopViewModel.pendingPairingRequests.collectAsState()
-    val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
-    val serverError by desktopViewModel.serverError.collectAsState()
-    val serverIpAddress by desktopViewModel.serverIpAddress.collectAsState()
-    val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
-    val isMacroExecutionEnabled by desktopViewModel.isMacroExecutionEnabled.collectAsState()
+    val uiState by desktopViewModel.uiState.collectAsState()
+    val connectedDevices = uiState.connectedDevices
+    val pendingPairingRequests = uiState.pendingPairingRequests
+    val isServerRunning = uiState.isServerRunning
+    val serverError = uiState.serverError
+    val serverIpAddress = uiState.serverIpAddress
+    val encryptionEnabled = uiState.encryptionEnabled
+    val isMacroExecutionEnabled = uiState.isMacroExecutionEnabled
+
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val currentPort = if (encryptionEnabled) secureServerPort else serverPort

@@ -72,7 +72,9 @@ class MacroKtorServer(
         clients[clientId]?.let { client ->
             client.authStatus = AuthStatus.AUTHENTICATED
             client.pendingChallenge = null
+            client.lastSeen = System.currentTimeMillis() // Reset timeout upon authentication
             logger.info("Client {} manually promoted to AUTHENTICATED", clientId)
+            onClientConnected(client.id, client.name)
         }
     }
 
@@ -107,7 +109,7 @@ class MacroKtorServer(
             install(WebSockets) {
                 if (appSettings.enableWebsocketPings) {
                     pingPeriod = 5.seconds
-                    timeout = 30.seconds
+                    timeout = 60.seconds
                 } else {
                     pingPeriod = null
                     timeout = 3600.seconds // Effectively disabled native timeout
@@ -157,9 +159,12 @@ class MacroKtorServer(
                         client.pongsSinceLastPing = 0
                     }
 
-                    // If no message (including heartbeat) received for 35 seconds, disconnect
-                    if (now - client.lastSeen > 35000) {
-                        logger.warn("Watchdog: Client {} timed out. Last seen {}ms ago.", id, now - client.lastSeen)
+                    // For authenticated clients, disconnect if no heartbeat for 60 seconds.
+                    // For clients in pairing (CHALLENGE_PENDING), be much more lenient (5 minutes).
+                    val timeout = if (client.authStatus == AuthStatus.AUTHENTICATED) 60000 else 300000
+                    
+                    if (now - client.lastSeen > timeout) {
+                        logger.warn("Watchdog: Client {} ({}) timed out. Last seen {}ms ago.", id, client.authStatus, now - client.lastSeen)
                         launch { 
                             try {
                                 disconnectClient(id, "Heartbeat timeout")
@@ -190,6 +195,8 @@ class MacroKtorServer(
                 client.pendingChallenge = challenge
                 logger.info("Sending AUTH_CHALLENGE to trusted device {}", client.id)
                 send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("challenge" to challenge)).toBytes()))
+                // Notify the ViewModel that a trusted client has connected
+                onClientConnected(client.id, client.name)
             } else {
                 if (!appSettings.allowNewConnections) {
                     send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "New connections disabled")).toBytes()))
@@ -221,9 +228,14 @@ class MacroKtorServer(
         } catch (e: Exception) {
             logger.error("Error in session for {}", client.id, e)
         } finally {
-            clients.remove(client.id)
-            temporaryTrustedDevices.remove(client.id)
-            onClientDisconnected(client.id)
+            // Only remove from clients if this is still the active session for this ID
+            if (clients[client.id] === client) {
+                clients.remove(client.id)
+                temporaryTrustedDevices.remove(client.id)
+                onClientDisconnected(client.id)
+            } else {
+                logger.debug("Session for {} finished, but a newer session is already active. Skipping removal.", client.id)
+            }
         }
     }
 
@@ -300,7 +312,7 @@ class MacroKtorServer(
             if (client.id != hashedPublicKey) {
                 logger.error("Security Alert: Identity mismatch for {}. Expected {}, received publicKey hash {}", client.id, client.id, hashedPublicKey)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Identity mismatch"))
-                clients.remove(client.id)
+                // Do not remove here, finally block handles it correctly with the identity check
                 return
             }
 
@@ -313,13 +325,13 @@ class MacroKtorServer(
             if (isValid) {
                 client.authStatus = AuthStatus.AUTHENTICATED
                 client.pendingChallenge = null
-                onClientConnected(client.id, client.name)
+                client.lastSeen = System.currentTimeMillis()
+                // Do not call onClientConnected(client.id, client.name) here as it was already called in handleSession or approveDevice
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
                 onMessageReceived(client.id, getMacrosRequest())
             } else {
                 logger.warn("Authentication failed for {}", client.id)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
-                clients.remove(client.id)
             }
         }
     }

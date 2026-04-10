@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -40,7 +41,8 @@ fun MacroButton(
             onClick = onClick,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(80.dp),
+                .height(90.dp),
+            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = if (isError) MaterialTheme.colorScheme.errorContainer 
                                 else MaterialTheme.colorScheme.primaryContainer,
@@ -54,9 +56,10 @@ fun MacroButton(
                 Text(
                     macroName, 
                     textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelLarge,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 14.sp
                 )
                 if (isExecuting) {
                     LinearProgressIndicator(

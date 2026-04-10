@@ -17,6 +17,21 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 
 /**
+ * The UI state for the desktop application.
+ */
+data class DesktopUiState(
+    val isServerRunning: Boolean = false,
+    val serverIpAddress: String = "Determining IP...",
+    val encryptionEnabled: Boolean = true,
+    val isMacroExecutionEnabled: Boolean = true,
+    val connectedDevices: List<ClientInfo> = emptyList(),
+    val pendingPairingRequests: List<ClientInfo> = emptyList(),
+    val serverError: String? = null,
+    val bannedDevices: Map<String, String> = emptyMap(),
+    val trustedDevices: Map<String, String> = emptyMap()
+)
+
+/**
  * The ViewModel for the desktop application.
  */
 class DesktopViewModel(
@@ -26,28 +41,10 @@ class DesktopViewModel(
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
 
-    private val _encryptionEnabled = MutableStateFlow(true)
-    val encryptionEnabled: StateFlow<Boolean> = _encryptionEnabled.asStateFlow()
-
-    private val _isMacroExecutionEnabled = MutableStateFlow(true)
-    val isMacroExecutionEnabled: StateFlow<Boolean> = _isMacroExecutionEnabled.asStateFlow()
+    private val _uiState = MutableStateFlow(DesktopUiState())
+    val uiState: StateFlow<DesktopUiState> = _uiState.asStateFlow()
 
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
-
-    private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
-    val connectedDevices: StateFlow<List<ClientInfo>> = _connectedDevices.asStateFlow()
-
-    private val _pendingPairingRequests = MutableStateFlow<List<ClientInfo>>(emptyList())
-    val pendingPairingRequests: StateFlow<List<ClientInfo>> = _pendingPairingRequests.asStateFlow()
-
-    private val _isServerRunning = MutableStateFlow(false)
-    val isServerRunning: StateFlow<Boolean> = _isServerRunning.asStateFlow()
-
-    private val _serverError = MutableStateFlow<String?>(null)
-    val serverError: StateFlow<String?> = _serverError.asStateFlow()
-
-    private val _serverIpAddress = MutableStateFlow("Determining IP...")
-    val serverIpAddress: StateFlow<String> = _serverIpAddress.asStateFlow()
 
     private val server = MacroKtorServer(
         appSettings = AppSettings,
@@ -59,21 +56,17 @@ class DesktopViewModel(
     )
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
 
-    private val _bannedDevices = MutableStateFlow<Map<String, String>>(emptyMap())
-    val bannedDevices: StateFlow<Map<String, String>> = _bannedDevices.asStateFlow()
-
-    private val _trustedDevices = MutableStateFlow<Map<String, String>>(emptyMap())
-    val trustedDevices: StateFlow<Map<String, String>> = _trustedDevices.asStateFlow()
-
     init {
         findLocalIpAddresses()
-        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
-        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
+        _uiState.update { it.copy(
+            bannedDevices = TrustedDeviceManager.getBannedDevices(),
+            trustedDevices = TrustedDeviceManager.getTrustedDevices()
+        ) }
         consoleViewModel.addLog(LogLevel.Info, "DesktopViewModel Initialized")
     }
 
     fun setMacroExecutionEnabled(enabled: Boolean) {
-        _isMacroExecutionEnabled.value = enabled
+        _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
         consoleViewModel.addLog(LogLevel.Info, "Macro execution ${if (enabled) "enabled" else "disabled"}")
     }
     
@@ -86,8 +79,8 @@ class DesktopViewModel(
     }
 
     fun setEncryption(enabled: Boolean) {
-        if (!_isServerRunning.value) {
-            _encryptionEnabled.value = enabled
+        if (!_uiState.value.isServerRunning) {
+            _uiState.update { it.copy(encryptionEnabled = enabled) }
             consoleViewModel.addLog(LogLevel.Info, "Encryption ${if (enabled) "enabled" else "disabled"}")
         }
     }
@@ -103,7 +96,7 @@ class DesktopViewModel(
         } catch (e: Exception) {
             "Not Found"
         }
-        _serverIpAddress.value = if (ips.isBlank()) "Not Found" else ips
+        _uiState.update { it.copy(serverIpAddress = if (ips.isBlank()) "Not Found" else ips) }
         consoleViewModel.addLog(LogLevel.Verbose, "Found local IPs: $ips")
     }
 
@@ -113,36 +106,37 @@ class DesktopViewModel(
         
         consoleViewModel.addLog(LogLevel.Info, if (forceRecreateKeystore) "Recreating keystore and starting server..." else "Starting server...")
         try {
-            val port = if (_encryptionEnabled.value) {
+            val encryptionEnabled = _uiState.value.encryptionEnabled
+            val port = if (encryptionEnabled) {
                 settingsViewModel.secureServerPort.value
             } else {
                 settingsViewModel.serverPort.value
             }
             
-            if (_encryptionEnabled.value) {
+            if (encryptionEnabled) {
                 try {
                     val workingDir = java.io.File(System.getProperty("user.home"), ".openmacropad")
                     if (!workingDir.exists()) workingDir.mkdirs()
                     com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getOrCreateKeystore(workingDir, forceRecreateKeystore)
                 } catch (e: com.kapcode.open.macropad.kmps.utils.KeystorePasswordException) {
                     consoleViewModel.addLog(LogLevel.Error, "Keystore Error: ${e.message}")
-                    _serverError.value = "Keystore password mismatch. Would you like to reset your server identity?"
+                    _uiState.update { it.copy(serverError = "Keystore password mismatch. Would you like to reset your server identity?") }
                     return
                 }
             }
 
-            server.start(port, _encryptionEnabled.value)
-            _isServerRunning.value = server.isRunning()
+            server.start(port, encryptionEnabled)
+            _uiState.update { it.copy(isServerRunning = server.isRunning()) }
             if (server.isRunning()) {
                 val serverName = System.getProperty("user.name") ?: "OpenMacropad Server"
-                discoveryAnnouncer.start(serverName, port, _encryptionEnabled.value)
+                discoveryAnnouncer.start(serverName, port, encryptionEnabled)
                 consoleViewModel.addLog(LogLevel.Info, "Server started on port $port")
             } else {
                 consoleViewModel.addLog(LogLevel.Error, "Server failed to start")
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            _isServerRunning.value = false
+            _uiState.update { it.copy(isServerRunning = false) }
             consoleViewModel.addLog(LogLevel.Error, "Error starting server: ${e.message}")
         }
     }
@@ -153,13 +147,13 @@ class DesktopViewModel(
         discoveryAnnouncer.stop()
         viewModelScope.launch {
             server.stop()
-            _isServerRunning.value = false
+            _uiState.update { it.copy(isServerRunning = false) }
             consoleViewModel.addLog(LogLevel.Info, "Server stopped")
         }
     }
 
     fun clearServerError() {
-        _serverError.value = null
+        _uiState.update { it.copy(serverError = null) }
     }
 
     fun shutdown() {
@@ -175,37 +169,36 @@ class DesktopViewModel(
     }
 
     private fun onClientConnected(clientId: String, clientName: String) {
-        val isTrusted = switchdektoptocompose.logic.TrustedDeviceManager.isTrusted(clientId)
-        _connectedDevices.update { currentList ->
-            if (currentList.any { it.id == clientId }) {
-                currentList.map { if (it.id == clientId) it.copy(isTrusted = isTrusted) else it }
+        val isTrusted = TrustedDeviceManager.isTrusted(clientId)
+        _uiState.update { state ->
+            val updatedDevices = if (state.connectedDevices.any { it.id == clientId }) {
+                state.connectedDevices.map { if (it.id == clientId) it.copy(isTrusted = isTrusted) else it }
             } else {
-                currentList + ClientInfo(id = clientId, name = clientName, isTrusted = isTrusted)
+                state.connectedDevices + ClientInfo(id = clientId, name = clientName, isTrusted = isTrusted)
             }
+            state.copy(connectedDevices = updatedDevices)
         }
         consoleViewModel.addLog(LogLevel.Info, "Client connected: $clientName ($clientId)")
     }
 
     private fun onClientDisconnected(clientId: String) {
-        val client = _connectedDevices.value.find { it.id == clientId }
-        _connectedDevices.update { currentList ->
-            currentList.filterNot { it.id == clientId }
-        }
-        _pendingPairingRequests.update { currentList ->
-            currentList.filterNot { it.id == clientId }
+        val client = _uiState.value.connectedDevices.find { it.id == clientId }
+        _uiState.update { state ->
+            state.copy(
+                connectedDevices = state.connectedDevices.filterNot { it.id == clientId },
+                pendingPairingRequests = state.pendingPairingRequests.filterNot { it.id == clientId }
+            )
         }
         consoleViewModel.addLog(LogLevel.Info, "Client disconnected: ${client?.name ?: clientId}")
     }
 
     private fun onPairingRequest(clientId: String, clientName: String) {
         val verificationCode = (100000..999999).random().toString()
-        _pendingPairingRequests.update { currentList ->
-            if (currentList.any { it.id == clientId }) currentList 
-            else currentList + ClientInfo(id = clientId, name = clientName, verificationCode = verificationCode)
+        _uiState.update { state ->
+            if (state.pendingPairingRequests.any { it.id == clientId }) state
+            else state.copy(pendingPairingRequests = state.pendingPairingRequests + ClientInfo(id = clientId, name = clientName, verificationCode = verificationCode))
         }
         
-        // VULNERABILITY FIX 3: Do NOT send the code to the client.
-        // The user must read it from the desktop screen and enter it on the client.
         viewModelScope.launch {
             server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
         }
@@ -214,7 +207,7 @@ class DesktopViewModel(
     }
 
     fun approveDevice(clientId: String, clientName: String, persistent: Boolean = true) {
-        val request = _pendingPairingRequests.value.find { it.id == clientId }
+        val request = _uiState.value.pendingPairingRequests.find { it.id == clientId }
         if (request != null && !request.codeMatched) {
             consoleViewModel.addLog(LogLevel.Warn, "Attempted to approve $clientName ($clientId) before code was correctly entered.")
             return
@@ -222,21 +215,21 @@ class DesktopViewModel(
 
         val finalPersistent = if (settingsViewModel.allowOnceOnly.value) false else persistent
         if (finalPersistent) {
-            switchdektoptocompose.logic.TrustedDeviceManager.addTrustedDevice(clientId, clientName)
-            _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
+            TrustedDeviceManager.addTrustedDevice(clientId, clientName)
+            _uiState.update { it.copy(trustedDevices = TrustedDeviceManager.getTrustedDevices()) }
         } else {
             server.approveTemporaryDevice(clientId)
         }
         
         server.authenticateClient(clientId)
         
-        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
-        onClientConnected(clientId, clientName)
-        
-        // Update connected devices status
-        _connectedDevices.update { currentList ->
-            currentList.map { if (it.id == clientId) it.copy(isTrusted = finalPersistent) else it }
+        _uiState.update { state ->
+            state.copy(
+                pendingPairingRequests = state.pendingPairingRequests.filterNot { it.id == clientId },
+                connectedDevices = state.connectedDevices.map { if (it.id == clientId) it.copy(isTrusted = finalPersistent) else it }
+            )
         }
+        
         viewModelScope.launch {
             server.sendToClient(clientId, pairingApprovedMessage())
             // Also send the macro list immediately upon approval
@@ -247,7 +240,7 @@ class DesktopViewModel(
     }
 
     fun rejectDevice(clientId: String) {
-        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
+        _uiState.update { it.copy(pendingPairingRequests = it.pendingPairingRequests.filterNot { it.id == clientId }) }
         viewModelScope.launch {
             server.sendToClient(clientId, pairingRejectedMessage("Pairing rejected by user"))
         }
@@ -255,7 +248,7 @@ class DesktopViewModel(
     }
 
     fun rejectAllPendingDevices() {
-        val currentRequests = _pendingPairingRequests.value
+        val currentRequests = _uiState.value.pendingPairingRequests
         if (currentRequests.isEmpty()) return
         
         consoleViewModel.addLog(LogLevel.Warn, "Rejecting all ${currentRequests.size} pending pairing requests.")
@@ -264,15 +257,19 @@ class DesktopViewModel(
                 server.sendToClient(request.id, pairingRejectedMessage("Pairing rejected (Mass Cancel)"))
             }
         }
-        _pendingPairingRequests.value = emptyList()
+        _uiState.update { it.copy(pendingPairingRequests = emptyList()) }
     }
 
     fun banDevice(clientId: String, clientName: String) {
-        switchdektoptocompose.logic.TrustedDeviceManager.banDevice(clientId, clientName)
-        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
-        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
-        _pendingPairingRequests.update { it.filterNot { client -> client.id == clientId } }
-        _connectedDevices.update { it.filterNot { client -> client.id == clientId } }
+        TrustedDeviceManager.banDevice(clientId, clientName)
+        _uiState.update { state ->
+            state.copy(
+                bannedDevices = TrustedDeviceManager.getBannedDevices(),
+                trustedDevices = TrustedDeviceManager.getTrustedDevices(),
+                pendingPairingRequests = state.pendingPairingRequests.filterNot { it.id == clientId },
+                connectedDevices = state.connectedDevices.filterNot { it.id == clientId }
+            )
+        }
         
         viewModelScope.launch {
             try {
@@ -285,15 +282,19 @@ class DesktopViewModel(
     }
 
     fun unbanDevice(clientId: String) {
-        switchdektoptocompose.logic.TrustedDeviceManager.unbanDevice(clientId)
-        _bannedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getBannedDevices()
+        TrustedDeviceManager.unbanDevice(clientId)
+        _uiState.update { it.copy(bannedDevices = TrustedDeviceManager.getBannedDevices()) }
         consoleViewModel.addLog(LogLevel.Info, "Unbanned device: $clientId")
     }
 
     fun removeTrustedDevice(clientId: String) {
-        switchdektoptocompose.logic.TrustedDeviceManager.removeTrustedDevice(clientId)
-        _trustedDevices.value = switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices()
-        _connectedDevices.update { it.filterNot { client -> client.id == clientId } }
+        TrustedDeviceManager.removeTrustedDevice(clientId)
+        _uiState.update { state ->
+            state.copy(
+                trustedDevices = TrustedDeviceManager.getTrustedDevices(),
+                connectedDevices = state.connectedDevices.filterNot { it.id == clientId }
+            )
+        }
         viewModelScope.launch {
             try {
                 server.disconnectClient(clientId, "The server has removed this device from its trusted list.")
@@ -326,13 +327,13 @@ class DesktopViewModel(
                 when (cmd) {
                     ControlCommand.PAIRING_RESPONSE -> {
                         val enteredCode = params["code"]
-                        val pendingRequest = _pendingPairingRequests.value.find { it.id == clientId }
+                        val pendingRequest = _uiState.value.pendingPairingRequests.find { it.id == clientId }
                         if (pendingRequest != null && pendingRequest.verificationCode == enteredCode) {
                             consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
-                            _pendingPairingRequests.update { currentList ->
-                                currentList.map { 
+                            _uiState.update { state ->
+                                state.copy(pendingPairingRequests = state.pendingPairingRequests.map { 
                                     if (it.id == clientId) it.copy(codeMatched = true) else it
-                                }
+                                })
                             }
                             // Notify client that code matched and they should wait for desktop approval
                             viewModelScope.launch {
@@ -362,7 +363,7 @@ class DesktopViewModel(
             onCommand = { cmd, _ ->
                 consoleViewModel.addLog(LogLevel.Debug, "Command received from $clientId: $cmd")
                 if (cmd.startsWith("play:")) {
-                    if (_isMacroExecutionEnabled.value) {
+                    if (_uiState.value.isMacroExecutionEnabled) {
                         val macroName = cmd.substringAfter("play:")
                         val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
                         if (macroToPlay != null) {

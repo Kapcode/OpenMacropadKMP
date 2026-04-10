@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoMode
@@ -34,6 +35,7 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.BillingConstants
 import com.kapcode.open.macropad.kmps.TokenManager
@@ -52,6 +54,8 @@ fun CommonAppBar(
     onCloseScanner: () -> Unit = {},
     isAutoZoomEnabled: Boolean = false,
     onAutoZoomToggle: (Boolean) -> Unit = {},
+    isAutoFocusEnabled: Boolean = false,
+    onAutoFocusToggle: (Boolean) -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -94,6 +98,16 @@ fun CommonAppBar(
                 }
             },
             actions = {
+                // Auto Focus Toggle (New)
+                IconButton(onClick = { onAutoFocusToggle(!isAutoFocusEnabled) }) {
+                    Icon(
+                        imageVector = if (isAutoFocusEnabled) Icons.Default.AutoMode else Icons.Default.TimerOff,
+                        contentDescription = "Toggle Auto Focus",
+                        tint = if (isAutoFocusEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Auto Zoom Toggle
                 IconButton(onClick = { onAutoZoomToggle(!isAutoZoomEnabled) }) {
                     Icon(
                         imageVector = if (isAutoZoomEnabled) Icons.Default.Timer else Icons.Default.TimerOff,
@@ -147,7 +161,14 @@ fun CommonAppBar(
         )
     } else {
         TopAppBar(
-            title = { Text(title) },
+            title = {
+                Text(
+                    text = title,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleMedium
+                )
+            },
             navigationIcon = navigationIcon,
             actions = {
                 actions()
@@ -157,12 +178,15 @@ fun CommonAppBar(
                 ) {
                     Icon(
                         imageVector = Icons.Default.MonetizationOn,
-                        contentDescription = "Tokens"
+                        contentDescription = "Tokens",
+                        modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(text = tokenBalance.toString())
+                    Text(
+                        text = tokenBalance.toString(),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
-                Spacer(modifier = Modifier.width(8.dp))
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,

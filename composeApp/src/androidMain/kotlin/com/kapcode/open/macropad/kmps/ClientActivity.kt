@@ -10,8 +10,12 @@ import androidx.activity.compose.BackHandler
 import android.view.MotionEvent
 import android.view.ScaleGestureDetector
 import androidx.camera.core.*
+import androidx.camera.camera2.interop.Camera2Interop
+import androidx.camera.camera2.interop.Camera2CameraControl
+import androidx.camera.camera2.interop.CaptureRequestOptions
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop
+import android.hardware.camera2.CaptureRequest
 import androidx.camera.core.FocusMeteringAction
-import androidx.camera.core.MeteringPointFactory
 import androidx.camera.core.SurfaceOrientedMeteringPointFactory
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -25,6 +29,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -36,6 +41,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +55,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -91,8 +98,8 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     private var client: MacroKtorClient? = null
     private val activityScope = CoroutineScope(Dispatchers.Main.immediate)
     private var clientJob: Job? = null
-    private val macros = mutableStateListOf<String>()
     private val settingsViewModel = SettingsViewModel()
+    private val clientViewModel = ClientViewModel()
     private lateinit var settingsStorage: SettingsStorage
     private val MAX_RETRIES = 5
 
@@ -199,16 +206,9 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
 
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
+            val uiState by clientViewModel.uiState.collectAsState()
+            
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
-                var connectionStatus by remember { mutableStateOf("Connecting...") }
-                var serverName by remember { mutableStateOf<String?>(null) }
-                var disconnectReason by remember { mutableStateOf<String?>(null) }
-                var verificationCode by remember { mutableStateOf<String?>(null) }
-                var isWaitingForDesktopApproval by remember { mutableStateOf(false) }
-                var showQrScanner by remember { mutableStateOf(false) }
-                val executingMacros = remember { mutableStateOf(setOf<String>()) }
-                val failedMacros = remember { mutableStateOf(setOf<String>()) }
-
                 LaunchedEffect(Unit) {
                     val tokenManager = TokenManager.getInstance(this@ClientActivity)
                     connectToServer(
@@ -218,23 +218,18 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                         isSecure,
                         discoveryFingerprint,
                         onUpdate = { status, name, reason, code ->
-                            connectionStatus = status
-                            serverName = name
-                            disconnectReason = reason
-                            verificationCode = code
+                            clientViewModel.updateConnection(status, name, reason, code)
                         },
                         onExecutionStart = { macro ->
-                            executingMacros.value += macro
-                            failedMacros.value -= macro
+                            clientViewModel.onMacroExecutionStart(macro)
                             // Deduct tokens on start
                             tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
                         },
                         onExecutionComplete = { macro ->
-                            executingMacros.value -= macro
+                            clientViewModel.onMacroExecutionComplete(macro)
                         },
                         onExecutionFailed = { macro, error ->
-                            executingMacros.value -= macro
-                            failedMacros.value += macro
+                            clientViewModel.onMacroExecutionFailed(macro)
                             // Refund tokens on failure
                             tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
                             Toast.makeText(this@ClientActivity, "Macro '$macro' failed: $error", Toast.LENGTH_SHORT).show()
@@ -243,25 +238,20 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                 }
 
                 ClientScreen(
-                    connectionStatus = connectionStatus,
-                    serverName = serverName ?: serverAddressFull,
-                    disconnectReason = disconnectReason,
-                    verificationCode = verificationCode,
-                    macros = macros,
-                    executingMacros = executingMacros.value,
-                    failedMacros = failedMacros.value,
+                    uiState = uiState,
                     settingsViewModel = settingsViewModel,
-                    showQrScanner = showQrScanner,
+                    clientViewModel = clientViewModel,
                     onQrScannerToggle = { show ->
                         if (show) {
-                            // BLOCK QR if we are already connected/have macros
-                            if (macros.isNotEmpty()) {
-                                Log.d("ClientActivity", "Ignoring QR toggle: Already connected with macros.")
+                            // HARD BLOCK: Never show QR if connected or if not in pairing state
+                            val canShow = uiState.macros.isEmpty() && uiState.connectionStatus == "Pending Approval"
+                            if (!canShow) {
+                                Log.d("ClientActivity", "Ignoring QR toggle: Not in pairing state (Status: ${uiState.connectionStatus}, Macros: ${uiState.macros.size})")
                                 return@ClientScreen
                             }
                             requestPermissionLauncher.launch(android.Manifest.permission.CAMERA)
                         }
-                        showQrScanner = show
+                        clientViewModel.setQrScannerVisible(show)
                     },
                     onGetMacros = { 
                         Log.d("ClientActivity", "Requesting macros...")
@@ -362,14 +352,14 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                             val msg = getMacrosRequest().toBytes()
                             client?.send(msg)
                             delay(5000)
-                            if (macros.isNotEmpty()) break
+                            if (clientViewModel.uiState.value.macros.isNotEmpty()) break
                         }
                     }
 
                     val watchdogJob = activityScope.launch {
                         while (isActive) {
                             delay(5000)
-                            if (System.currentTimeMillis() - lastHeartbeat > 20000) {
+                            if (System.currentTimeMillis() - lastHeartbeat > 40000) {
                                 Log.w("ClientActivity", "Heartbeat timeout! Reconnecting...")
                                 this@launch.cancel()
                                 tempClient?.close()
@@ -396,7 +386,7 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                                 // Note: 'challenge' for authentication is handled internally by MacroKtorClient
                                             }
                                             ControlCommand.PAIRING_PENDING -> {
-                                                macros.clear()
+                                                clientViewModel.setMacros(emptyList())
                                                 val code = params["code"]
                                                 currentVerificationCode = code
                                                 onUpdate("Pending Approval", null, null, code)
@@ -411,18 +401,18 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
-                                                macros.clear()
+                                                clientViewModel.setMacros(emptyList())
                                                 onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.", null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.BANNED -> {
-                                                macros.clear()
+                                                clientViewModel.setMacros(emptyList())
                                                 val reason = params["reason"] ?: "Device is banned"
                                                 onUpdate("Banned", null, reason, null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.DISCONNECT -> {
-                                                macros.clear()
+                                                clientViewModel.setMacros(emptyList())
                                                 onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.", null)
                                                 this@launch.cancel()
                                             }
@@ -442,10 +432,9 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                     },
                                     onText = { text ->
                                         if (text.startsWith("macros:")) {
-                                            onUpdate("Connected", ipAddress, null, null)
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
-                                            macros.clear()
-                                            macros.addAll(macroNames)
+                                            clientViewModel.setMacros(macroNames)
+                                            clientViewModel.updateConnection("Connected", ipAddress, null, null)
                                         }
                                     },
                                     onHeartbeat = {
@@ -599,12 +588,20 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
     }
 }
 
+@androidx.annotation.OptIn(ExperimentalCamera2Interop::class)
 @ExperimentalGetImage
 @Composable
 fun QrCodeScanner(
     onCodeScanned: (String) -> Unit,
     onClose: () -> Unit,
     isAutoZoomEnabled: Boolean = false,
+    isAutoFocusEnabled: Boolean = true,
+    manualZoomRatio: Float = 1f,
+    manualFocusDistance: Float = 0f,
+    onManualZoomChange: (Float) -> Unit = {},
+    onManualFocusChange: (Float) -> Unit = {},
+    onAutoZoomToggle: (Boolean) -> Unit = {},
+    onAutoFocusToggle: (Boolean) -> Unit = {},
     onCameraReady: (Camera) -> Unit = {}
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -616,6 +613,24 @@ fun QrCodeScanner(
     val previewView = remember { 
         PreviewView(context).apply {
             implementationMode = PreviewView.ImplementationMode.COMPATIBLE
+        }
+    }
+
+    // Toast hint for manual focus optimization
+    val scannerStartTime = remember { System.currentTimeMillis() }
+    var hasShownFocusToast by rememberSaveable { mutableStateOf(false) }
+    
+    LaunchedEffect(isAutoFocusEnabled) {
+        if (!isAutoFocusEnabled && !hasShownFocusToast) {
+            val elapsed = System.currentTimeMillis() - scannerStartTime
+            if (elapsed < 5000) {
+                delay(5000 - elapsed)
+            }
+            // Check again after delay
+            if (!isAutoFocusEnabled && !hasShownFocusToast) {
+                Toast.makeText(context, "Focus not adequate? Device on a mount? Just wave hand in front of camera.", Toast.LENGTH_LONG).show()
+                hasShownFocusToast = true
+            }
         }
     }
 
@@ -670,9 +685,15 @@ fun QrCodeScanner(
                     it.setSurfaceProvider(previewView.surfaceProvider)
                 }
 
-                val imageAnalysis = ImageAnalysis.Builder()
+                val imageAnalysisBuilder = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
-                    .build()
+
+                Camera2Interop.Extender(imageAnalysisBuilder).setCaptureRequestOption(
+                    CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
+                    android.util.Range(20, 30)
+                )
+
+                val imageAnalysis = imageAnalysisBuilder.build()
 
                 imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
                     val mediaImage = imageProxy.image
@@ -712,36 +733,62 @@ fun QrCodeScanner(
         }, ContextCompat.getMainExecutor(context))
     }
 
-    LaunchedEffect(camera, isAutoZoomEnabled) {
+    // Auto-Focus/Zoom Controller
+    LaunchedEffect(camera, isAutoZoomEnabled, isAutoFocusEnabled, manualZoomRatio, manualFocusDistance) {
         val cam = camera ?: return@LaunchedEffect
-        if (!isAutoZoomEnabled) {
-            // Reset to min zoom when auto-zoom is disabled
-            val zoomState = cam.cameraInfo.zoomState.value
-            cam.cameraControl.setZoomRatio(zoomState?.minZoomRatio ?: 1f)
-            return@LaunchedEffect
-        }
+        
+        // Loop for auto-focus or auto-zoom
+        if (isAutoZoomEnabled || isAutoFocusEnabled) {
+            val intervals = listOf(0.0f, 0.33f, 0.66f, 1.0f) // Normalized
+            var currentIndex = 0
 
-        while(isActive) {
-            val zoomState = cam.cameraInfo.zoomState.value
-            val minZoom = zoomState?.minZoomRatio ?: 1f
-            val maxZoom = (zoomState?.maxZoomRatio ?: 3f).coerceAtMost(4f) // Cap auto-zoom at 4x
-            val midZoom = (minZoom * 2f).coerceAtMost(maxZoom)
+            while(isActive) {
+                val zoomState = cam.cameraInfo.zoomState.value
+                val minZoom = zoomState?.minZoomRatio ?: 1f
+                val maxZoom = (zoomState?.maxZoomRatio ?: 3f).coerceAtMost(4f)
+                
+                // 1. Handle Zoom
+                if (isAutoZoomEnabled) {
+                    val targetLevel = intervals[currentIndex]
+                    val targetRatio = minZoom + (maxZoom - minZoom) * targetLevel
+                    cam.cameraControl.setZoomRatio(targetRatio)
+                } else {
+                    cam.cameraControl.setZoomRatio(manualZoomRatio)
+                }
+                
+                // 2. Handle Focus
+                if (isAutoFocusEnabled) {
+                    val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
+                    val centerPoint = factory.createPoint(0.5f, 0.5f)
+                    val action = FocusMeteringAction.Builder(centerPoint, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE or FocusMeteringAction.FLAG_AWB)
+                        .setAutoCancelDuration(2, TimeUnit.SECONDS)
+                        .build()
+                    
+                    cam.cameraControl.startFocusAndMetering(action)
+                    // Frequent refocusing with AE/AWB help for screen scanning
+                    delay(2500)
+                } else {
+                    // Manual focus mode within the loop if auto-zoom is on
+                    val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+                    camera2Control.captureRequestOptions = CaptureRequestOptions.Builder()
+                        .setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                        .setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, manualFocusDistance * 10f)
+                        .build()
+                    delay(2000)
+                }
 
-            // Dwell times optimized for sensor stabilization
-            val longDwell = 3500L
-            val shortDwell = 2000L
-
-            // Phase 1: Full Zoom Out (Reset/Wide view)
-            cam.cameraControl.setZoomRatio(minZoom)
-            delay(longDwell) // Nice long pause at wide view
-
-            // Phase 2: Moderate Zoom (Common QR distance)
-            cam.cameraControl.setZoomRatio(midZoom)
-            delay(shortDwell)
-
-            // Phase 3: High Zoom (Far distance)
-            cam.cameraControl.setZoomRatio(maxZoom)
-            delay(shortDwell)
+                currentIndex = (currentIndex + 1) % intervals.size
+            }
+        } else {
+            // Manual mode: strictly follow manualZoomRatio
+            cam.cameraControl.setZoomRatio(manualZoomRatio)
+            
+            // Manual Focus
+            val camera2Control = Camera2CameraControl.from(cam.cameraControl)
+            camera2Control.captureRequestOptions = CaptureRequestOptions.Builder()
+                .setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
+                .setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, manualFocusDistance * 10f)
+                .build()
         }
     }
 
@@ -755,8 +802,7 @@ fun QrCodeScanner(
                     if (event.action == MotionEvent.ACTION_UP && !scaleGestureDetector.isInProgress) {
                         val factory = view.meteringPointFactory
                         val point = factory.createPoint(event.x, event.y)
-                        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF)
-                            .addPoint(point, FocusMeteringAction.FLAG_AE)
+                        val action = FocusMeteringAction.Builder(point, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE or FocusMeteringAction.FLAG_AWB)
                             .build()
                         camera?.cameraControl?.startFocusAndMetering(action)
                     }
@@ -772,8 +818,79 @@ fun QrCodeScanner(
                 .align(Alignment.Center)
                 .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
         )
+
+        // Focus & Zoom Controls Overlay
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 32.dp)
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            if (!isAutoFocusEnabled) {
+                Text(
+                    "Manual Focus",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                Slider(
+                    value = manualFocusDistance,
+                    onValueChange = { 
+                        onManualFocusChange(it)
+                    },
+                    valueRange = 0f..1f,
+                    modifier = Modifier.width(200.dp),
+                    colors = SliderDefaults.colors(
+                        thumbColor = Color.White,
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.White.copy(alpha = 0.3f)
+                    )
+                )
+                Spacer(Modifier.height(16.dp))
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Toggle Focus Mode
+                IconButton(
+                    onClick = { 
+                        onAutoFocusToggle(!isAutoFocusEnabled)
+                    },
+                    modifier = Modifier.background(
+                        if (!isAutoFocusEnabled) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+                ) {
+                    Icon(
+                        if (!isAutoFocusEnabled) Icons.Default.FilterCenterFocus else Icons.Default.CenterFocusWeak,
+                        contentDescription = "Manual Focus",
+                        tint = Color.White
+                    )
+                }
+                
+                // Toggle Auto-Zoom
+                IconButton(
+                    onClick = { 
+                        onAutoZoomToggle(!isAutoZoomEnabled)
+                    },
+                    modifier = Modifier.background(
+                        if (isAutoZoomEnabled) Color.White.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.ZoomIn,
+                        contentDescription = "Auto Zoom",
+                        tint = Color.White
+                    )
+                }
+            }
+        }
         
-        // Overlay for Switch Camera only (Close moved to top bar)
+        // Overlay for Switch Camera
         IconButton(
             modifier = Modifier.align(Alignment.TopEnd).padding(16.dp),
             onClick = {
@@ -798,14 +915,9 @@ fun QrCodeScanner(
 @ExperimentalGetImage
 @Composable
 fun ClientScreen(
-    connectionStatus: String,
-    serverName: String?,
-    disconnectReason: String?,
-    verificationCode: String?,
-    macros: List<String>,
-    executingMacros: Set<String> = emptySet(),
-    failedMacros: Set<String> = emptySet(),
+    uiState: ClientUiState,
     settingsViewModel: SettingsViewModel,
+    clientViewModel: ClientViewModel,
     onGetMacros: () -> Unit,
     onMacroClick: (String) -> Unit,
     onPairingCodeEntered: (String) -> Unit,
@@ -813,12 +925,22 @@ fun ClientScreen(
     onOkayTriggerSet: (() -> Unit) -> Unit = {},
     onCancelTriggerSet: (() -> Unit) -> Unit = {},
     onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
-    showQrScanner: Boolean = false,
     onQrScannerToggle: (Boolean) -> Unit = {}
 ) {
+    val connectionStatus = uiState.connectionStatus
+    val serverName = uiState.serverName
+    val disconnectReason = uiState.disconnectReason
+    val macros = uiState.macros
+    val executingMacros = uiState.executingMacros
+    val failedMacros = uiState.failedMacros
+    val showQrScanner = uiState.showQrScanner
+    val isAutoZoomEnabled_State = uiState.isAutoZoomEnabled
+    val isAutoFocusEnabled_State = uiState.isAutoFocusEnabled
+    val manualZoomRatio_State = uiState.manualZoomRatio
+    val manualFocusDistance_State = uiState.manualFocusDistance
+
     var showSettings by remember { mutableStateOf(false) }
     var activeCamera by remember { mutableStateOf<Camera?>(null) }
-    var isAutoZoomEnabled by remember { mutableStateOf(true) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -826,9 +948,13 @@ fun ClientScreen(
         onCancelTriggerSet(onBackToMain)
     }
 
-    LaunchedEffect(macros.isEmpty()) {
+    LaunchedEffect(macros.isEmpty(), connectionStatus) {
         onSlamTriggerSet { isDouble ->
-            if (macros.isEmpty() && !showQrScanner) { // Only toggle QR if not in macro grid AND not already in QR mode
+            // ONLY allow slam to OPEN QR if we are explicitly in "Pending Approval"
+            // This ensures it only triggers when the user is actually at the step that needs QR/PIN
+            val isAtPairingStep = connectionStatus == "Pending Approval"
+            
+            if (isAtPairingStep && !showQrScanner) {
                 if (!isDouble) {
                     onQrScannerToggle(true)
                 }
@@ -868,24 +994,28 @@ fun ClientScreen(
                 title = if (showSettings) "Settings" else "Open Macropad",
                 onSettingsClick = { showSettings = !showSettings },
                 isQrScannerActive = showQrScanner && !showSettings,
-                isAutoZoomEnabled = isAutoZoomEnabled,
-                onAutoZoomToggle = { isAutoZoomEnabled = it },
+                isAutoZoomEnabled = isAutoZoomEnabled_State,
+                onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                isAutoFocusEnabled = isAutoFocusEnabled_State,
+                onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
                 onZoomIn = {
-                    isAutoZoomEnabled = false
+                    clientViewModel.setAutoZoomEnabled(false)
                     activeCamera?.let { cam ->
                         val zoomState = cam.cameraInfo.zoomState.value
-                        val currentZoom = zoomState?.zoomRatio ?: 1f
                         val maxZoom = zoomState?.maxZoomRatio ?: 1f
-                        cam.cameraControl.setZoomRatio((currentZoom + 0.2f).coerceAtMost(maxZoom))
+                        val newZoom = (manualZoomRatio_State + 0.2f).coerceAtMost(maxZoom)
+                        clientViewModel.setManualZoomRatio(newZoom)
+                        cam.cameraControl.setZoomRatio(newZoom)
                     }
                 },
                 onZoomOut = {
-                    isAutoZoomEnabled = false
+                    clientViewModel.setAutoZoomEnabled(false)
                     activeCamera?.let { cam ->
                         val zoomState = cam.cameraInfo.zoomState.value
-                        val currentZoom = zoomState?.zoomRatio ?: 1f
                         val minZoom = zoomState?.minZoomRatio ?: 1f
-                        cam.cameraControl.setZoomRatio((currentZoom - 0.2f).coerceAtLeast(minZoom))
+                        val newZoom = (manualZoomRatio_State - 0.2f).coerceAtLeast(minZoom)
+                        clientViewModel.setManualZoomRatio(newZoom)
+                        cam.cameraControl.setZoomRatio(newZoom)
                     }
                 },
                 onCloseScanner = { onQrScannerToggle(false) },
@@ -1037,6 +1167,38 @@ fun ClientScreen(
                             failedMacros = failedMacros,
                             onMacroClick = onMacroClick
                         )
+                    } else if (showQrScanner) {
+                        Box(
+                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val configuration = LocalConfiguration.current
+                            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                            Box(
+                                modifier = if (isLandscape) {
+                                    Modifier.fillMaxHeight().aspectRatio(1f)
+                                } else {
+                                    Modifier.fillMaxWidth().aspectRatio(1f)
+                                }
+                            ) {
+                                QrCodeScanner(
+                                    onCodeScanned = { code: String ->
+                                        onPairingCodeEntered(code)
+                                        onQrScannerToggle(false)
+                                    },
+                                    onClose = { onQrScannerToggle(false) },
+                                    isAutoZoomEnabled = isAutoZoomEnabled_State,
+                                    isAutoFocusEnabled = isAutoFocusEnabled_State,
+                                    manualZoomRatio = manualZoomRatio_State,
+                                    manualFocusDistance = manualFocusDistance_State,
+                                    onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
+                                    onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
+                                    onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                                    onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
+                                    onCameraReady = { activeCamera = it }
+                                )
+                            }
+                        }
                     } else {
                         val scrollState = rememberScrollState()
                         Column(
@@ -1047,19 +1209,7 @@ fun ClientScreen(
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            if (showQrScanner) {
-                                Box(modifier = Modifier.fillMaxSize().aspectRatio(1f)) {
-                                    QrCodeScanner(
-                                        onCodeScanned = { code: String ->
-                                            onPairingCodeEntered(code)
-                                            onQrScannerToggle(false)
-                                        },
-                                        onClose = { onQrScannerToggle(false) },
-                                        isAutoZoomEnabled = isAutoZoomEnabled,
-                                        onCameraReady = { activeCamera = it }
-                                    )
-                                }
-                            } else if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
+                            if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
                                 var enteredCode by remember { mutableStateOf("") }
                                 val focusRequester = remember { FocusRequester() }
                                 val keyboardController = LocalSoftwareKeyboardController.current

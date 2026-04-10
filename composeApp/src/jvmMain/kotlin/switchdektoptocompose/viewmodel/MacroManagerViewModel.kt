@@ -11,6 +11,14 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
 
+data class MacroManagerState(
+    val macroFiles: List<MacroFileState> = emptyList(),
+    val isSelectionMode: Boolean = false,
+    val filePendingDeletion: File? = null,
+    val filesPendingDeletion: List<File>? = null,
+    val macroBeingRenamed: MacroFileState? = null
+)
+
 class MacroManagerViewModel(
     private val settingsViewModel: SettingsViewModel,
     private val consoleViewModel: ConsoleViewModel,
@@ -42,20 +50,23 @@ class MacroManagerViewModel(
     }
     """.trimIndent()
 
-    private val _macroFiles = MutableStateFlow<List<MacroFileState>>(emptyList())
-    val macroFiles: StateFlow<List<MacroFileState>> = _macroFiles.asStateFlow()
+    private val _uiState = MutableStateFlow(MacroManagerState())
+    val uiState: StateFlow<MacroManagerState> = _uiState.asStateFlow()
 
-    private val _isSelectionMode = MutableStateFlow(false)
-    val isSelectionMode: StateFlow<Boolean> = _isSelectionMode.asStateFlow()
+    val macroFiles: StateFlow<List<MacroFileState>> = _uiState.map { it.macroFiles }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, emptyList())
 
-    private val _filePendingDeletion = MutableStateFlow<File?>(null)
-    val filePendingDeletion: StateFlow<File?> = _filePendingDeletion.asStateFlow()
+    val isSelectionMode: StateFlow<Boolean> = _uiState.map { it.isSelectionMode }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, false)
 
-    private val _filesPendingDeletion = MutableStateFlow<List<File>?>(null)
-    val filesPendingDeletion: StateFlow<List<File>?> = _filesPendingDeletion.asStateFlow()
+    val filePendingDeletion: StateFlow<File?> = _uiState.map { it.filePendingDeletion }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
-    private val _macroBeingRenamed = MutableStateFlow<MacroFileState?>(null)
-    val macroBeingRenamed: StateFlow<MacroFileState?> = _macroBeingRenamed.asStateFlow()
+    val filesPendingDeletion: StateFlow<List<File>?> = _uiState.map { it.filesPendingDeletion }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
+
+    val macroBeingRenamed: StateFlow<MacroFileState?> = _uiState.map { it.macroBeingRenamed }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
     private val playbackJob = SupervisorJob()
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
@@ -122,13 +133,13 @@ class MacroManagerViewModel(
             allowedClients = sampleAllowedClients
         )
 
-        _macroFiles.value = listOf(sampleMacro) + fileMacros
+        _uiState.update { it.copy(macroFiles = listOf(sampleMacro) + fileMacros) }
         onMacrosUpdated()
     }
 
 
     fun getActiveMacrosForClient(clientName: String): List<MacroFileState> {
-        return _macroFiles.value.filter { macro ->
+        return _uiState.value.macroFiles.filter { macro ->
             macro.isActive && (
                 macro.allowedClients.isBlank() ||
                 macro.allowedClients.split(',')
@@ -199,7 +210,7 @@ class MacroManagerViewModel(
                 refresh()
                 
                 // Find the new macro state and open it in the editor
-                _macroFiles.value.find { it.file == file }?.let { newMacroState ->
+                _uiState.value.macroFiles.find { it.file == file }?.let { newMacroState ->
                      onEditMacroRequested(newMacroState)
                 }
                 
@@ -260,38 +271,37 @@ class MacroManagerViewModel(
     
     fun onDeleteMacro(macro: MacroFileState) {
         if (macro.file == null) return
-        _filePendingDeletion.value = macro.file
+        _uiState.update { it.copy(filePendingDeletion = macro.file) }
     }
 
     fun confirmDeletion() {
-        _filePendingDeletion.value?.let { file ->
+        _uiState.value.filePendingDeletion?.let { file ->
             file.delete()
             refresh()
         }
-        _filePendingDeletion.value = null
+        _uiState.update { it.copy(filePendingDeletion = null) }
     }
 
     fun cancelDeletion() {
-        _filePendingDeletion.value = null
+        _uiState.update { it.copy(filePendingDeletion = null) }
     }
 
     fun deleteSelectedMacros() {
-        val filesToDelete = _macroFiles.value.filter { it.isSelectedForDeletion && it.file != null }.map { it.file!! }
+        val filesToDelete = _uiState.value.macroFiles.filter { it.isSelectedForDeletion && it.file != null }.map { it.file!! }
         if (filesToDelete.isEmpty()) return
-        _filesPendingDeletion.value = filesToDelete
+        _uiState.update { it.copy(filesPendingDeletion = filesToDelete) }
     }
 
     fun confirmMultipleDeletion() {
-        _filesPendingDeletion.value?.forEach {
+        _uiState.value.filesPendingDeletion?.forEach {
             it.delete()
         }
-        _filesPendingDeletion.value = null
+        _uiState.update { it.copy(filesPendingDeletion = null, isSelectionMode = false) }
         refresh()
-        _isSelectionMode.value = false
     }
 
     fun cancelMultipleDeletion() {
-        _filesPendingDeletion.value = null
+        _uiState.update { it.copy(filesPendingDeletion = null) }
     }
 
     fun onEditMacro(macro: MacroFileState) {
@@ -299,43 +309,50 @@ class MacroManagerViewModel(
     }
 
     fun onRenameMacro(macro: MacroFileState) {
-        _macroBeingRenamed.value = macro
+        _uiState.update { it.copy(macroBeingRenamed = macro) }
     }
 
     fun confirmRename(newName: String) {
-        _macroBeingRenamed.value?.file?.let { file ->
+        _uiState.value.macroBeingRenamed?.file?.let { file ->
             val newFile = File(file.parent, "$newName.json")
             if (file.renameTo(newFile)) {
                 refresh()
             }
         }
-        _macroBeingRenamed.value = null
+        _uiState.update { it.copy(macroBeingRenamed = null) }
     }
 
     fun cancelRename() {
-        _macroBeingRenamed.value = null
+        _uiState.update { it.copy(macroBeingRenamed = null) }
     }
 
     fun toggleSelectionMode() {
-        _isSelectionMode.update { !it }
-        if (!_isSelectionMode.value) {
-            _macroFiles.update { list -> list.map { it.copy(isSelectedForDeletion = false) } }
+        _uiState.update { state -> 
+            val newSelectionMode = !state.isSelectionMode
+            state.copy(
+                isSelectionMode = newSelectionMode,
+                macroFiles = if (!newSelectionMode) state.macroFiles.map { it.copy(isSelectedForDeletion = false) } else state.macroFiles
+            )
         }
     }
 
     fun selectMacroForDeletion(macroId: String, select: Boolean) {
-        _macroFiles.update { list ->
-            list.map {
-                if (it.id == macroId) it.copy(isSelectedForDeletion = select) else it
-            }
+        _uiState.update { state ->
+            state.copy(
+                macroFiles = state.macroFiles.map {
+                    if (it.id == macroId) it.copy(isSelectedForDeletion = select) else it
+                }
+            )
         }
     }
 
     fun onToggleMacroActive(macroId: String, isActive: Boolean) {
-        _macroFiles.update { list ->
-            list.map {
-                if (it.id == macroId) it.copy(isActive = isActive) else it
-            }
+        _uiState.update { state ->
+            state.copy(
+                macroFiles = state.macroFiles.map {
+                    if (it.id == macroId) it.copy(isActive = isActive) else it
+                }
+            )
         }
         activeMacrosProps.setProperty(macroId, isActive.toString())
         saveActiveMacros()

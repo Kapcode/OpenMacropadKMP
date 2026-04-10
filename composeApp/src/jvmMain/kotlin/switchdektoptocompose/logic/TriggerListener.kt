@@ -118,7 +118,7 @@ class TriggerListener(
             return
         }
 
-        if (viewModel.isMacroExecutionEnabled.value) {
+        if (viewModel.uiState.value.isMacroExecutionEnabled) {
             val triggers = activeTriggers[e.keyCode]
             if (triggers != null) {
                 // Offload the processing to a coroutine to return from the native callback ASAP

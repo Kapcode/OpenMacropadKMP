@@ -9,13 +9,21 @@ import org.json.JSONObject
 import switchdektoptocompose.model.*
 import java.util.*
 
+data class TimelineUiState(
+    val triggerEvent: TriggerState? = null,
+    val events: List<MacroEventState> = emptyList()
+)
+
 class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewModel) {
 
-    private val _triggerEvent = MutableStateFlow<TriggerState?>(null)
-    val triggerEvent = _triggerEvent.asStateFlow()
+    private val _uiState = MutableStateFlow(TimelineUiState())
+    val uiState = _uiState.asStateFlow()
 
-    private val _events = MutableStateFlow<List<MacroEventState>>(emptyList())
-    val events = _events.asStateFlow()
+    val triggerEvent = _uiState.map { it.triggerEvent }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
+
+    val events = _uiState.map { it.events }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, emptyList())
 
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
 
@@ -30,24 +38,36 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     }
     
     fun addOrUpdateTrigger(keyName: String, allowedClients: String) {
-        _triggerEvent.value = TriggerState(keyName, allowedClients)
+        _uiState.update { it.copy(triggerEvent = TriggerState(keyName, allowedClients)) }
         updateEditorText()
     }
 
     fun addEvents(newEvents: List<MacroEventState>) {
-        _events.update { currentEvents ->
+        _uiState.update { state ->
+            val currentEvents = state.events
             val autoWaitEvents = newEvents.filterIsInstance<MacroEventState.SetAutoWaitEvent>()
             val otherEvents = newEvents.filterNot { it is MacroEventState.SetAutoWaitEvent }
             
             // Prepend auto-wait events, append the rest
-            autoWaitEvents + currentEvents + otherEvents
+            state.copy(events = autoWaitEvents + currentEvents + otherEvents)
         }
         updateEditorText()
     }
 
     fun moveEvent(from: Int, to: Int) {
-        _events.value = _events.value.toMutableList().apply { add(to, removeAt(from)) }
+        _uiState.update { state ->
+            state.copy(events = state.events.toMutableList().apply { add(to, removeAt(from)) })
+        }
         updateEditorText()
+    }
+
+    fun deleteEvent(index: Int) {
+        if (index in _uiState.value.events.indices) {
+            _uiState.update { state ->
+                state.copy(events = state.events.toMutableList().apply { removeAt(index) })
+            }
+            updateEditorText()
+        }
     }
 
     fun onReorderFinished(from: Int, to: Int) {
@@ -56,8 +76,9 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
     
     private fun updateEditorText() {
         val rootJson = JSONObject()
+        val state = _uiState.value
         
-        _triggerEvent.value?.let { trigger ->
+        state.triggerEvent?.let { trigger ->
             val triggerJson = JSONObject()
             triggerJson.put("type", "key")
             triggerJson.put("action", "RELEASE")
@@ -67,7 +88,7 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         }
 
         val eventsJsonArray = JSONArray()
-        _events.value.forEach { event ->
+        state.events.forEach { event ->
             val eventJson = JSONObject()
             when (event) {
                 is MacroEventState.KeyEvent -> {
@@ -111,7 +132,7 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         try {
             val json = JSONObject(jsonContent)
             
-            _triggerEvent.value = json.optJSONObject("trigger")?.let {
+            val trigger = json.optJSONObject("trigger")?.let {
                 TriggerState(
                     keyName = it.getString("keyName"),
                     allowedClients = it.optString("allowedClients", "")
@@ -138,10 +159,9 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                     }
                 }
             }
-            _events.value = newEvents
+            _uiState.update { it.copy(triggerEvent = trigger, events = newEvents) }
         } catch (e: Exception) {
-            _triggerEvent.value = null
-            _events.value = emptyList()
+            _uiState.update { it.copy(triggerEvent = null, events = emptyList()) }
         }
     }
 }

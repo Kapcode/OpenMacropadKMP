@@ -83,11 +83,11 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
                     viewModel.updateSelectedTabContent(newContent)
                 },
                 isDark = isDark,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().padding(8.dp)
             )
         } else {
-            Box(modifier = Modifier.weight(1f)) {
-                Text("No macros open.")
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text("No macros open.", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

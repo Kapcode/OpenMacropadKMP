@@ -36,8 +36,11 @@ fun SettingsDialog(
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
-    val encryptionEnabled by desktopViewModel.encryptionEnabled.collectAsState()
-    val isServerRunning by desktopViewModel.isServerRunning.collectAsState()
+    val uiState by desktopViewModel.uiState.collectAsState()
+    val encryptionEnabled = uiState.encryptionEnabled
+    val isServerRunning = uiState.isServerRunning
+    val bannedDevices = uiState.bannedDevices
+    val trustedDevices = uiState.trustedDevices
     val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
     val showMinimizeToTrayDialog by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val animateToTraySetting by settingsViewModel.animateToTray.collectAsState()
@@ -47,8 +50,6 @@ fun SettingsDialog(
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val fleetModeEnabled by settingsViewModel.fleetModeEnabled.collectAsState()
     val enableWebsocketPings by settingsViewModel.enableWebsocketPings.collectAsState()
-    val bannedDevices by desktopViewModel.bannedDevices.collectAsState()
-    val trustedDevices by desktopViewModel.trustedDevices.collectAsState()
     val multiQrEnabled by sharedSettingsViewModel.multiQrEnabled.collectAsState()
 
     // Scroll state management

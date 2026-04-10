@@ -41,7 +41,8 @@ fun main() = application {
     val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
-    val pendingPairingRequests by desktopViewModel.pendingPairingRequests.collectAsState()
+    val uiState by desktopViewModel.uiState.collectAsState()
+    val pendingPairingRequests = uiState.pendingPairingRequests
     val icon = painterResource("macropadIcon512.png")
 
     DisposableEffect(Unit) {

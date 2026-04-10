@@ -1,23 +1,33 @@
 package switchdektoptocompose.viewmodel
 
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import switchdektoptocompose.model.*
 import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
+
+data class EditorUiState(
+    val tabs: List<EditorTabState> = emptyList(),
+    val selectedTabIndex: Int = 0
+)
 
 class MacroEditorViewModel(
     private val settingsViewModel: SettingsViewModel,
     private val onSave: () -> Unit
 ) {
 
-    private val _tabs = MutableStateFlow<List<EditorTabState>>(emptyList())
-    val tabs = _tabs.asStateFlow()
+    private val _uiState = MutableStateFlow(EditorUiState())
+    val uiState = _uiState.asStateFlow()
 
-    private val _selectedTabIndex = MutableStateFlow(0)
-    val selectedTabIndex = _selectedTabIndex.asStateFlow()
+    private val viewModelScope = CoroutineScope(Dispatchers.Main)
+
+    val tabs: StateFlow<List<EditorTabState>> = _uiState.map { it.tabs }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val selectedTabIndex: StateFlow<Int> = _uiState.map { it.selectedTabIndex }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
 
     init {
         addNewTab()
@@ -27,7 +37,7 @@ class MacroEditorViewModel(
         val fileToOpen = macro.file
         val idToCheck = fileToOpen?.absolutePath ?: macro.id
 
-        val existingTabIndex = tabs.value.indexOfFirst {
+        val existingTabIndex = _uiState.value.tabs.indexOfFirst {
             val tabId = it.file?.absolutePath ?: (if (it.title == "Sample Macro") "__SAMPLE_MACRO__" else null)
             tabId == idToCheck
         }
@@ -42,8 +52,7 @@ class MacroEditorViewModel(
                     content = content,
                     file = fileToOpen
                 )
-                _tabs.update { it + newTab }
-                _selectedTabIndex.value = tabs.value.lastIndex
+                _uiState.update { it.copy(tabs = it.tabs + newTab, selectedTabIndex = it.tabs.size) }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -55,46 +64,52 @@ class MacroEditorViewModel(
             title = "New Macro",
             content = "{\n    \"events\": []\n}"
         )
-        _tabs.update { it + newTab }
-        _selectedTabIndex.value = tabs.value.lastIndex
+        _uiState.update { it.copy(tabs = it.tabs + newTab, selectedTabIndex = it.tabs.size) }
     }
 
     fun selectTab(index: Int) {
-        if (index in tabs.value.indices) {
-            _selectedTabIndex.value = index
+        if (index in _uiState.value.tabs.indices) {
+            _uiState.update { it.copy(selectedTabIndex = index) }
         }
     }
 
     fun closeTab(index: Int) {
-        if (tabs.value.isEmpty()) return
-        if (index !in tabs.value.indices) return
+        if (_uiState.value.tabs.isEmpty()) return
+        if (index !in _uiState.value.tabs.indices) return
 
-        _tabs.update { it.toMutableList().apply { removeAt(index) } }
-
-        if (tabs.value.isEmpty()) {
-            addNewTab()
-        } else if (_selectedTabIndex.value >= tabs.value.size) {
-            _selectedTabIndex.value = tabs.value.lastIndex
-        }
-    }
-
-    fun updateSelectedTabContent(newContent: String) {
-        val currentIndex = _selectedTabIndex.value
-        if (currentIndex !in tabs.value.indices) return
-
-        if (tabs.value[currentIndex].content == newContent) {
-            return
-        }
-
-        _tabs.update { currentTabs ->
-            currentTabs.toMutableList().also {
-                it[currentIndex] = it[currentIndex].copy(content = newContent)
+        _uiState.update { state ->
+            val newTabs = state.tabs.toMutableList().apply { removeAt(index) }
+            if (newTabs.isEmpty()) {
+                val newTab = EditorTabState(
+                    title = "New Macro",
+                    content = "{\n    \"events\": []\n}"
+                )
+                state.copy(tabs = listOf(newTab), selectedTabIndex = 0)
+            } else {
+                val newIndex = if (state.selectedTabIndex >= newTabs.size) newTabs.lastIndex else state.selectedTabIndex
+                state.copy(tabs = newTabs, selectedTabIndex = newIndex)
             }
         }
     }
 
+    fun updateSelectedTabContent(newContent: String) {
+        val currentIndex = _uiState.value.selectedTabIndex
+        if (currentIndex !in _uiState.value.tabs.indices) return
+
+        if (_uiState.value.tabs[currentIndex].content == newContent) {
+            return
+        }
+
+        _uiState.update { state ->
+            val newTabs = state.tabs.toMutableList().also {
+                it[currentIndex] = it[currentIndex].copy(content = newContent)
+            }
+            state.copy(tabs = newTabs)
+        }
+    }
+
     fun saveSelectedTab() {
-        val currentTab = tabs.value.getOrNull(selectedTabIndex.value) ?: return
+        val currentTab = _uiState.value.tabs.getOrNull(_uiState.value.selectedTabIndex) ?: return
         if (currentTab.file != null) {
             currentTab.file.writeText(currentTab.content)
             onSave()
@@ -114,7 +129,7 @@ class MacroEditorViewModel(
     }
 
     fun saveSelectedTabAs() {
-        val currentTab = tabs.value.getOrNull(selectedTabIndex.value) ?: return
+        val currentTab = _uiState.value.tabs.getOrNull(_uiState.value.selectedTabIndex) ?: return
         val macroDirectory = File(settingsViewModel.macroDirectory.value)
         val defaultFile = findNextAvailableMacroFile(macroDirectory)
         val fileChooser = JFileChooser().apply {
@@ -134,8 +149,9 @@ class MacroEditorViewModel(
                 file = selectedFile,
                 title = selectedFile.nameWithoutExtension
             )
-            _tabs.update {
-                it.toMutableList().apply { set(selectedTabIndex.value, newTabState) }
+            _uiState.update { state ->
+                val newTabs = state.tabs.toMutableList().apply { set(state.selectedTabIndex, newTabState) }
+                state.copy(tabs = newTabs)
             }
             onSave()
         }

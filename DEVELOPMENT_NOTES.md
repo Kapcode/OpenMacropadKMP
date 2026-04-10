@@ -325,6 +325,20 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Advanced Camera Controls**: Added pinch-to-zoom, tap-to-focus, and auto-exposure to the `QrCodeScanner` to improve reliability in various lighting conditions and distances.
     - **Protocol Hardening**: Removed the PIN from the initial `PAIRING_PENDING` network message. The client must now obtain the PIN out-of-band (QR/Manual) to prevent passive interception. Added a `PAIRING_CODE_MATCHED` state to notify the client that the PIN was accepted and it is now waiting for the user to click "Approve" on the desktop.
 
+## 25. Stability & Connection Lifecycle
+
+### Challenge: Disconnect Immediately After Pairing Approval
+- **Problem**: Newly approved devices would often disconnect or fail to transition to the "Connected" state, requiring a manual restart of the connection.
+- **Root Causes**:
+    1.  **Race Conditions**: The server's `handleSession` finally block was aggressively removing clients from the active map, occasionally clearing a new successful retry session when an old one closed.
+    2.  **Timeout Sensitivity**: The 20-30s heartbeat watchdog was too strict for the manual pairing process (PIN entry + approval), causing silent timeouts during the sensitive handshake.
+    3.  **UI Notification Lag**: The server was only notifying the UI of a "connection" after a full cryptographic challenge-response, which doesn't happen during the initial manual pairing approval phase.
+- **Solution**:
+    1.  **Differentiated Watchdog**: Increased the pairing phase timeout to **5 minutes** while keeping the active session timeout at 60s.
+    2.  **Session Identity Check**: Updated the server's cleanup logic to only remove a client from the map if the closing session is the *exact* one currently registered for that ID.
+    3.  **Explicit Promotion**: Modified `authenticateClient` to explicitly trigger `onClientConnected` and reset the heartbeat timer. This ensures the UI updates immediately and the device gets a fresh timeout window the moment "Approve" is clicked.
+    4.  **Heartbeat Relaxation**: Heartbeats are no longer strictly required to keep the socket alive during the PIN entry phase.
+
 ## 25. Pairing UI Optimization for Mobile
 
 ### Challenge: Visibility and Focus in Landscape Mode

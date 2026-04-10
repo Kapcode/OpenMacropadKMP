@@ -45,11 +45,11 @@ private fun KeyItem(event: MacroEventState.KeyEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("KEY", fontWeight = FontWeight.Bold, color = Color(0xFF6897BB), fontSize = 12.sp)
+        Text("KEY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Box(
             modifier = Modifier
-                .border(1.dp, Color.Gray, shape = MaterialTheme.shapes.small)
+                .border(1.dp, MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.small)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(event.keyName)
@@ -65,7 +65,7 @@ private fun MouseItem(event: MacroEventState.MouseEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("MOUSE", fontWeight = FontWeight.Bold, color = Color(0xFFB568BB), fontSize = 12.sp)
+        Text("MOUSE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("Action: ${event.action.name}", style = MaterialTheme.typography.labelMedium)
         if (event.action == MouseAction.MOVE) {
@@ -81,11 +81,11 @@ private fun MouseButtonItem(event: MacroEventState.MouseButtonEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("MOUSE BTN", fontWeight = FontWeight.Bold, color = Color(0xFFB568BB), fontSize = 12.sp)
+        Text("MOUSE BTN", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Box(
             modifier = Modifier
-                .border(1.dp, Color.Gray, shape = MaterialTheme.shapes.small)
+                .border(1.dp, MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.small)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text("Button ${event.buttonNumber}")
@@ -101,7 +101,7 @@ private fun ScrollItem(event: MacroEventState.ScrollEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("SCROLL", fontWeight = FontWeight.Bold, color = Color(0xFFE6A23C), fontSize = 12.sp)
+        Text("SCROLL", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         val amount = if (event.scrollAmount > 0) "+${event.scrollAmount}" else "${event.scrollAmount}"
         Text("Amount: $amount", style = MaterialTheme.typography.bodyMedium)
@@ -114,7 +114,7 @@ private fun DelayItem(event: MacroEventState.DelayEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("DELAY", fontWeight = FontWeight.Bold, color = Color(0xFF6AAB73), fontSize = 12.sp)
+        Text("DELAY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("${event.durationMs} ms", style = MaterialTheme.typography.bodyMedium)
     }
@@ -126,7 +126,7 @@ private fun SetAutoWaitItem(event: MacroEventState.SetAutoWaitEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("AUTO DELAY", fontWeight = FontWeight.Bold, color = Color(0xFFDDAA77), fontSize = 12.sp)
+        Text("AUTO DELAY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("Set automatic delay to ${event.delayMs} ms", style = MaterialTheme.typography.bodyMedium)
     }

@@ -100,56 +100,51 @@ private fun MacroItem(
     onRename: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            if (isSelectionMode) {
-                Checkbox(
-                    checked = state.isSelectedForDeletion,
-                    onCheckedChange = onSelectForDeletion
+    ListItem(
+        headlineContent = {
+            Text(state.name, maxLines = 1)
+        },
+        leadingContent = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isSelectionMode) {
+                    Checkbox(
+                        checked = state.isSelectedForDeletion,
+                        onCheckedChange = onSelectForDeletion
+                    )
+                    Spacer(Modifier.width(8.dp))
+                }
+                Switch(
+                    checked = state.isActive,
+                    onCheckedChange = onToggleActive
                 )
             }
-            Switch(
-                checked = state.isActive,
-                onCheckedChange = onToggleActive
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(state.name, maxLines = 1)
-        }
-        
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Play Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                IconButton(onClick = onPlay) {
-                    Icon(Icons.Default.PlayArrow, contentDescription = "Play Macro")
+        },
+        trailingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Play Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = onPlay) {
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Play Macro")
+                    }
                 }
-            }
-            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Edit Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Edit Macro")
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Edit Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Macro")
+                    }
                 }
-            }
-            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Rename Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                IconButton(onClick = onRename, enabled = state.file != null) {
-                    Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename Macro")
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Rename Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = onRename, enabled = state.file != null) {
+                        Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename Macro")
+                    }
                 }
-            }
-            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                IconButton(onClick = onDelete, enabled = state.file != null) {
-                    Icon(Icons.Default.Delete, contentDescription = "Delete Macro", tint = if (state.file != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = onDelete, enabled = state.file != null) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Macro", tint = if (state.file != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
+                    }
                 }
             }
         }
-    }
+    )
 }

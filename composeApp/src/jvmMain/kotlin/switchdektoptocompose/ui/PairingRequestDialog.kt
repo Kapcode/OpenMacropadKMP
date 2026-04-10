@@ -271,8 +271,8 @@ fun UnifiedPairingLayout(
 ) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     val fleetMode by settingsViewModel.fleetModeEnabled.collectAsState()
-    var gridRows by remember { mutableStateOf(3) }
-    var gridCols by remember { mutableStateOf(3) }
+    var gridRows by remember { mutableIntStateOf(3) }
+    var gridCols by remember { mutableIntStateOf(3) }
     val totalGridSize = gridRows * gridCols
 
     // Dynamically identify which devices are visible in the scrollable list
