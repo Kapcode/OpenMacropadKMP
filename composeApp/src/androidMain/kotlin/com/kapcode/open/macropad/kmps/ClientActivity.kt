@@ -53,6 +53,8 @@ import android.content.res.Configuration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.draw.alpha
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -456,6 +458,29 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                                 val reason = params["reason"] ?: "Device is banned"
                                                 onUpdate("Banned", null, reason, null)
                                                 this@launch.cancel()
+                                            }
+                                            ControlCommand.PUSH_SETTINGS -> {
+                                                Log.d("ClientActivity", "Received PUSH_SETTINGS from server: $params")
+                                                params["theme"]?.let { themeStr ->
+                                                    try {
+                                                        // Use the alias to avoid confusion with the UI theme composable
+                                                        val theme = SettingsAppTheme.valueOf(themeStr)
+                                                        settingsViewModel.setTheme(theme)
+                                                    } catch (e: Exception) {
+                                                        Log.e("ClientActivity", "Failed to parse pushed theme: $themeStr")
+                                                    }
+                                                }
+                                                params["analyticsEnabled"]?.let {
+                                                    settingsViewModel.setAnalyticsEnabled(it.toBoolean())
+                                                }
+                                                params["slamFireEnabled"]?.let {
+                                                    settingsViewModel.setSlamFireEnabled(it.toBoolean())
+                                                }
+                                                params["macroExecutionEnabled"]?.let {
+                                                    clientViewModel.setMacroExecutionEnabled(it.toBoolean())
+                                                }
+                                                // Note: slamFireAction is currently a generic string, 
+                                                // might need mapping if it's meant to be a specific macro name
                                             }
                                             ControlCommand.DISCONNECT -> {
                                                 clientViewModel.setMacros(emptyList())
@@ -1117,6 +1142,42 @@ fun ClientScreen(
                     if (!showSettings && macros.isNotEmpty() && slamFireEnabled) {
                         var expandedSingle by remember { mutableStateOf(false) }
                         var expandedDouble by remember { mutableStateOf(false) }
+                        var showSlamInfoDialog by remember { mutableStateOf<String?>(null) }
+
+                        if (showSlamInfoDialog != null) {
+                            AlertDialog(
+                                onDismissRequest = { showSlamInfoDialog = null },
+                                title = { 
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.TouchApp, null)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(if (showSlamInfoDialog == "single") "Slam Fire: Single Tap" else "Slam Fire: Double Tap")
+                                    }
+                                },
+                                text = {
+                                    Text(
+                                        if (showSlamInfoDialog == "single") {
+                                            "A single physical trigger (proximity sensor or volume key) will execute the selected macro immediately. Use this for your most frequent action."
+                                        } else {
+                                            "A rapid double physical trigger will execute this separate macro. Great for dangerous actions that need confirmation."
+                                        }
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(onClick = { 
+                                        if (showSlamInfoDialog == "single") expandedSingle = true else expandedDouble = true
+                                        showSlamInfoDialog = null 
+                                    }) {
+                                        Text("Select Macro")
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { showSlamInfoDialog = null }) {
+                                        Text("Dismiss")
+                                    }
+                                }
+                            )
+                        }
 
                         // Scrollable container for Slam Fire dropdowns
                         Row(
@@ -1129,7 +1190,7 @@ fun ClientScreen(
                             // Single Slam Dropdown
                             Box {
                                 TextButton(
-                                    onClick = { expandedSingle = true },
+                                    onClick = { showSlamInfoDialog = "single" },
                                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                                 ) {
                                     Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(16.dp))
@@ -1239,13 +1300,46 @@ fun ClientScreen(
                     color = MaterialTheme.colorScheme.background
                 ) {
                     if (macros.isNotEmpty() && !showQrScanner) {
-                        MacroButtonsScreen(
-                            macros = macros, 
-                            executingMacros = executingMacros,
-                            failedMacros = failedMacros,
-                            currency = uiState.currency,
-                            onMacroClick = onMacroClick
-                        )
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            MacroButtonsScreen(
+                                macros = macros, 
+                                executingMacros = executingMacros,
+                                failedMacros = failedMacros,
+                                currency = uiState.currency,
+                                onMacroClick = onMacroClick,
+                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
+                            )
+                            
+                            if (!uiState.isMacroExecutionEnabled) {
+                                Surface(
+                                    modifier = Modifier.fillMaxSize(),
+                                    color = Color.Black.copy(alpha = 0.3f)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Card(
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                            ),
+                                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(16.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Icon(Icons.Default.Block, contentDescription = null)
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(
+                                                    "Execution Disabled (E-STOP)",
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     } else if (showQrScanner) {
                         Box(
                             modifier = Modifier.fillMaxSize().padding(16.dp),

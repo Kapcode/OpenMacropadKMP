@@ -21,7 +21,8 @@ data class ClientUiState(
     val manualFocusDistance: Float = 0f,
     val currentActualZoom: Float = 1f,
     val currentFocusState: String = "Idle",
-    val currency: Long = 0L
+    val currency: Long = 0L,
+    val isMacroExecutionEnabled: Boolean = true
 )
 
 class ClientViewModel : ViewModel() {
@@ -73,6 +74,10 @@ class ClientViewModel : ViewModel() {
 
     fun updateCurrency(amount: Long) {
         _uiState.update { it.copy(currency = amount) }
+    }
+
+    fun setMacroExecutionEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
     }
 
     fun onMacroExecutionStart(macro: String) {

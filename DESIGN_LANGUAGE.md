@@ -44,17 +44,26 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
 - **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
 
 ### Desktop Motion & Layout
-- **Split Pane Navigation**: The Desktop console utilizes a `VerticalSplitPane` for the sidebar, dividing "Current Sessions" and "Recent Activity." This allows users to adjust their focus between active control and historical auditing.
-- **Pill-Shaped Pulltabs**: All split panes use custom-styled, high-visibility "pill" handles (pulltabs). These are designed to be easily discoverable and provide a tactile feel for layout adjustment.
-- **Minimize to Tray**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area.
-- **Tray Interaction**: Single-click on the tray icon toggles window visibility; right-click provides an OS-native context menu.
+- **Split Pane Navigation**: The Desktop layout utilizes a `MoveableVerticalSplitPane` and `MoveableHorizontalSplitPane` for root and nested views, dividing major functional areas. This allows users to adjust their focus between active control, monitoring, and editing.
+- **Ghost Image Resizing**: To provide real-time visual feedback, splitters display a "Ghost Image" (a semi-transparent representation of the new divider position) during active dragging.
+- **Dynamic Splitter Highlighting**: All split panes use custom-styled "pill" handles (pulltabs). These handles feature dynamic transparency:
+    - **Idle**: 5% alpha.
+    - **Hover**: 20% alpha.
+    - **Pressed/Dragging**: 40% alpha.
+- **Configurable Exit Behavior**: The application provides three exit strategies:
+    - **Ask**: Displays a three-way confirmation dialog (Exit to Tray, Just Exit, or Cancel).
+    - **Exit to Tray**: Automatically minimizes the application to the system tray.
+    - **Just Exit**: Terminates the process immediately.
+- **Minimize Animation**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area when "Exit to Tray" is triggered (respecting the `animateToTray` setting).
+- **Tray Interaction**: Single-click on the tray icon toggles window visibility; right-click provides an OS-native context menu. Manual "Exit" triggers from the tray or UI header bypass the "Tray" setting to ensure the user can always fully quit the application.
 
 ## 3. Accessibility & Usability
 
 ### High-Visibility Scrollbars
-To assist users on touchscreens or with hidden system scrollbars, all major scrollable areas (Settings, Macro Timeline, Event Dialogs) use:
+To assist users on touchscreens or with hidden system scrollbars, all major scrollable areas (Settings, Macro Timeline, Event Dialogs, Console Toolbar) use:
 - **Thickness**: `8.dp`
 - **Visibility**: Persistent or high-contrast against the background.
+- **Console Toolbar**: Specifically uses a `HorizontalScrollbar` with `onPointerEvent` for mouse-wheel scrolling support.
 
 ### Contrast Requirements
 - In the **Light Blue** theme, success/running indicators use a darkened green (`#008000`) instead of bright green to ensure readability against the light surface variant.

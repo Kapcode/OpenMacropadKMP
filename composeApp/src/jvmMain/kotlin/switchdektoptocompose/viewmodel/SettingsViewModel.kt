@@ -20,11 +20,8 @@ class SettingsViewModel {
     private val _eStopKey = MutableStateFlow(AppSettings.eStopKey)
     val eStopKey = _eStopKey.asStateFlow()
     
-    private val _minimizeToTray = MutableStateFlow(AppSettings.minimizeToTray)
-    val minimizeToTray = _minimizeToTray.asStateFlow()
-
-    private val _showMinimizeToTrayDialog = MutableStateFlow(AppSettings.showMinimizeToTrayDialog)
-    val showMinimizeToTrayDialog = _showMinimizeToTrayDialog.asStateFlow()
+    private val _exitBehavior = MutableStateFlow(AppSettings.exitBehavior)
+    val exitBehavior = _exitBehavior.asStateFlow()
 
     private val _clickTrayToToggle = MutableStateFlow(AppSettings.clickTrayToToggle)
     val clickTrayToToggle = _clickTrayToToggle.asStateFlow()
@@ -55,6 +52,35 @@ class SettingsViewModel {
 
     private val _defaultPairingModeQr = MutableStateFlow(AppSettings.defaultPairingModeQr)
     val defaultPairingModeQr = _defaultPairingModeQr.asStateFlow()
+
+    // Connected Clients Settings
+    private val _clientTheme = MutableStateFlow(AppSettings.clientTheme)
+    val clientTheme = _clientTheme.asStateFlow()
+
+    private val _clientAnalyticsEnabled = MutableStateFlow(AppSettings.clientAnalyticsEnabled)
+    val clientAnalyticsEnabled = _clientAnalyticsEnabled.asStateFlow()
+
+    private val _clientSlamFireEnabled = MutableStateFlow(AppSettings.clientSlamFireEnabled)
+    val clientSlamFireEnabled = _clientSlamFireEnabled.asStateFlow()
+
+    private val _clientSlamFireAction = MutableStateFlow(AppSettings.clientSlamFireAction)
+    val clientSlamFireAction = _clientSlamFireAction.asStateFlow()
+
+    // Shortcuts
+    private val _copyConsoleOutputShortcut = MutableStateFlow(AppSettings.copyConsoleOutputShortcut)
+    val copyConsoleOutputShortcut = _copyConsoleOutputShortcut.asStateFlow()
+
+    private val _stopKeyShortcut = MutableStateFlow(AppSettings.stopKeyShortcut)
+    val stopKeyShortcut = _stopKeyShortcut.asStateFlow()
+
+    private val _inspectKeyShortcut = MutableStateFlow(AppSettings.inspectKeyShortcut)
+    val inspectKeyShortcut = _inspectKeyShortcut.asStateFlow()
+
+    private val _splitterSwapModifier = MutableStateFlow(AppSettings.splitterSwapModifier)
+    val splitterSwapModifier = _splitterSwapModifier.asStateFlow()
+
+    private val _splitterInfoModifier = MutableStateFlow(AppSettings.splitterInfoModifier)
+    val splitterInfoModifier = _splitterInfoModifier.asStateFlow()
 
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
@@ -98,14 +124,9 @@ class SettingsViewModel {
         AppSettings.eStopKey = key
     }
     
-    fun setMinimizeToTray(enabled: Boolean) {
-        _minimizeToTray.value = enabled
-        AppSettings.minimizeToTray = enabled
-    }
-
-    fun setShowMinimizeToTrayDialog(enabled: Boolean) {
-        _showMinimizeToTrayDialog.value = enabled
-        AppSettings.showMinimizeToTrayDialog = enabled
+    fun setExitBehavior(value: String) {
+        _exitBehavior.value = value
+        AppSettings.exitBehavior = value
     }
 
     fun setClickTrayToToggle(enabled: Boolean) {
@@ -159,6 +180,80 @@ class SettingsViewModel {
     fun setDefaultPairingModeQr(enabled: Boolean) {
         _defaultPairingModeQr.value = enabled
         AppSettings.defaultPairingModeQr = enabled
+    }
+
+    fun setClientTheme(theme: String) {
+        _clientTheme.value = theme
+        AppSettings.clientTheme = theme
+        pushSettingsToClients()
+    }
+
+    fun setClientAnalyticsEnabled(enabled: Boolean) {
+        _clientAnalyticsEnabled.value = enabled
+        AppSettings.clientAnalyticsEnabled = enabled
+        pushSettingsToClients()
+    }
+
+    fun setClientSlamFireEnabled(enabled: Boolean) {
+        _clientSlamFireEnabled.value = enabled
+        AppSettings.clientSlamFireEnabled = enabled
+        pushSettingsToClients()
+    }
+
+    fun setClientSlamFireAction(action: String) {
+        _clientSlamFireAction.value = action
+        AppSettings.clientSlamFireAction = action
+        pushSettingsToClients()
+    }
+
+    private var _pushSettingsCallback: (() -> Unit)? = null
+    fun setPushSettingsCallback(callback: () -> Unit) {
+        _pushSettingsCallback = callback
+    }
+
+    private fun pushSettingsToClients() {
+        _pushSettingsCallback?.invoke()
+    }
+
+    fun setCopyConsoleOutputShortcut(shortcut: String) {
+        _copyConsoleOutputShortcut.value = shortcut
+        AppSettings.copyConsoleOutputShortcut = shortcut
+    }
+
+    fun setStopKeyShortcut(shortcut: String) {
+        _stopKeyShortcut.value = shortcut
+        AppSettings.stopKeyShortcut = shortcut
+    }
+
+    fun setInspectKeyShortcut(shortcut: String) {
+        _inspectKeyShortcut.value = shortcut
+        AppSettings.inspectKeyShortcut = shortcut
+    }
+
+    fun setSplitterSwapModifier(modifier: String) {
+        _splitterSwapModifier.value = modifier
+        AppSettings.splitterSwapModifier = modifier
+    }
+
+    fun setSplitterInfoModifier(modifier: String) {
+        _splitterInfoModifier.value = modifier
+        AppSettings.splitterInfoModifier = modifier
+    }
+
+    fun getSplitterPosition(name: String, default: Float): Float {
+        return AppSettings.getSplitterPosition(name, default)
+    }
+
+    fun setSplitterPosition(name: String, position: Float) {
+        AppSettings.setSplitterPosition(name, position)
+    }
+
+    fun getSplitterSwapped(name: String, default: Boolean): Boolean {
+        return AppSettings.getSplitterSwapped(name, default)
+    }
+
+    fun setSplitterSwapped(name: String, swapped: Boolean) {
+        AppSettings.setSplitterSwapped(name, swapped)
     }
 
     fun selectTheme(theme: String) {

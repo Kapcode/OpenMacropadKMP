@@ -18,20 +18,20 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Centralized DI:** Uses a `ViewModelFactory` to manage ViewModel lifecycles and complex dependencies.
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
 *   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
-*   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and "Minimize to Tray" support.
+*   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and a flexible three-option exit system (**Ask, Exit to Tray, Just Exit**).
 *   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, **native OS keyring integration** (via `SecretManager`) for identity protection, hardware-backed keystore management on Android, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
 *   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a **Smart Multi-QR Grid** that automatically calculates optimal row/column density based on window size and visibility toggles to prevent UI overlap. Includes a **Spatial Grid Selector** to persistently enable/disable specific grid positions (Corners and Centers).
 *   **Gold Standard Currency**: A unified monetization system across Desktop and Android. All currency-related icons and values are displayed in high-contrast Gold (`#FFFFD700`).
-*   **Split Pane Console**: Redesigned Desktop sidebar with a `VerticalSplitPane` and custom **Pill-Shaped Pulltabs**, dividing "Current Sessions" and "Recent Activity" for better auditing and oversight.
-*   **Lifecycle Management**: Support for in-app application restarts (via `ProcessBuilder`) and a standardized `ExitConfirmDialog` for graceful shutdowns.
+*   **Split Pane Console**: Redesigned Desktop sidebar with a `MoveableVerticalSplitPane` and custom-styled **Pill-Shaped Pulltabs**, dividing "Current Sessions" and "Recent Activity" for better auditing and oversight. Splitters now feature **Ghost Image** feedback for resizing and **Hover/Press highlights** (5% to 40% alpha) for better discoverability.
+*   **Lifecycle Management**: Support for in-app application restarts (via `ProcessBuilder`) and a standardized **three-way Exit Dialog** for graceful shutdowns and background persistence.
 *   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger.
     *   **Single Slam**: Execute a primary macro or "OK" action.
     *   **Double Slam**: Execute a secondary macro or "Cancel/Back" action with configurable timing thresholds.
     *   **Context Aware**: Automatically acts as a QR scanner toggle during setup, then transitions to macro triggering once connected.
-*   **Animation & Polish**: Smooth window transitions to the tray, high-quality 512px taskbar icons, and Material 3 dialog notifications.
+*   **Animation & Polish**: Smooth window transitions to the tray (respecting user preferences), high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.
-*   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging.
+*   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging. The toolbar supports **mouse-wheel horizontal scrolling** and features a high-visibility **custom scrollbar**.
 
 ### Android Client
 *   **Remote Triggering:** Interface to execute desktop macros from a mobile device with real-time execution feedback (progress bars and status).

@@ -14,8 +14,7 @@ object AppSettings {
     private const val SERVER_PORT_KEY = "serverPort"
     private const val SECURE_SERVER_PORT_KEY = "secureServerPort"
     private const val ESTOP_KEY_KEY = "eStopKey"
-    private const val MINIMIZE_TO_TRAY_KEY = "minimizeToTray"
-    private const val SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY = "showMinimizeToTrayDialog"
+    private const val EXIT_BEHAVIOR_KEY = "exitBehavior"
     private const val CLICK_TRAY_TO_TOGGLE_KEY = "clickTrayToToggle"
     private const val ANIMATE_TO_TRAY_KEY = "animateToTray"
     private const val HARD_ESTOP_KEY = "hardEstop"
@@ -26,6 +25,22 @@ object AppSettings {
     private const val FLEET_GRID_VISIBILITY_KEY = "fleetGridVisibility"
     private const val DEFAULT_PAIRING_MODE_QR_KEY = "defaultPairingModeQr"
     private const val TOTAL_CURRENCY_SPENT_KEY = "totalCurrencySpent"
+
+    // Connected Clients Settings
+    private const val CLIENT_THEME_KEY = "clientTheme"
+    private const val CLIENT_ANALYTICS_ENABLED_KEY = "clientAnalyticsEnabled"
+    private const val CLIENT_SLAM_FIRE_ENABLED_KEY = "clientSlamFireEnabled"
+    private const val CLIENT_SLAM_FIRE_ACTION_KEY = "clientSlamFireAction"
+
+    // Shortcuts
+    private const val COPY_CONSOLE_OUTPUT_SHORTCUT_KEY = "copyConsoleOutputShortcut"
+    private const val STOP_KEY_SHORTCUT_KEY = "stopKeyShortcut"
+    private const val INSPECT_KEY_SHORTCUT_KEY = "inspectKeyShortcut"
+    private const val SPLITTER_SWAP_MODIFIER_KEY = "splitterSwapModifier"
+    private const val SPLITTER_INFO_MODIFIER_KEY = "splitterInfoModifier"
+
+    private const val SPLITTER_POS_PREFIX = "splitter_pos_"
+    private const val SPLITTER_SWAPPED_PREFIX = "splitter_swapped_"
 
     init {
         if (!configDir.exists()) {
@@ -75,17 +90,10 @@ object AppSettings {
             save()
         }
 
-    var minimizeToTray: Boolean
-        get() = properties.getProperty(MINIMIZE_TO_TRAY_KEY, "true").toBoolean()
+    var exitBehavior: String
+        get() = properties.getProperty(EXIT_BEHAVIOR_KEY, "ASK")
         set(value) {
-            properties.setProperty(MINIMIZE_TO_TRAY_KEY, value.toString())
-            save()
-        }
-
-    var showMinimizeToTrayDialog: Boolean
-        get() = properties.getProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, "true").toBoolean()
-        set(value) {
-            properties.setProperty(SHOW_MINIMIZE_TO_TRAY_DIALOG_KEY, value.toString())
+            properties.setProperty(EXIT_BEHAVIOR_KEY, value)
             save()
         }
 
@@ -158,6 +166,89 @@ object AppSettings {
             properties.setProperty(TOTAL_CURRENCY_SPENT_KEY, value.toString())
             save()
         }
+
+    // Connected Clients Settings
+    var clientTheme: String
+        get() = properties.getProperty(CLIENT_THEME_KEY, "Dark Blue")
+        set(value) {
+            properties.setProperty(CLIENT_THEME_KEY, value)
+            save()
+        }
+
+    var clientAnalyticsEnabled: Boolean
+        get() = properties.getProperty(CLIENT_ANALYTICS_ENABLED_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(CLIENT_ANALYTICS_ENABLED_KEY, value.toString())
+            save()
+        }
+
+    var clientSlamFireEnabled: Boolean
+        get() = properties.getProperty(CLIENT_SLAM_FIRE_ENABLED_KEY, "false").toBoolean()
+        set(value) {
+            properties.setProperty(CLIENT_SLAM_FIRE_ENABLED_KEY, value.toString())
+            save()
+        }
+
+    var clientSlamFireAction: String
+        get() = properties.getProperty(CLIENT_SLAM_FIRE_ACTION_KEY, "None")
+        set(value) {
+            properties.setProperty(CLIENT_SLAM_FIRE_ACTION_KEY, value)
+            save()
+        }
+
+    // Shortcuts
+    var copyConsoleOutputShortcut: String
+        get() = properties.getProperty(COPY_CONSOLE_OUTPUT_SHORTCUT_KEY, "Ctrl+Shift+C")
+        set(value) {
+            properties.setProperty(COPY_CONSOLE_OUTPUT_SHORTCUT_KEY, value)
+            save()
+        }
+
+    var stopKeyShortcut: String
+        get() = properties.getProperty(STOP_KEY_SHORTCUT_KEY, "Escape")
+        set(value) {
+            properties.setProperty(STOP_KEY_SHORTCUT_KEY, value)
+            save()
+        }
+
+    var inspectKeyShortcut: String
+        get() = properties.getProperty(INSPECT_KEY_SHORTCUT_KEY, "F10")
+        set(value) {
+            properties.setProperty(INSPECT_KEY_SHORTCUT_KEY, value)
+            save()
+        }
+
+    var splitterSwapModifier: String
+        get() = properties.getProperty(SPLITTER_SWAP_MODIFIER_KEY, "Shift")
+        set(value) {
+            properties.setProperty(SPLITTER_SWAP_MODIFIER_KEY, value)
+            save()
+        }
+
+    var splitterInfoModifier: String
+        get() = properties.getProperty(SPLITTER_INFO_MODIFIER_KEY, "Ctrl")
+        set(value) {
+            properties.setProperty(SPLITTER_INFO_MODIFIER_KEY, value)
+            save()
+        }
+
+    fun getSplitterPosition(name: String, default: Float): Float {
+        return properties.getProperty(SPLITTER_POS_PREFIX + name, default.toString()).toFloatOrNull() ?: default
+    }
+
+    fun setSplitterPosition(name: String, position: Float) {
+        properties.setProperty(SPLITTER_POS_PREFIX + name, position.toString())
+        save()
+    }
+
+    fun getSplitterSwapped(name: String, default: Boolean): Boolean {
+        return properties.getProperty(SPLITTER_SWAPPED_PREFIX + name, default.toString()).toBoolean()
+    }
+
+    fun setSplitterSwapped(name: String, swapped: Boolean) {
+        properties.setProperty(SPLITTER_SWAPPED_PREFIX + name, swapped.toString())
+        save()
+    }
 
     private fun save() {
         FileOutputStream(configFile).use { properties.store(it, "OpenMacropadServer Settings") }

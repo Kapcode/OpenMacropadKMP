@@ -375,6 +375,18 @@ class MacroKtorServer(
                 client.lastSeen = System.currentTimeMillis()
 
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
+                
+                // Push current global settings to the newly authenticated client
+                val settingsMap = mapOf(
+                    "theme" to appSettings.clientTheme,
+                    "analyticsEnabled" to appSettings.clientAnalyticsEnabled.toString(),
+                    "slamFireEnabled" to appSettings.clientSlamFireEnabled.toString(),
+                    "slamFireAction" to appSettings.clientSlamFireAction
+                )
+                client.session.send(Frame.Binary(true, DataModel(
+                    messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
+                ).toBytes()))
+
                 onMessageReceived(client.id, getMacrosRequest())
             } else {
                 logger.warn("Authentication failed for {}", client.id)
@@ -433,5 +445,20 @@ class MacroKtorServer(
     suspend fun sendToAll(dataModel: DataModel) {
         val bytes = dataModel.toBytes()
         clients.values.forEach { it.session.send(Frame.Binary(true, bytes)) }
+    }
+
+    fun pushSettingsToClients(theme: String, analyticsEnabled: Boolean, slamFireEnabled: Boolean, slamFireAction: String) {
+        serverScope.launch {
+            val settingsMap = mapOf(
+                "theme" to theme,
+                "analyticsEnabled" to analyticsEnabled.toString(),
+                "slamFireEnabled" to slamFireEnabled.toString(),
+                "slamFireAction" to slamFireAction
+            )
+            val message = DataModel(
+                messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
+            )
+            sendToAll(message)
+        }
     }
 }

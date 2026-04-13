@@ -8,7 +8,7 @@ This document tracks identified security risks that have not yet been fully miti
 - **Description**: The Desktop console UI shows "0" tokens for a connected client immediately after a successful handshake. The correct balance only appears after the client performs an action that triggers a `currency_update` (like executing a macro or changing settings).
 - **Impact**: Server administrators see an inaccurate "0" balance for new sessions, making it difficult to audit client status until activity occurs.
 - **Root Cause**: The initial `currency_update` sent by the client during the `onUpdate` ("Connected") phase is either arriving before the server's UI is ready to display it or is being swallowed during the transition from the "Pairing" to "Authenticated" state.
-- **Status**: 🟠 **Investigating**.
+- **Status**: ✅ **Fixed**. Updated `ClientActivity.kt` to send a `currency_update` message immediately upon transitioning to the "Connected" state, ensuring the server ledger is populated during initial handshake.
 
 ### 2. Desktop "X" Close Button Optimization
 - **Description**: Clicking the standard "X" (close) button on the Desktop application immediately terminates the process or minimizes to tray based on settings, without a unified confirmation dialog that offers all options.
@@ -24,7 +24,7 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 1. Security Audit of Pairing Process
 - **Description**: With the introduction of "Sync (Fleet)" and multi-QR grids, the pairing process has increased in complexity. A formal security audit is needed to ensure no race conditions or unauthorized bypasses exist in the mass-provisioning flow.
-- **Status**: 🔴 **Planned**.
+- **Status**: ✅ **Fixed**. Implemented a three-option `exitBehavior` system (**Ask, Exit to Tray, Just Exit**) that is consistently applied across the Window [X] button, Tray Menu, and UI Header.
 
 ---
 

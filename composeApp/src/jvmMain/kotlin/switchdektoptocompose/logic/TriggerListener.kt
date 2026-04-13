@@ -26,6 +26,9 @@ class TriggerListener(
 
     private val activeTriggers = ConcurrentHashMap<Int, MutableList<ActiveTrigger>>()
     private var eStopKeyCode: Int? = null
+    private var copyConsoleShortcut: String? = null
+    private var stopKeyShortcut: String? = null
+    private var inspectKeyShortcut: String? = null
     private val listenerScope = CoroutineScope(Dispatchers.Default)
 
     init {
@@ -45,10 +48,19 @@ class TriggerListener(
         })
     }
 
-    fun updateActiveTriggers(macros: List<MacroFileState>, eStopKeyName: String = "F12") {
+    fun updateActiveTriggers(
+        macros: List<MacroFileState>, 
+        eStopKeyName: String = "F12",
+        copyConsoleShortcut: String? = null,
+        stopKeyShortcut: String? = null,
+        inspectKeyShortcut: String? = null
+    ) {
         activeTriggers.clear()
         
         eStopKeyCode = KeyParser.parseNativeHookKeys(eStopKeyName).firstOrNull()
+        this.copyConsoleShortcut = copyConsoleShortcut
+        this.stopKeyShortcut = stopKeyShortcut
+        this.inspectKeyShortcut = inspectKeyShortcut
         println("Trigger Listener: E-Stop key set to $eStopKeyName (${eStopKeyCode})")
 
         macros.filter { it.isActive }.forEach { macroState ->
@@ -111,11 +123,42 @@ class TriggerListener(
     }
 
     override fun nativeKeyReleased(e: NativeKeyEvent) {
+        val keyText = NativeKeyEvent.getKeyText(e.keyCode)
+        val modifiers = NativeKeyEvent.getModifiersText(e.modifiers)
+        val fullShortcut = if (modifiers.isNotEmpty()) "$modifiers+$keyText".replace(" ", "") else keyText
+
         // Check for E-Stop first
         if (e.keyCode == eStopKeyCode) {
-            println("Trigger Listener: E-STOP ACTIVATED!")
+            val msg = "E-STOP ACTIVATED via keyboard shortcut!"
+            println("Trigger Listener: $msg")
+            viewModel.consoleViewModel.addLog(LogLevel.Error, msg)
             viewModel.stopAllMacros()
             return
+        }
+
+        // Check for Copy Console Shortcut
+        if (copyConsoleShortcut != null && fullShortcut == copyConsoleShortcut) {
+            listenerScope.launch(Dispatchers.Main) {
+                val text = viewModel.consoleViewModel.logMessages.value.joinToString("\n") { it.formatted }
+                val selection = java.awt.datatransfer.StringSelection(text)
+                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+                viewModel.consoleViewModel.addLog(LogLevel.Info, "Console output copied to clipboard via shortcut ($fullShortcut).")
+            }
+        }
+
+        // Check for Stop Macro Shortcut
+        if (stopKeyShortcut != null && fullShortcut == stopKeyShortcut) {
+            println("Trigger Listener: STOP MACRO ACTIVATED!")
+            viewModel.macroManagerViewModel.cancelAllMacros()
+            viewModel.consoleViewModel.addLog(LogLevel.Warn, "Stopping all running macros via shortcut ($fullShortcut).")
+        }
+
+        // Check for Inspect Key Shortcut
+        if (inspectKeyShortcut != null && fullShortcut == inspectKeyShortcut) {
+            println("Trigger Listener: TOGGLE INSPECTOR!")
+            listenerScope.launch(Dispatchers.Main) {
+                viewModel.inspectorViewModel.toggleInspector()
+            }
         }
 
         if (viewModel.uiState.value.isMacroExecutionEnabled) {
@@ -125,6 +168,7 @@ class TriggerListener(
                 listenerScope.launch {
                     triggers.forEach { trigger ->
                         if (trigger.macro.isActive) {
+                            viewModel.consoleViewModel.addLog(LogLevel.Info, "Macro triggered via shortcut: ${trigger.macro.name}")
                             onTrigger(trigger.macro)
                         }
                     }

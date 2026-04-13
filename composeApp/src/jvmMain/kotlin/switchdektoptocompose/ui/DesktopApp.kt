@@ -8,13 +8,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
@@ -40,7 +41,7 @@ fun DesktopAppPreview() {
     val settingsViewModel = remember { DesktopSettingsViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
-    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
+    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel, inspectorViewModel) }
     val macroManagerViewModel = remember {
         MacroManagerViewModel(
             settingsViewModel = settingsViewModel,
@@ -68,8 +69,11 @@ fun DesktopAppPreview() {
         newEventViewModel = newEventViewModel
     )
 
+    val desktopWindowState = rememberDesktopWindowState(settingsViewModel = settingsViewModel)
+
     DesktopApp(
-        viewModels = viewModels
+        viewModels = viewModels,
+        desktopWindowState = desktopWindowState
     )
 }
 
@@ -77,7 +81,16 @@ fun DesktopAppPreview() {
 @Composable
 fun DesktopApp(
     viewModels: DesktopViewModels,
-    onExit: () -> Unit = {}
+    desktopWindowState: DesktopWindowState,
+    onExit: () -> Unit = {},
+    showExitDialog: Boolean = false,
+    onShowExitDialogChange: (Boolean) -> Unit = {},
+    showShortcutsDialog: Boolean = false,
+    onShowShortcutsDialogChange: (Boolean) -> Unit = {},
+    showPushSettingsDialog: Boolean = false,
+    onShowPushSettingsDialogChange: (Boolean) -> Unit = {},
+    showSettingsDialog: Boolean = false,
+    onShowSettingsDialogChange: (Boolean) -> Unit = {}
 ) {
     val desktopViewModel = viewModels.desktopViewModel
     val consoleViewModel = viewModels.consoleViewModel
@@ -131,35 +144,28 @@ fun DesktopApp(
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
     val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
 
-    var showSettingsDialog by remember { mutableStateOf(false) }
-    var showSettingsToSecurity by remember { mutableStateOf(false) }
     var showNewEventDialog by remember { mutableStateOf(false) }
     var showRecordDialog by remember { mutableStateOf(false) }
-    var showExitDialog by remember { mutableStateOf(false) }
+    var showExitDialogInternal by remember { mutableStateOf(false) }
+    val showExitDialogResolved = showExitDialog || showExitDialogInternal
 
-    if (showExitDialog) {
+    val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
+    // Using the desktopWindowState passed from main.kt
+
+    if (showExitDialogResolved) {
         ExitConfirmDialog(
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
             onExitNow = onExit,
-            onRestart = {
-                val javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java"
-                val jarFile = File(System.getProperty("java.class.path"))
-                
-                if (jarFile.extension == "jar") {
-                    try {
-                        ProcessBuilder(javaBin, "-jar", jarFile.absolutePath).start()
-                        onExit()
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        onExit()
-                    }
-                } else {
-                    // Fallback if not running from a JAR (e.g., during development)
-                    onExit()
-                }
+            onExitToTray = {
+                onShowExitDialogChange(false)
+                showExitDialogInternal = false
+                desktopWindowState.animateToTray()
             },
-            onDismiss = { showExitDialog = false }
+            onDismiss = {
+                onShowExitDialogChange(false)
+                showExitDialogInternal = false
+            }
         )
     }
 
@@ -171,10 +177,16 @@ fun DesktopApp(
             sharedSettingsViewModel = sharedSettingsViewModel,
             consoleViewModel = consoleViewModel,
             onDismissRequest = { 
-                showSettingsDialog = false
-                showSettingsToSecurity = false 
+                onShowSettingsDialogChange(false)
             },
-            initialScrollToSecurity = showSettingsToSecurity
+            onShowShortcutsRequest = {
+                onShowSettingsDialogChange(false)
+                onShowShortcutsDialogChange(true)
+            },
+            onShowPushSettingsRequest = {
+                onShowSettingsDialogChange(false)
+                onShowPushSettingsDialogChange(true)
+            }
         )
     }
 
@@ -275,14 +287,31 @@ fun DesktopApp(
             modifier = Modifier.fillMaxSize()
         ) { paddingValues ->
             Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                val rootVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
-                val mainHorizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.1f)
-                val leftVerticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.5f)
+                val rootVerticalSplitter = rememberSplitPaneState(
+                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Root Layout", 0.0254f)
+                )
+                val mainHorizontalSplitter = rememberSplitPaneState(
+                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Main Horizontal", 0.2965f)
+                )
+                val secondaryPanelSplitter = rememberSplitPaneState(
+                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Secondary Panel", 0.1564f)
+                )
+                val sidebarSplitter = rememberSplitPaneState(
+                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Sidebar Split", 0.7073f)
+                )
 
-                VerticalSplitPane(splitPaneState = rootVerticalSplitter) {
-                    first(minSize = 100.dp) {
+                MoveableVerticalSplitPane(
+                    name = "Root Layout",
+                    firstName = "Header",
+                    secondName = "Main Content",
+                    splitPaneState = rootVerticalSplitter,
+                    consoleViewModel = consoleViewModel,
+                    settingsViewModel = settingsViewModel,
+                    firstMinSize = 48.dp,
+                    secondMinSize = 200.dp,
+                    first = {
                         Row(
-                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant).padding(horizontal = 8.dp),
+                            modifier = Modifier.fillMaxSize().background(panelBackground(0)).padding(horizontal = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             var menuExpanded by remember { mutableStateOf(false) }
@@ -305,15 +334,40 @@ fun DesktopApp(
                                     leadingIcon = { Icon(Icons.Default.Stop, null) }
                                 )
                                 HorizontalDivider()
-                                DropdownMenuItem(text = { Text("Settings") }, onClick = { showSettingsDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.Default.Settings, null) })
+                                DropdownMenuItem(
+                                    text = { Text("Settings") },
+                                    onClick = { onShowSettingsDialogChange(true); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.Settings, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Shortcuts & Keymap") },
+                                    onClick = { onShowShortcutsDialogChange(true); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.Keyboard, null) }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Bulk Settings Pusher") },
+                                    onClick = { onShowPushSettingsDialogChange(true); menuExpanded = false },
+                                    leadingIcon = { Icon(Icons.Default.Send, null) }
+                                )
                                 HorizontalDivider()
-                                DropdownMenuItem(text = { Text("Exit") }, onClick = { showExitDialog = true; menuExpanded = false }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) })
+                                DropdownMenuItem(
+                                    text = { Text("Exit") },
+                                    onClick = {
+                                        menuExpanded = false
+                                        if (exitBehavior == "ASK") {
+                                            onShowExitDialogChange(true)
+                                        } else {
+                                            onExit()
+                                        }
+                                    },
+                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) }
+                                )
                             }
                             
                             Spacer(Modifier.width(16.dp))
 
                             Box(
-                                modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp),
+                                modifier = Modifier.weight(1f).fillMaxHeight().padding(vertical = 4.dp, horizontal = 8.dp),
                                 contentAlignment = Alignment.CenterStart
                             ) {
                                 Column {
@@ -324,7 +378,7 @@ fun DesktopApp(
                                     }
                                     
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor)
+                                        Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor, style = MaterialTheme.typography.bodySmall)
                                         Spacer(Modifier.width(12.dp))
                                         Text("Connected: ${connectedDevices.size}", style = MaterialTheme.typography.bodySmall)
                                         Spacer(Modifier.width(12.dp))
@@ -333,9 +387,11 @@ fun DesktopApp(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = if (isMacroExecutionEnabled) Color.Unspecified else Color.Red
                                         )
+                                        Spacer(Modifier.width(12.dp))
+                                        Text("Address: $serverIpAddress:$currentPort", style = MaterialTheme.typography.bodySmall)
                                     }
                                     
-                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     
                                     TooltipArea(
                                         tooltip = {
@@ -349,55 +405,53 @@ fun DesktopApp(
                                         },
                                         delayMillis = 500
                                     ) {
-                                        Column(
+                                        Row(
                                             modifier = Modifier
                                                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.small)
                                                 .clickable {
-                                                    showSettingsToSecurity = true
-                                                    showSettingsDialog = true
+                                                    onShowSettingsDialogChange(true)
                                                 }
-                                                .padding(4.dp)
+                                                .padding(horizontal = 4.dp, vertical = 2.dp),
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(
-                                                    if (encryptionEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
-                                                    contentDescription = null,
-                                                    modifier = Modifier.size(14.dp),
-                                                    tint = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
-                                                )
-                                                Spacer(Modifier.width(4.dp))
-                                                Text(
-                                                    "Security: ${if (encryptionEnabled) "Encrypted (WSS)" else "Unencrypted (WS)"}",
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                            Row {
-                                                Text(
-                                                    "One-Time Approvals ONLY: ${if (allowOnceOnly) "Yes" else "No"}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = if (allowOnceOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                                )
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    "Discovery: ${if (allowNewConnections) "On" else "Off"}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = if (allowNewConnections) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
-                                                )
-                                            }
+                                            Icon(
+                                                if (encryptionEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(12.dp),
+                                                tint = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                "Security: ${if (encryptionEnabled) "Encrypted" else "Unencrypted"}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "One-Time: ${if (allowOnceOnly) "Yes" else "No"}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (allowOnceOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "Discovery: ${if (allowNewConnections) "On" else "Off"}",
+                                                style = MaterialTheme.typography.labelSmall,
+                                                color = if (allowNewConnections) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
+                                            )
                                         }
                                     }
-                                    
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Address: $serverIpAddress:$currentPort", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                             
                             TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Emergency Stop Key", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
                                 var eStopMenuExpanded by remember { mutableStateOf(false) }
                                 Box {
-                                    OutlinedButton(onClick = { eStopMenuExpanded = true }) {
-                                        Text("E-Stop: $eStopKey")
+                                    OutlinedButton(
+                                        onClick = { eStopMenuExpanded = true },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                        modifier = Modifier.height(32.dp)
+                                    ) {
+                                        Text("E-Stop: $eStopKey", style = MaterialTheme.typography.labelMedium)
                                     }
                                     DropdownMenu(
                                         expanded = eStopMenuExpanded,
@@ -426,142 +480,104 @@ fun DesktopApp(
 
                             TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Power, contentDescription = "Macros Enabled")
+                                    Icon(Icons.Default.Power, contentDescription = "Macros Enabled", modifier = Modifier.size(20.dp))
                                     Switch(
                                         checked = isMacroExecutionEnabled,
-                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) }
+                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) },
+                                        modifier = Modifier.scale(0.8f)
                                     )
                                 }
                             }
-                            
-                            Spacer(Modifier.width(16.dp))
-
-                            Box(modifier = Modifier.weight(0.1f).fillMaxHeight()) {
-                                InspectorScreen(viewModel = inspectorViewModel)
-                            }
                         }
-                    }
-                    second(minSize = 200.dp) {
-                        HorizontalSplitPane(splitPaneState = mainHorizontalSplitter) {
-                            first(minSize = 250.dp) {
-                                VerticalSplitPane(splitPaneState = leftVerticalSplitter) {
-                                    first(minSize = 150.dp) {
-                                        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                                            ConnectedDevicesScreen(
-                                                devices = connectedDevices,
-                                                history = uiState.connectionHistory,
-                                                totalCurrencySpent = uiState.totalCurrencySpent,
-                                                onDisconnect = { desktopViewModel.disconnectClient(it) },
-                                                onUnpair = { desktopViewModel.unpairDevice(it) },
-                                                onBan = { desktopViewModel.banDevice(it.id, it.name) },
-                                                onClearHistory = { desktopViewModel.clearConnectionHistory() }
-                                            )
-                                        }
-                                    }
-                                    second(minSize = 100.dp) {
+                    },
+                    second = {
+                        MoveableHorizontalSplitPane(
+                            name = "Main Horizontal",
+                            firstName = "Left Sidebar",
+                            secondName = "Right Panel",
+                            splitPaneState = mainHorizontalSplitter,
+                            consoleViewModel = consoleViewModel,
+                            settingsViewModel = settingsViewModel,
+                            firstMinSize = 150.dp,
+                            secondMinSize = 500.dp,
+                            first = {
+                                MoveableVerticalSplitPane(
+                                    name = "Sidebar Split",
+                                    firstName = "Console",
+                                    secondName = "Inspector",
+                                    splitPaneState = sidebarSplitter,
+                                    consoleViewModel = consoleViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    firstMinSize = 100.dp,
+                                    secondMinSize = 100.dp,
+                                    first = {
                                         Box(
                                             modifier = Modifier.fillMaxSize()
-                                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                                .background(panelBackground(1))
                                                 .padding(8.dp)
                                         ) {
                                             Console(viewModel = consoleViewModel)
                                         }
-                                    }
-                                    splitter {
-                                        visiblePart {
-                                            Box(Modifier.fillMaxSize()) {
-                                                Box(
-                                                    Modifier
-                                                        .width(48.dp)
-                                                        .height(8.dp)
-                                                        .background(
-                                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                                            shape = MaterialTheme.shapes.extraSmall
-                                                        )
-                                                        .align(Alignment.Center)
-                                                )
-                                            }
+                                    },
+                                    second = {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize()
+                                                .background(panelBackground(2))
+                                                .padding(8.dp)
+                                        ) {
+                                            InspectorScreen(viewModel = inspectorViewModel)
                                         }
-                                        handle {
-                                            Box(
-                                                Modifier
-                                                    .markAsHandle()
-                                                    .fillMaxWidth()
-                                                    .height(16.dp)
+                                    }
+                                )
+                            },
+                            second = {
+                                MoveableHorizontalSplitPane(
+                                    name = "Secondary Panel",
+                                    firstName = "Connections",
+                                    secondName = "Macros",
+                                    splitPaneState = secondaryPanelSplitter,
+                                    consoleViewModel = consoleViewModel,
+                                    settingsViewModel = settingsViewModel,
+                                    firstMinSize = 250.dp,
+                                    secondMinSize = 500.dp,
+                                    first = {
+                                        Box(modifier = Modifier.fillMaxSize().background(panelBackground(3)).padding(8.dp)) {
+                                            ConnectedDevicesScreen(
+                                                devices = connectedDevices,
+                                                history = uiState.connectionHistory,
+                                                trustedDevices = uiState.trustedDevices,
+                                                totalCurrencySpent = uiState.totalCurrencySpent,
+                                                onDisconnect = { desktopViewModel.disconnectClient(it) },
+                                                onUnpair = { desktopViewModel.unpairDevice(it) },
+                                                onBan = { desktopViewModel.banDevice(it.id, it.name) },
+                                                onUnban = { desktopViewModel.unbanDevice(it) },
+                                                onClearHistory = { desktopViewModel.clearConnectionHistory() }
                                             )
                                         }
-                                    }
-                                }
-                            }
-                            second(minSize = 500.dp) {
-                                MacroEditingArea(
-                                    macroManagerViewModel = macroManagerViewModel,
-                                    macroEditorViewModel = macroEditorViewModel,
-                                    macroTimelineViewModel = macroTimelineViewModel,
-                                    settingsViewModel = settingsViewModel,
-                                    consoleViewModel = consoleViewModel,
-                                    selectedTheme = selectedTheme,
-                                    onAddEventClicked = {
-                                        newEventViewModel.reset()
-                                        showNewEventDialog = true
                                     },
-                                    onRecordMacroClicked = {
-                                        recordMacroViewModel.reset()
-                                        showRecordDialog = true
+                                    second = {
+                                        MacroEditingArea(
+                                            macroManagerViewModel = macroManagerViewModel,
+                                            macroEditorViewModel = macroEditorViewModel,
+                                            macroTimelineViewModel = macroTimelineViewModel,
+                                            settingsViewModel = settingsViewModel,
+                                            consoleViewModel = consoleViewModel,
+                                            selectedTheme = selectedTheme,
+                                            onAddEventClicked = {
+                                                newEventViewModel.reset()
+                                                showNewEventDialog = true
+                                            },
+                                            onRecordMacroClicked = {
+                                                recordMacroViewModel.reset()
+                                                showRecordDialog = true
+                                            }
+                                        )
                                     }
                                 )
                             }
-                            splitter {
-                                visiblePart {
-                                    Box(Modifier.fillMaxSize()) {
-                                        Box(
-                                            Modifier
-                                                .width(8.dp)
-                                                .height(48.dp)
-                                                .background(
-                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                                    shape = MaterialTheme.shapes.extraSmall
-                                                )
-                                                .align(Alignment.Center)
-                                        )
-                                    }
-                                }
-                                handle {
-                                    Box(
-                                        Modifier
-                                            .markAsHandle()
-                                            .fillMaxHeight()
-                                            .width(16.dp)
-                                    )
-                                }
-                            }
-                        }
+                        )
                     }
-                    splitter {
-                        visiblePart {
-                            Box(Modifier.fillMaxSize()) {
-                                Box(
-                                    Modifier
-                                        .width(48.dp)
-                                        .height(8.dp)
-                                        .background(
-                                            color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                            shape = MaterialTheme.shapes.extraSmall
-                                        )
-                                        .align(Alignment.Center)
-                                )
-                            }
-                        }
-                        handle {
-                            Box(
-                                Modifier
-                                    .markAsHandle()
-                                    .fillMaxWidth()
-                                    .height(16.dp)
-                            )
-                        }
-                    }
-                }
+                )
             }
         }
     }

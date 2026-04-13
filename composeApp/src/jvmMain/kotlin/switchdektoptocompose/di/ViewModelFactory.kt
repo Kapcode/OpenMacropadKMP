@@ -25,7 +25,7 @@ object ViewModelFactory {
         val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
         val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
-        val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel) }
+        val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel, inspectorViewModel) }
         
         val macroManagerViewModel = remember {
             MacroManagerViewModel(

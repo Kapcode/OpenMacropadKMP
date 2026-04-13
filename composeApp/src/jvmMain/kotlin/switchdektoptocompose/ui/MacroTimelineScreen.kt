@@ -70,7 +70,7 @@ fun MacroTimelineScreen(
         // --- Trigger Event Display ---
         triggerEvent?.let { trigger ->
             Surface(
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier.fillMaxWidth().padding(start = 8.dp, top = 8.dp, end = 8.dp),
                 color = MaterialTheme.colorScheme.secondaryContainer,
                 shape = MaterialTheme.shapes.medium,
                 tonalElevation = 4.dp
@@ -98,7 +98,8 @@ fun MacroTimelineScreen(
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(8.dp)
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 itemsIndexed(events, key = { _, event -> event.id }) { index, event ->
                     ReorderableItem(

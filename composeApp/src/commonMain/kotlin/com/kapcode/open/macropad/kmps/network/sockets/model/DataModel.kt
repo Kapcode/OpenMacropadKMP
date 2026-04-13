@@ -70,7 +70,8 @@ enum class ControlCommand {
     DISCONNECT,
     EXECUTION_START,
     EXECUTION_COMPLETE,
-    EXECUTION_FAILED
+    EXECUTION_FAILED,
+    PUSH_SETTINGS
 }
 
 /**

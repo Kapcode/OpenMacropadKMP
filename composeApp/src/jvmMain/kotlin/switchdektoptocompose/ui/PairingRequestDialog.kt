@@ -61,7 +61,7 @@ fun PairingRequestDialog(
     AppDialog(
         onCloseRequest = onCancelAll,
         state = windowState,
-        title = if (fleetMode) "FLEET SYNC (${requests.size} Devices)" else "DEVICE SYNC",
+        title = if (fleetMode) "PAIRING AND SYNC (FLEET) (${requests.size} Devices)" else "DEVICE SYNC",
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel,
         resizable = true
@@ -127,7 +127,7 @@ fun SmallPairingLayout(
             )
             
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Fleet Mode", style = MaterialTheme.typography.labelLarge)
+                Text("Pairing & Sync (Fleet) Mode", style = MaterialTheme.typography.labelLarge)
                 Switch(
                     checked = fleetMode,
                     onCheckedChange = { settingsViewModel.setFleetModeEnabled(it) },
@@ -397,7 +397,7 @@ fun UnifiedPairingLayout(
                 ) {
                     Column {
                         Text(
-                            "SYNC (FLEET)",
+                            "PAIRING AND SYNC (FLEET)",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Black,
                             color = MaterialTheme.colorScheme.primary
@@ -477,7 +477,7 @@ fun UnifiedPairingLayout(
                     
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Fleet Mode", style = MaterialTheme.typography.labelLarge)
+                            Text("Pairing & Sync (Fleet) Mode", style = MaterialTheme.typography.labelLarge)
                             Switch(
                                 checked = fleetMode,
                                 onCheckedChange = { settingsViewModel.setFleetModeEnabled(it) },

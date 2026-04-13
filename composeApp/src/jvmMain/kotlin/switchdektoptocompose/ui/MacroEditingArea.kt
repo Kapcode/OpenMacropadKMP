@@ -4,13 +4,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import switchdektoptocompose.viewmodel.*
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
-import org.jetbrains.compose.splitpane.HorizontalSplitPane
-import org.jetbrains.compose.splitpane.VerticalSplitPane
 import org.jetbrains.compose.splitpane.rememberSplitPaneState
 
 @OptIn(ExperimentalSplitPaneApi::class)
@@ -25,81 +22,57 @@ fun MacroEditingArea(
     onAddEventClicked: () -> Unit,
     onRecordMacroClicked: () -> Unit
 ) {
-    val verticalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.7f)
-    val horizontalSplitter = rememberSplitPaneState(initialPositionPercentage = 0.2f)
+    val verticalSplitter = rememberSplitPaneState(
+        initialPositionPercentage = settingsViewModel.getSplitterPosition("Macro Editor Vertical", 0.5716f)
+    )
+    val horizontalSplitter = rememberSplitPaneState(
+        initialPositionPercentage = settingsViewModel.getSplitterPosition("Macro Editor Horizontal", 0.6747f)
+    )
 
-    VerticalSplitPane(splitPaneState = verticalSplitter) {
-        // --- Top Pane (Macro Manager & Editor) ---
-        first(minSize = 200.dp) {
-            HorizontalSplitPane(splitPaneState = horizontalSplitter) {
-                first(minSize = 200.dp) {
-                    MacroManagerScreen(
-                        viewModel = macroManagerViewModel,
-                        consoleViewModel = consoleViewModel,
-                        selectedTheme = selectedTheme,
-                        onNewMacroClicked = onRecordMacroClicked
-                    )
-                }
-                second(minSize = 300.dp) {
-                    MacroEditorScreen(viewModel = macroEditorViewModel, settingsViewModel = settingsViewModel)
-                }
-                splitter {
-                    visiblePart {
-                        Box(Modifier.fillMaxSize()) {
-                            Box(
-                                Modifier
-                                    .width(8.dp)
-                                    .height(48.dp)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                        shape = MaterialTheme.shapes.extraSmall
-                                    )
-                                    .align(Alignment.Center)
-                            )
-                        }
-                    }
-                    handle {
-                        Box(
-                            Modifier
-                                .markAsHandle()
-                                .fillMaxHeight()
-                                .width(16.dp)
+    MoveableVerticalSplitPane(
+        name = "Macro Editor Vertical",
+        firstName = "Editor/Manager",
+        secondName = "Timeline",
+        consoleViewModel = consoleViewModel,
+        settingsViewModel = settingsViewModel,
+        splitPaneState = verticalSplitter,
+        firstMinSize = 200.dp,
+        secondMinSize = 150.dp,
+        first = {
+            MoveableHorizontalSplitPane(
+                name = "Macro Editor Horizontal",
+                firstName = "Macro Manager",
+                secondName = "Macro Editor",
+                consoleViewModel = consoleViewModel,
+                settingsViewModel = settingsViewModel,
+                splitPaneState = horizontalSplitter,
+                firstMinSize = 200.dp,
+                secondMinSize = 300.dp,
+                first = {
+                    Box(modifier = Modifier.fillMaxSize().background(panelBackground(4)).padding(8.dp)) {
+                        MacroManagerScreen(
+                            viewModel = macroManagerViewModel,
+                            consoleViewModel = consoleViewModel,
+                            selectedTheme = selectedTheme,
+                            onNewMacroClicked = onRecordMacroClicked
                         )
                     }
+                },
+                second = {
+                    Box(modifier = Modifier.fillMaxSize().background(panelBackground(5)).padding(8.dp)) {
+                        MacroEditorScreen(viewModel = macroEditorViewModel, settingsViewModel = settingsViewModel)
+                    }
                 }
-            }
-        }
-        // --- Bottom Pane (Timeline) ---
-        second(minSize = 150.dp) {
-            MacroTimelineScreen(
-                viewModel = macroTimelineViewModel,
-                onAddEventClicked = onAddEventClicked,
-                onRecordMacroClicked = onRecordMacroClicked
             )
-        }
-        splitter {
-            visiblePart {
-                Box(Modifier.fillMaxSize()) {
-                    Box(
-                        Modifier
-                            .width(48.dp)
-                            .height(8.dp)
-                            .background(
-                                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                                shape = MaterialTheme.shapes.extraSmall
-                            )
-                            .align(Alignment.Center)
-                    )
-                }
-            }
-            handle {
-                Box(
-                    Modifier
-                        .markAsHandle()
-                        .fillMaxWidth()
-                        .height(16.dp)
+        },
+        second = {
+            Box(modifier = Modifier.fillMaxSize().background(panelBackground(6)).padding(8.dp)) {
+                MacroTimelineScreen(
+                    viewModel = macroTimelineViewModel,
+                    onAddEventClicked = onAddEventClicked,
+                    onRecordMacroClicked = onRecordMacroClicked
                 )
             }
         }
-    }
+    )
 }

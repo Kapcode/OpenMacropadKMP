@@ -1,18 +1,17 @@
 package switchdektoptocompose.ui
 
-import androidx.compose.foundation.ContextMenuArea
-import androidx.compose.foundation.ContextMenuItem
-import androidx.compose.foundation.background
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CurrencyExchange
-import androidx.compose.material.icons.filled.DeleteSweep
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Sensors
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.GppBad
+import androidx.compose.material.icons.outlined.LinkOff
+import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,19 +23,27 @@ import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.model.ClientInfo
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConnectedDevicesScreen(
     devices: List<ClientInfo>,
     history: List<ConnectionHistoryManager.ConnectionEvent>,
+    trustedDevices: Map<String, String> = emptyMap(),
     totalCurrencySpent: Long = 0,
     onDisconnect: (String) -> Unit = {},
     onUnpair: (String) -> Unit = {},
     onBan: (ClientInfo) -> Unit = {},
+    onUnban: (String) -> Unit = {},
     onClearHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val clipboardManager = LocalClipboardManager.current
     
+    val connectedIds = remember(devices) { devices.map { it.id }.toSet() }
+    val offlineTrustedDevices = remember(trustedDevices, connectedIds) {
+        trustedDevices.filterKeys { it !in connectedIds }
+    }
+
     Column(modifier = modifier.fillMaxSize()) {
         SectionHeader(
             icon = Icons.Default.Sensors,
@@ -62,7 +69,7 @@ fun ConnectedDevicesScreen(
 
         if (devices.isEmpty()) {
             Box(
-                modifier = Modifier.fillMaxWidth().height(100.dp),
+                modifier = Modifier.fillMaxWidth().height(60.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text("No active sessions.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -80,43 +87,133 @@ fun ConnectedDevicesScreen(
                                 ContextMenuItem("Disconnect") { onDisconnect(device.id) }
                             )
                             if (device.isTrusted) {
-                                items.add(ContextMenuItem("Unpair") { onUnpair(device.id) })
+                                items.add(ContextMenuItem("Revoke Trust (Unpair)") { onUnpair(device.id) })
                             }
                             items.add(ContextMenuItem("Ban Device") { onBan(device) })
                             items.add(ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(device.id)) })
                             items
                         }
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surface,
+                            tonalElevation = 1.dp,
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                         ) {
-                            Box(modifier = Modifier.weight(1f)) {
-                                ConnectionItem(
-                                    name = device.name,
-                                    ipAddressPort = device.id,
-                                    onClick = {
-                                        clipboardManager.setText(AnnotatedString("${device.name} (${device.id})"))
-                                    }
-                                )
-                            }
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(end = 12.dp)
+                                modifier = Modifier.fillMaxWidth().padding(end = 8.dp)
                             ) {
-                                Icon(
-                                    Icons.Default.CurrencyExchange,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(14.dp),
-                                    tint = Color(0xFFFFD700)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    "${device.currency}",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    color = Color(0xFFFFD700),
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Box(modifier = Modifier.weight(1f)) {
+                                    ConnectionItem(
+                                        name = device.name,
+                                        ipAddressPort = device.id,
+                                        onClick = {
+                                            clipboardManager.setText(AnnotatedString("${device.name} (${device.id})"))
+                                        }
+                                    )
+                                }
+                                
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    if (device.isTrusted) {
+                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("Trusted Device", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                            Icon(
+                                                Icons.Default.VerifiedUser,
+                                                contentDescription = "Trusted",
+                                                tint = Color(0xFF4CAF50),
+                                                modifier = Modifier.size(20.dp).padding(horizontal = 4.dp)
+                                            )
+                                        }
+                                        
+                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("Revoke Trust", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                            IconButton(onClick = { onUnpair(device.id) }, modifier = Modifier.size(32.dp)) {
+                                                Icon(Icons.Outlined.LinkOff, "Revoke Trust", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                    } else {
+                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("One-Time Session", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                            Icon(
+                                                Icons.Default.Timer,
+                                                contentDescription = "Temporary",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(20.dp).padding(horizontal = 4.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(Modifier.width(4.dp))
+                                    
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(horizontal = 4.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.CurrencyExchange,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(14.dp),
+                                            tint = Color(0xFFFFD700)
+                                        )
+                                        Spacer(Modifier.width(2.dp))
+                                        Text(
+                                            "${device.currency}",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = Color(0xFFFFD700),
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    
+                                    IconButton(onClick = { onDisconnect(device.id) }, modifier = Modifier.size(32.dp)) {
+                                        Icon(Icons.Default.Close, "Disconnect", modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (offlineTrustedDevices.isNotEmpty()) {
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp), color = MaterialTheme.colorScheme.outlineVariant)
+            SectionHeader(
+                icon = Icons.Default.VerifiedUser,
+                title = "TRUSTED DEVICES (OFFLINE)",
+                badgeCount = offlineTrustedDevices.size
+            )
+            
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false),
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                items(offlineTrustedDevices.toList(), key = { it.first }) { (id, name) ->
+                    ContextMenuArea(
+                        items = {
+                            listOf(
+                                ContextMenuItem("Revoke Trust") { onUnpair(id) },
+                                ContextMenuItem("Ban Device") { onBan(ClientInfo(id, name)) },
+                                ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(id)) }
+                            )
+                        }
+                    ) {
+                        Surface(
+                            shape = MaterialTheme.shapes.small,
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Devices, null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(Modifier.width(12.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+                                    Text(id, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                IconButton(onClick = { onUnpair(id) }) {
+                                    Icon(Icons.Outlined.GppBad, "Revoke Trust", tint = MaterialTheme.colorScheme.error)
+                                }
                             }
                         }
                     }

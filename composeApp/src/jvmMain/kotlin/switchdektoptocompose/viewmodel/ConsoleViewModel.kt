@@ -1,8 +1,10 @@
 package switchdektoptocompose.viewmodel
 
-import switchdektoptocompose.model.LogLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import switchdektoptocompose.model.LogLevel
+import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
+import org.jetbrains.compose.splitpane.SplitPaneState
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -76,6 +78,27 @@ class ConsoleViewModel {
     private val timestampFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
     private var logFile: File? = null
     private val idGenerator = AtomicLong(0)
+
+    @OptIn(ExperimentalSplitPaneApi::class)
+    private val splitterStates = mutableMapOf<String, SplitPaneState>()
+
+    @OptIn(ExperimentalSplitPaneApi::class)
+    fun registerSplitter(name: String, state: SplitPaneState) {
+        splitterStates[name] = state
+    }
+
+    @OptIn(ExperimentalSplitPaneApi::class)
+    fun printAllSplitterPositions() {
+        if (splitterStates.isEmpty()) {
+            addLog(LogLevel.Verbose, "[Layout] No registered splitters found.")
+            return
+        }
+        val sb = StringBuilder("[Layout] Current Splitter Positions:\n")
+        splitterStates.entries.sortedBy { it.key }.forEach { (name, state) ->
+            sb.append("  - $name: ${"%.4f".format(state.positionPercentage)}\n")
+        }
+        addLog(LogLevel.Info, sb.toString())
+    }
 
     fun setLogLevel(level: LogLevel) {
         _logLevel.value = level

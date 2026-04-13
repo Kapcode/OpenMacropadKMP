@@ -235,16 +235,21 @@ Automated macros could cause loss of system control if they ran too long or went
 
 ## 18. Desktop Taskbar & System Tray Integration
 
-### Challenge: Unreliable "Minimize to Tray" Behavior
-- **Problem**: The initial implementation for iconifying the application to the system tray was unstable across different OS environments, lacking proper "Restore" behavior and clear user feedback.
+### Challenge: Unreliable "Minimize to Tray" & Inconsistent Exit Behavior
+- **Problem**: The initial implementation for iconifying the application to the system tray was unstable across different OS environments, lacked proper "Restore" behavior, and had inconsistent exit logic between the Window [X] button and the Tray "Exit" menu item.
 - **Solution**:
     - **Native Tray Integration**: Leveraged Compose for Desktop's `Tray` API to provide a stable, OS-native icon and context menu.
-    - **Smooth Transitions**: Implemented a quadratic ease-in animation that scales and moves the window toward the system tray area during minimize.
-    - **Dynamic Menu Items**: Implemented a state-aware context menu that changes its labels (e.g., "Show Main Window" vs. "Hide to Tray") based on the current window visibility and minimized state.
-    - **Robust Toggling**: Optimized the `onAction` handler to handle quick clicks, window restoration from a minimized taskbar state, and immediate cancellation of active hide animations if the user "catches" the window.
-    - **Stability**: Set `animateToTray` to `false` by default in `AppSettings` to provide a more predictable out-of-the-box experience while remaining configurable.
-    - **User Notification**: Created a dedicated `MinimizeToTrayDialog` with high-visibility Material 3 typography to inform the user when the application is continuing to run in the background. Included a "Don't show again" option that persists in `AppSettings`.
-    - **High-Quality Assets**: Switched to a 512px icon to eliminate white fringing artifacts on dark system taskbars.
+    - **Three-Option Exit System**: Refactored the exit behavior into a configurable system in `AppSettings`:
+        1. **ASK**: Shows a confirmation dialog (Ask every time).
+        2. **TRAY**: Minimizes the window to the system tray (Exit to Tray).
+        3. **EXIT**: Closes the application immediately (Just Exit).
+    - **Context-Aware Logic**: 
+        - The **Window [X]** button respects the `exitBehavior` setting (e.g., will minimize to tray if "TRAY" is selected).
+        - **Manual "Exit" Buttons** (Tray Menu and UI Header) are treated as explicit shutdown requests. If behavior is "ASK", the dialog is shown; otherwise, the app exits immediately, bypassing the "TRAY" setting to ensure users can always fully quit the app without changing settings.
+    - **Shared Window State**: Resolved state desync by sharing a single `DesktopWindowState` instance between `main.kt` and `DesktopApp`. This ensures that tray animations and visibility toggles affect the actual application window consistently.
+    - **Cleanup**: Fully removed the deprecated `MinimizeToTrayDialog` and consolidated settings into the `exitBehavior` property.
+    - **Smooth Transitions**: Maintained the quadratic ease-in animation that scales and moves the window toward the system tray area during minimize.
+    - **High-Quality Assets**: Uses a 512px icon to eliminate white fringing artifacts on dark system taskbars.
 
 ## 19. Comprehensive UI Theming & Accessibility
 

@@ -1,5 +1,6 @@
 package switchdektoptocompose.viewmodel
 
+import switchdektoptocompose.model.LogLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -71,5 +72,11 @@ class InspectorViewModel(
 
     fun onBottomRightYChanged(value: String) {
         _bottomRightY.value = value
+    }
+
+    fun toggleInspector() {
+        _screenshotOnPress.value = !_screenshotOnPress.value
+        val status = if (_screenshotOnPress.value) "ENABLED" else "DISABLED"
+        consoleViewModel.addLog(LogLevel.Info, "Global Key Inspector $status via shortcut.")
     }
 }

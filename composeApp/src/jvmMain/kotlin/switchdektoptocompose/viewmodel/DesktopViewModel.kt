@@ -38,8 +38,9 @@ data class DesktopUiState(
  * The ViewModel for the desktop application.
  */
 class DesktopViewModel(
-    private val settingsViewModel: SettingsViewModel,
-    val consoleViewModel: ConsoleViewModel
+    val settingsViewModel: SettingsViewModel,
+    val consoleViewModel: ConsoleViewModel,
+    val inspectorViewModel: InspectorViewModel
 ) {
 
     lateinit var macroManagerViewModel: MacroManagerViewModel
@@ -67,12 +68,30 @@ class DesktopViewModel(
             trustedDevices = TrustedDeviceManager.getTrustedDevices(),
             totalCurrencySpent = AppSettings.totalCurrencySpent
         ) }
+        
+        settingsViewModel.setPushSettingsCallback {
+            server.pushSettingsToClients(
+                theme = settingsViewModel.clientTheme.value,
+                analyticsEnabled = settingsViewModel.clientAnalyticsEnabled.value,
+                slamFireEnabled = settingsViewModel.clientSlamFireEnabled.value,
+                slamFireAction = settingsViewModel.clientSlamFireAction.value
+            )
+        }
+
         consoleViewModel.addLog(LogLevel.Info, "DesktopViewModel Initialized")
     }
 
     fun setMacroExecutionEnabled(enabled: Boolean) {
         _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
         consoleViewModel.addLog(LogLevel.Info, "Macro execution ${if (enabled) "enabled" else "disabled"}")
+        
+        // Push status to all connected clients
+        viewModelScope.launch {
+            server.sendToAll(controlMessage(
+                ControlCommand.PUSH_SETTINGS,
+                parameters = mapOf("macroExecutionEnabled" to enabled.toString())
+            ))
+        }
     }
     
     fun stopAllMacros() {
@@ -317,6 +336,17 @@ class DesktopViewModel(
         TrustedDeviceManager.unbanDevice(clientId)
         _uiState.update { it.copy(bannedDevices = TrustedDeviceManager.getBannedDevices()) }
         consoleViewModel.addLog(LogLevel.Info, "Unbanned device: $clientId")
+    }
+
+    fun unbanAllDevices() {
+        val count = TrustedDeviceManager.getBannedDevices().size
+        if (count == 0) return
+        
+        TrustedDeviceManager.getBannedDevices().keys.forEach { 
+            TrustedDeviceManager.unbanDevice(it)
+        }
+        _uiState.update { it.copy(bannedDevices = emptyMap()) }
+        consoleViewModel.addLog(LogLevel.Info, "Unbanned all devices ($count total).")
     }
 
     fun removeTrustedDevice(clientId: String) {

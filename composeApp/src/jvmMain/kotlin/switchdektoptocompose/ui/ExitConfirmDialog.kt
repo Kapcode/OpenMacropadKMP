@@ -16,13 +16,13 @@ fun ExitConfirmDialog(
     selectedTheme: String,
     consoleViewModel: ConsoleViewModel,
     onExitNow: () -> Unit,
-    onRestart: () -> Unit,
+    onExitToTray: () -> Unit,
     onDismiss: () -> Unit
 ) {
     AppDialog(
         onCloseRequest = onDismiss,
         title = "EXIT",
-        state = rememberWindowState(width = 400.dp, height = 250.dp),
+        state = rememberWindowState(width = 450.dp, height = 250.dp),
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel,
         resizable = false
@@ -40,7 +40,7 @@ fun ExitConfirmDialog(
             )
             
             Text(
-                "Are you sure you want to exit?",
+                "How would you like to exit?",
                 style = MaterialTheme.typography.titleMedium
             )
             
@@ -58,11 +58,11 @@ fun ExitConfirmDialog(
                 }
                 
                 Button(
-                    onClick = onRestart,
-                    modifier = Modifier.weight(1f),
+                    onClick = onExitToTray,
+                    modifier = Modifier.weight(1.2f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
                 ) {
-                    Text("RESTART")
+                    Text("EXIT TO TRAY")
                 }
                 
                 Button(
@@ -70,7 +70,7 @@ fun ExitConfirmDialog(
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                 ) {
-                    Text("EXIT NOW")
+                    Text("JUST EXIT")
                 }
             }
         }

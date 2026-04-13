@@ -9,12 +9,18 @@ import switchdektoptocompose.di.ViewModelFactory
 import switchdektoptocompose.logic.InspectorManager
 import switchdektoptocompose.logic.TriggerListener
 import switchdektoptocompose.ui.DesktopApp
-import switchdektoptocompose.ui.MinimizeToTrayDialog
+import switchdektoptocompose.ui.DesktopWindowState
 import switchdektoptocompose.ui.rememberDesktopWindowState
 import javax.swing.UIManager
 
+object AppConfig {
+    var isVerboseOutputEnabled: Boolean = false
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
-fun main() = application {
+fun main(args: Array<String>) = application {
+    AppConfig.isVerboseOutputEnabled = args.contains("-o") || args.contains("-output")
+
     // Set the initial Look and Feel
     UIManager.setLookAndFeel(FlatDarkLaf())
 
@@ -36,14 +42,33 @@ fun main() = application {
     }
     val inspectorManager = remember { InspectorManager(inspectorViewModel, consoleViewModel) }
 
-    var showMinimizeToTrayDialog by remember { mutableStateOf(false) }
-    val minimizeToTray by settingsViewModel.minimizeToTray.collectAsState()
-    val showMinimizeToTrayDialogSetting by settingsViewModel.showMinimizeToTrayDialog.collectAsState()
+    var showExitDialog by remember { mutableStateOf(false) }
+    var showShortcutsDialog by remember { mutableStateOf(false) }
+    var showPushSettingsDialog by remember { mutableStateOf(false) }
+    var showSettingsDialog by remember { mutableStateOf(false) }
+    val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val uiState by desktopViewModel.uiState.collectAsState()
     val pendingPairingRequests = uiState.pendingPairingRequests
     val icon = painterResource("macropadIcon512.png")
+
+    // Update triggers in the application scope so they stay active even when window is hidden
+    val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+    val eStopKey by settingsViewModel.eStopKey.collectAsState()
+    val copyConsoleShortcut by settingsViewModel.copyConsoleOutputShortcut.collectAsState()
+    val stopKeyShortcut by settingsViewModel.stopKeyShortcut.collectAsState()
+    val inspectKeyShortcut by settingsViewModel.inspectKeyShortcut.collectAsState()
+
+    LaunchedEffect(macroFiles, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
+        triggerListener.updateActiveTriggers(
+            macroFiles,
+            eStopKey,
+            copyConsoleShortcut,
+            stopKeyShortcut,
+            inspectKeyShortcut
+        )
+    }
 
     DisposableEffect(Unit) {
         desktopViewModel.startServer()
@@ -75,51 +100,66 @@ fun main() = application {
                 Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
             }
             Separator()
-            Item("Exit", onClick = ::exitApplication)
+            Item("Shortcuts & Keymap", onClick = { showShortcutsDialog = true })
+            Item("Bulk Settings Pusher", onClick = { showPushSettingsDialog = true })
+            Separator()
+            Item("Exit", onClick = {
+                if (exitBehavior == "ASK") {
+                    showExitDialog = true
+                    desktopWindowState.showWindow()
+                } else {
+                    exitApplication()
+                }
+            })
         }
     )
 
-    if (showMinimizeToTrayDialog) {
-        MinimizeToTrayDialog(
+    if (showShortcutsDialog) {
+        switchdektoptocompose.ui.ShortcutsDialog(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
             selectedTheme = selectedTheme,
-            onConfirm = { dontShowAgain ->
-                if (dontShowAgain) {
-                    settingsViewModel.setShowMinimizeToTrayDialog(false)
-                }
-                showMinimizeToTrayDialog = false
-                desktopWindowState.animateToTray()
-            },
-            onDismiss = { showMinimizeToTrayDialog = false }
+            onDismissRequest = { showShortcutsDialog = false }
         )
     }
+
+    if (showPushSettingsDialog) {
+        switchdektoptocompose.ui.PushSettingsDialog(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            selectedTheme = selectedTheme,
+            onDismissRequest = { showPushSettingsDialog = false }
+        )
+    }
+
 
     Window(
         visible = desktopWindowState.isWindowVisible,
         onCloseRequest = {
-            if (minimizeToTray) {
-                if (showMinimizeToTrayDialogSetting) {
-                    showMinimizeToTrayDialog = true
-                } else {
-                    desktopWindowState.animateToTray()
+            when (exitBehavior) {
+                "TRAY" -> desktopWindowState.animateToTray()
+                "EXIT" -> exitApplication()
+                else -> {
+                    showExitDialog = true
                 }
-            } else {
-                exitApplication()
             }
         },
         state = desktopWindowState.windowState,
         title = "Open Macropad (Compose)",
         icon = icon
     ) {
-        val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
-        val eStopKey by settingsViewModel.eStopKey.collectAsState()
-
-        LaunchedEffect(macroFiles, eStopKey) {
-            triggerListener.updateActiveTriggers(macroFiles, eStopKey)
-        }
-
         DesktopApp(
             viewModels = viewModels,
-            onExit = ::exitApplication
+            desktopWindowState = desktopWindowState,
+            onExit = ::exitApplication,
+            showExitDialog = showExitDialog,
+            onShowExitDialogChange = { showExitDialog = it },
+            showShortcutsDialog = showShortcutsDialog,
+            onShowShortcutsDialogChange = { showShortcutsDialog = it },
+            showPushSettingsDialog = showPushSettingsDialog,
+            onShowPushSettingsDialogChange = { showPushSettingsDialog = it },
+            showSettingsDialog = showSettingsDialog,
+            onShowSettingsDialogChange = { showSettingsDialog = it }
         )
     }
 }
