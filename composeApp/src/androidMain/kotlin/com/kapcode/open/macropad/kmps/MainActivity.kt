@@ -69,32 +69,41 @@ import android.hardware.SensorManager
 import android.content.Context
 import androidx.camera.core.ExperimentalGetImage
 import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
+import com.kapcode.open.macropad.kmps.network.ClientRepository
 
 const val TAG = "MainActivity"
 
 @OptIn(ExperimentalMaterial3Api::class)
-class MainActivity : ComponentActivity(), SensorEventListener {
+class MainActivity : ComponentActivity() {
 
     private val clientDiscovery by lazy { ClientDiscovery() }
     private val settingsViewModel = SettingsViewModel()
-    private val clientViewModel = ClientViewModel()
+    private lateinit var clientRepository: ClientRepository
+    private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
     private var onOkayPressed: (() -> Unit)? = null
     
-    private var sensorManager: SensorManager? = null
-    private var proximitySensor: Sensor? = null
-    private var lastProximityState: Boolean? = null // null = unknown, true = covered, false = uncovered
+    private lateinit var slamFireManager: SlamFireManager
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         
-        sensorManager = getSystemService(Context.SENSOR_SERVICE) as SensorManager
-        proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
+        clientRepository = ClientRepository(this)
+        clientViewModel = ClientViewModel(clientRepository)
 
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
+        
+        slamFireManager = SlamFireManager(this, settingsViewModel, lifecycleScope) { isDouble ->
+            if (isDouble) {
+                // In MainActivity, we don't really have a 'Cancel' action for double slam
+                // ,but we could just trigger the same okay or nothing.
+            } else {
+                onOkayPressed?.invoke()
+            }
+        }
         
         setContent {
             val splashScreenVisible = remember { mutableStateOf(true) }
@@ -164,47 +173,23 @@ class MainActivity : ComponentActivity(), SensorEventListener {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (settingsViewModel.slamFireEnabled.value) {
-            val trigger = settingsViewModel.slamFireTrigger.value
-            val isMatch = when (trigger) {
-                SlamFireTrigger.VolumeDown -> keyCode == KeyEvent.KEYCODE_VOLUME_DOWN
-                SlamFireTrigger.VolumeUp -> keyCode == KeyEvent.KEYCODE_VOLUME_UP
-                SlamFireTrigger.Power -> keyCode == KeyEvent.KEYCODE_POWER
-                SlamFireTrigger.Bixby -> keyCode == 1082 // Common Bixby code
-                SlamFireTrigger.Assistant -> keyCode == KeyEvent.KEYCODE_ASSIST || keyCode == KeyEvent.KEYCODE_VOICE_ASSIST
-                else -> false
-            }
-            if (isMatch) {
-                onOkayPressed?.invoke()
-                return true
-            }
+        if (slamFireManager.handleKeyDown(keyCode)) {
+            return true
         }
         return super.onKeyDown(keyCode, event)
     }
 
-    override fun onSensorChanged(event: SensorEvent?) {
-        if (event?.sensor?.type == Sensor.TYPE_PROXIMITY && settingsViewModel.slamFireEnabled.value) {
-            val distance = event.values[0]
-            val maxRange = event.sensor.maximumRange
-            
-            // Many sensors are binary (0 for near, maxRange for far). 
-            // For non-binary sensors, 5cm is a common "near" threshold.
-            val threshold = if (maxRange > 5f) 5f else maxRange / 2f
-            val isCovered = distance < threshold
-            
-            if (isCovered != lastProximityState) {
-                lastProximityState = isCovered
-                val trigger = settingsViewModel.slamFireTrigger.value
-                if (trigger == SlamFireTrigger.ProximityCovered && isCovered) {
-                    onOkayPressed?.invoke()
-                } else if (trigger == SlamFireTrigger.ProximityUncovered && !isCovered) {
-                    onOkayPressed?.invoke()
-                }
-            }
-        }
+    override fun onResume() {
+        super.onResume()
+        slamFireManager.start()
+        // Removed eager discovery start to save resources until user clicks "Scan"
     }
 
-    override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
+    override fun onPause() {
+        super.onPause()
+        slamFireManager.stop()
+        // clientDiscovery is lazy, only stop if it was initialized
+    }
 
     @Composable
     private fun SplashUI(isBlinking: Boolean) {
@@ -249,20 +234,6 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                 )
             }
         }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        proximitySensor?.let {
-            sensorManager?.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
-        }
-        // Removed eager discovery start to save resources until user clicks "Scan"
-    }
-
-    override fun onPause() {
-        super.onPause()
-        sensorManager?.unregisterListener(this)
-        // clientDiscovery is lazy, only stop if it was initialized
     }
 
     override fun onDestroy() {

@@ -77,6 +77,17 @@ To assist users on touchscreens or with hidden system scrollbars, all major scro
 - **Splash Screen**: Follows the Android 12+ standard using `androidx.core:core-splashscreen`.
 - **Adaptive Icons**: 512px source wrapped in a 192dp container to fit within the OS-enforced "safe circle" without clipping or "black ring" artifacts.
 
+### Dashboard & Edit Mode (Android)
+To allow users to customize their experience, the "My Dashboard" tab features an interactive grid:
+- **Long-Press Activation**: Users initiate "Edit Mode" by long-pressing any macro in the dashboard.
+- **Visual Feedback (Dragging)**:
+    - **Scaling**: The dragged item scales to `1.1f` to appear "lifted" from the surface.
+    - **Rotation**: A subtle `2-degree` rotation is applied to create a "loose" or "floating" feel.
+    - **Shadows**: Elevation is increased while dragging to distinguish the active item from the grid.
+- **Dynamic Reordering**: The grid automatically shifts items to fill gaps in real-time as the dragged macro moves over other positions.
+- **Macro Picker**: A prominent **Floating Action Button (FAB)** opens a searchable dialog containing all macros from the server, allowing users to "pin" their favorites to the dashboard.
+- **Persistence**: Any additions, removals, or reordering are immediately persisted to local storage (`SharedPreferences`).
+
 ### Mobile Pairing & QR Scanning
 To ensure secure and ergonomic device pairing on mobile:
 - **Keyboard-Aware Layout**: Use `WindowInsets.ime` to detect keyboard state. Pinned instructions are placed at the top, and critical action fields (like Manual IP entry) are pinned to the bottom. Central content (QR Scanner) uses `Modifier.weight(1f)` to shrink gracefully when the keyboard is visible.

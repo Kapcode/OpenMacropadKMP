@@ -49,17 +49,17 @@ The Desktop app becomes the central management point.
     - [DONE] Link InspectorManager to DesktopViewModel.
     - [DONE] Emit `ACTIVE_PROCESS_CHANGED` packet to Android clients.
 
-## Phase 3: Android "Dual-Mode" Interface [IN PROGRESS]
+## Phase 3: Android "Dual-Mode" Interface [DONE]
 The Android app gains a dynamic, searchable interface for managing macros and packs.
 - [DONE] Navigation Bar: Implement `NavigationHeader` with "Active Pack" and "My Dashboard" tabs.
 - [DONE] Search Bar: Implement real-time filtering of the macro grid based on search query.
 - [DONE] Dashboard Persistence: Save curated macros to local storage via `SharedPreferences`.
 - [DONE] Long-Press Management: Toggle macro presence in "My Dashboard" via long-press on any button.
 - [DONE] Dynamic Grid Logic (Active Pack): Load associated `MacroPack` based on `active_process` broadcast.
-- [ ] Editable User Grid (Static):
-    - [ ] Customization Settings: Add Rows/Columns configuration in Android settings.
-    - [ ] Edit Mode: Implement drag-and-drop or reordering logic for macro buttons.
-    - [ ] Add Item (FAB): A picker to add any available macro to the custom grid.
+- [DONE] Editable User Grid (Static):
+    - [DONE] Edit Mode: Implement drag-and-drop or reordering logic for macro buttons.
+    - [DONE] Add Item (FAB): A picker to add any available macro to the custom grid.
+    - [DONE] Customization Settings: Add Rows/Columns configuration in Android settings.
 
 ## Phase 4: Communication & Sync [DONE]
 - [DONE] Protocol Update:

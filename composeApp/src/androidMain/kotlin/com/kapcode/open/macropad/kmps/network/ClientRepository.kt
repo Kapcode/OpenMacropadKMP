@@ -1,0 +1,318 @@
+package com.kapcode.open.macropad.kmps.network
+
+import MacroKTOR.MacroKtorClient
+import android.annotation.SuppressLint
+import android.content.Context
+import android.util.Log
+import com.kapcode.open.macropad.kmps.ServerStorage
+import com.kapcode.open.macropad.kmps.TokenManager
+import com.kapcode.open.macropad.kmps.models.MarketplaceItem
+import com.kapcode.open.macropad.kmps.network.sockets.model.*
+import io.ktor.client.*
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.websocket.WebSockets
+import io.ktor.websocket.*
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.receiveAsFlow
+import okhttp3.OkHttpClient
+import java.security.cert.X509Certificate
+import javax.net.ssl.SSLContext
+import javax.net.ssl.X509TrustManager
+import kotlin.coroutines.cancellation.CancellationException
+
+class ClientRepository(private val context: Context) {
+    private var client: MacroKtorClient? = null
+    private var clientJob: Job? = null
+    private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+
+    fun connect(
+        ipAddress: String,
+        port: Int,
+        deviceName: String,
+        isSecure: Boolean,
+        discoveryFingerprint: String?,
+        onUpdate: (status: String, serverName: String?, reason: String?, verificationCode: String?) -> Unit,
+        onMacrosReceived: (List<String>) -> Unit,
+        onActiveProcessChanged: (String?) -> Unit,
+        onCurrencyUpdate: (Long) -> Unit,
+        onExecutionStart: (String) -> Unit,
+        onExecutionComplete: (String) -> Unit,
+        onExecutionFailed: (String, String) -> Unit,
+        onSettingsPushed: (Map<String, String>) -> Unit,
+        onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit
+    ) {
+        clientJob?.cancel()
+        clientJob = scope.launch {
+            var backoffMillis = 1000L
+            val maxBackoffMillis = 16000L
+            var retryCount = 0
+            val maxRetries = 5
+
+            while (isActive) {
+                var tempClient: MacroKtorClient? = null
+                try {
+                    val ktorHttpClient = HttpClient(OkHttp) {
+                        install(WebSockets)
+                        engine {
+                            if (isSecure) {
+                                val savedFingerprint = ServerStorage.getServerFingerprint(context, "$ipAddress:$port")
+                                    ?: discoveryFingerprint
+
+                                if (savedFingerprint != null) {
+                                    preconfigured = createPinnedOkHttpClient(savedFingerprint)
+                                } else {
+                                    preconfigured = createUnsafeOkHttpClient()
+                                }
+                            }
+                        }
+                    }
+
+                    tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
+                    this@ClientRepository.client = tempClient
+
+                    onUpdate("Connecting...", ipAddress, null, null)
+                    withContext(Dispatchers.IO) {
+                        tempClient.connect(deviceName)
+                    }
+
+                    onUpdate("Connected", ipAddress, null, null)
+                    backoffMillis = 1000L
+                    retryCount = 0
+                    var lastHeartbeat = System.currentTimeMillis()
+                    var currentVerificationCode: String? = null
+
+                    val tokenManager = TokenManager.getInstance(context)
+                    tempClient.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+
+                    val macroFetchJob = launch {
+                        while (isActive) {
+                            tempClient.send(getMacrosRequest().toBytes())
+                            delay(5000)
+                        }
+                    }
+
+                    val watchdogJob = launch {
+                        while (isActive) {
+                            delay(5000)
+                            if (System.currentTimeMillis() - lastHeartbeat > 40000) {
+                                Log.w("ClientRepository", "Heartbeat timeout! Reconnecting...")
+                                this@launch.cancel()
+                                tempClient.close()
+                            }
+                        }
+                    }
+
+                    tempClient.incomingMessages.receiveAsFlow().collect { frame ->
+                        if (frame is Frame.Binary) {
+                            try {
+                                lastHeartbeat = System.currentTimeMillis()
+                                val dataModel = DataModel.fromBytes(frame.readBytes())
+                                dataModel.handle(
+                                    onControl = { command, params ->
+                                        when (command) {
+                                            ControlCommand.AUTH_CHALLENGE -> {
+                                                val fingerprint = params["fingerprint"]
+                                                if (fingerprint != null) {
+                                                    ServerStorage.saveServerFingerprint(context, "$ipAddress:$port", fingerprint)
+                                                }
+                                            }
+                                            ControlCommand.PAIRING_PENDING -> {
+                                                onMacrosReceived(emptyList())
+                                                val code = params["code"]
+                                                currentVerificationCode = code
+                                                onUpdate("Pending Approval", null, null, code)
+                                            }
+                                            ControlCommand.PAIRING_CODE_MATCHED -> {
+                                                onUpdate("Code Matched", null, null, currentVerificationCode)
+                                            }
+                                            ControlCommand.PAIRING_APPROVED -> {
+                                                onUpdate("Connected", ipAddress, null, null)
+                                                launch {
+                                                    tempClient.send(textMessage("getMacros").toBytes())
+                                                }
+                                            }
+                                            ControlCommand.PAIRING_REJECTED -> {
+                                                onMacrosReceived(emptyList())
+                                                onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.", null)
+                                                this@launch.cancel()
+                                            }
+                                            ControlCommand.BANNED -> {
+                                                onMacrosReceived(emptyList())
+                                                val reason = params["reason"] ?: "Device is banned"
+                                                onUpdate("Banned", null, reason, null)
+                                                this@launch.cancel()
+                                            }
+                                            ControlCommand.PUSH_SETTINGS -> {
+                                                onSettingsPushed(params)
+                                            }
+                                            ControlCommand.MARKETPLACE_LIST -> {
+                                                // We'll handle this in onData for now since it might be a large JSON blob
+                                            }
+                                            ControlCommand.DISCONNECT -> {
+                                                onMacrosReceived(emptyList())
+                                                onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.", null)
+                                                this@launch.cancel()
+                                            }
+                                            ControlCommand.EXECUTION_START -> {
+                                                params["macro"]?.let { onExecutionStart(it) }
+                                            }
+                                            ControlCommand.EXECUTION_COMPLETE -> {
+                                                params["macro"]?.let { onExecutionComplete(it) }
+                                            }
+                                            ControlCommand.EXECUTION_FAILED -> {
+                                                val macro = params["macro"] ?: "Unknown"
+                                                val error = params["error"] ?: "Unknown error"
+                                                onExecutionFailed(macro, error)
+                                            }
+                                            else -> {}
+                                        }
+                                    },
+                                    onText = { text ->
+                                        if (text.startsWith("macros:")) {
+                                            val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
+                                            onMacrosReceived(macroNames)
+                                            onUpdate("Connected", ipAddress, null, null)
+                                            macroFetchJob.cancel()
+                                        }
+                                    },
+                                    onHeartbeat = {
+                                        lastHeartbeat = System.currentTimeMillis()
+                                    },
+                                    onCommand = { command, params ->
+                                        if (command == "active_process") {
+                                            onActiveProcessChanged(params["name"])
+                                        }
+                                    },
+                                    onData = { key, value ->
+                                        when (key) {
+                                            "currency_update" -> {
+                                                try {
+                                                    val balance = value.decodeToString().toLong()
+                                                    onCurrencyUpdate(balance)
+                                                } catch (e: Exception) {
+                                                    Log.e("ClientRepository", "Failed to parse currency_update", e)
+                                                }
+                                            }
+                                            "marketplace_items" -> {
+                                                try {
+                                                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                                                    val items = json.decodeFromString<List<MarketplaceItem>>(value.decodeToString())
+                                                    onMarketplaceItemsReceived(items)
+                                                } catch (e: Exception) {
+                                                    Log.e("ClientRepository", "Failed to parse marketplace_items", e)
+                                                }
+                                            }
+                                        }
+                                    }
+                                )
+                            } catch (e: Exception) {
+                                Log.e("ClientRepository", "Error parsing DataModel", e)
+                            }
+                        }
+                    }
+                    watchdogJob.cancel()
+                    macroFetchJob.cancel()
+
+                } catch (e: Exception) {
+                    if (e is CancellationException) throw e
+                    retryCount++
+                    if (retryCount > maxRetries) {
+                        onUpdate("Failed", null, "Max retries reached.", null)
+                        this@launch.cancel()
+                        return@launch
+                    }
+                    onUpdate("Connecting...", null, "Retrying ($retryCount/$maxRetries)...", null)
+                } finally {
+                    tempClient?.close()
+                    this@ClientRepository.client = null
+                }
+
+                delay(backoffMillis)
+                backoffMillis = (backoffMillis * 2).coerceAtMost(maxBackoffMillis)
+            }
+        }
+    }
+
+    fun disconnect() {
+        clientJob?.cancel()
+        client?.close()
+        client = null
+    }
+
+    fun sendMacro(macroName: String) {
+        scope.launch {
+            client?.send(commandMessage("play:$macroName").toBytes())
+        }
+    }
+
+    fun submitPairingCode(code: String) {
+        scope.launch {
+            val msg = controlMessage(ControlCommand.PAIRING_RESPONSE, mapOf("code" to code))
+            client?.send(msg.toBytes())
+        }
+    }
+
+    fun requestMacros() {
+        scope.launch {
+            client?.send(getMacrosRequest().toBytes())
+        }
+    }
+
+    fun requestMarketplace() {
+        scope.launch {
+            client?.send(commandMessage("getMarketplace").toBytes())
+        }
+    }
+
+    fun downloadMarketplaceItem(itemId: String) {
+        scope.launch {
+            client?.send(commandMessage("downloadMarketplaceItem", mapOf("id" to itemId)).toBytes())
+        }
+    }
+
+    fun sendData(key: String, value: String) {
+        scope.launch {
+            client?.send(dataMessage(key, value.encodeToByteArray()).toBytes())
+        }
+    }
+
+    private fun createPinnedOkHttpClient(expectedFingerprint: String): OkHttpClient {
+        val trustManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+                if (chain == null || chain.isEmpty()) throw java.security.cert.CertificateException("Empty certificate chain")
+                val cert = chain[0]
+                val digest = java.security.MessageDigest.getInstance("SHA-256")
+                val fingerprint = digest.digest(cert.encoded).joinToString(":") { "%02X".format(it) }
+                if (fingerprint != expectedFingerprint) {
+                    throw java.security.cert.CertificateException("Certificate fingerprint mismatch!")
+                }
+            }
+            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+        }
+
+        val sslContext = SSLContext.getInstance("TLS")
+        sslContext.init(null, arrayOf(trustManager), java.security.SecureRandom())
+
+        return OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustManager)
+            .hostnameVerifier { _, _ -> true }
+            .build()
+    }
+
+    private fun createUnsafeOkHttpClient(): OkHttpClient {
+        val trustAllCerts = arrayOf<X509TrustManager>(
+            @SuppressLint("CustomX509TrustManager")
+            object : X509TrustManager {
+                override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+                override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
+            }
+        )
+        val sslContext = SSLContext.getInstance("SSL")
+        sslContext.init(null, trustAllCerts, java.security.SecureRandom())
+        return OkHttpClient.Builder()
+            .sslSocketFactory(sslContext.socketFactory, trustAllCerts[0])
+            .hostnameVerifier { _, _ -> true }.build()
+    }
+}

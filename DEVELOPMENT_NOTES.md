@@ -351,7 +351,7 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Context-Aware Resolution**: Implemented automatic "Active Pack" switching based on the Desktop's active process broadcast.
 - [x] **Advanced Gestures**: Refactored macro buttons to use `pointerInput` for reliable long-press detection.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
-- [ ] **Editable User Grid**: Implement drag-and-drop or reordering logic for macro buttons.
+- [x] **Editable User Grid**: Implemented reordering logic using `detectDragGesturesAfterLongPress` and a custom `MacroPicker` for adding any available macro to the dashboard.
 
 ### Desktop Server
 - [x] **Architectural Refactoring**: Cleaned up the `jvmMain` package structure, separating UI, ViewModels, Models, Logic, and DI.
@@ -460,6 +460,16 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Solution**:
     - **Explicit Binding**: Created a `bindViewModel` pattern where the `MainActivity` explicitly connects the storage layer to the VM after both are fully initialized.
     - **Lifecycle-Aware Toasts**: Wrapped all Toast calls in `MainScope().launch` and ensured they use the `Activity` context rather than a potentially stale `Application` context for UI-bound feedback.
+
+## 35. Android Edit Mode & Reordering
+
+### Challenge: Drag-and-Drop Reordering in a LazyVerticalGrid
+- **Problem**: Jetpack Compose's `LazyVerticalGrid` does not have built-in support for drag-and-drop reordering, and maintaining smooth visual feedback during swaps is complex.
+- **Solution**:
+    - **Long-Press Detection**: Used `detectDragGesturesAfterLongPress` to initiate the drag state.
+    - **Index Calculation**: Implemented a hit-test logic that calculates the currently hovered item index based on pointer offset and `gridState.layoutInfo`.
+    - **Smooth Swapping**: Integrated an `IntOffset` for the dragging item and used `graphicsLayer` scaling and elevation to provide depth.
+    - **Atomic List Updates**: Created a `moveDashboardMacro` function in `ClientViewModel` that performs a stable list swap, which is then persisted to `SharedPreferences` via `SettingsStorage`.
 
 ### Ideas
 - **Cursor Hotbar**: I have a prompt for this, but the general idea is to have a hotbar of cursor locations that you can scroll through, making UI navigation faster. It would be JSON backed, use the Macro Manager UI as well as use the Editor.

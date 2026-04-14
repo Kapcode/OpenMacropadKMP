@@ -82,11 +82,19 @@ class SettingsStorage(context: Context) {
     }
 
     fun saveDashboardMacros(macros: List<String>) {
-        prefs.edit().putStringSet("dashboard_macros", macros.toSet()).apply()
+        prefs.edit().putString("dashboard_macros", macros.joinToString(",")).apply()
     }
 
     fun getDashboardMacros(): List<String> {
-        return prefs.getStringSet("dashboard_macros", emptySet())?.toList() ?: emptyList()
+        val value = try {
+            prefs.getString("dashboard_macros", "")
+        } catch (e: ClassCastException) {
+            val set = prefs.getStringSet("dashboard_macros", emptySet()) ?: emptySet()
+            val joined = set.joinToString(",")
+            prefs.edit().putString("dashboard_macros", joined).apply()
+            joined
+        } ?: ""
+        return if (value.isEmpty()) emptyList() else value.split(",")
     }
 
     fun bindViewModel(viewModel: SettingsViewModel, clientViewModel: ClientViewModel, scope: CoroutineScope) {

@@ -1,11 +1,18 @@
 package com.kapcode.open.macropad.kmps
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
+import com.kapcode.open.macropad.kmps.models.MarketplaceItem
+import com.kapcode.open.macropad.kmps.network.ClientRepository
+import com.kapcode.open.macropad.kmps.settings.AppTheme
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 
 data class ClientUiState(
     val connectionStatus: String = "Disconnected",
@@ -29,14 +36,93 @@ data class ClientUiState(
     val installedPacks: List<MacroPack> = emptyList(),
     val filteredPacks: List<MacroPack> = emptyList(),
     val dashboardMacros: List<String> = emptyList(),
+    val marketplaceItems: List<MarketplaceItem> = emptyList(),
+    val isMarketplaceLoading: Boolean = false,
     val searchQuery: String = "",
-    val currentTab: Int = 0, // 0: Active Pack, 1: My Dashboard
+    val currentTab: Int = 0, // 0: Active Pack, 1: My Dashboard, 2: Marketplace
     val isEditMode: Boolean = false
 )
 
-class ClientViewModel : ViewModel() {
+class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(ClientUiState())
     val uiState: StateFlow<ClientUiState> = _uiState.asStateFlow()
+
+    fun connect(
+        ipAddress: String,
+        port: Int,
+        deviceName: String,
+        isSecure: Boolean,
+        discoveryFingerprint: String?,
+        tokenManager: TokenManager,
+        settingsViewModel: SettingsViewModel,
+        onExecutionFailedToast: (String) -> Unit
+    ) {
+        repository.connect(
+            ipAddress = ipAddress,
+            port = port,
+            deviceName = deviceName,
+            isSecure = isSecure,
+            discoveryFingerprint = discoveryFingerprint,
+            onUpdate = { status, name, reason, code ->
+                updateConnection(status, name, reason, code)
+            },
+            onMacrosReceived = { macros ->
+                setMacros(macros)
+            },
+            onActiveProcessChanged = { process ->
+                setActiveProcess(process)
+            },
+            onCurrencyUpdate = { balance ->
+                updateCurrency(balance)
+            },
+            onExecutionStart = { macro ->
+                onMacroExecutionStart(macro)
+                if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+                    repository.sendData("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toString())
+                    repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                }
+            },
+            onExecutionComplete = { macro ->
+                onMacroExecutionComplete(macro)
+            },
+            onExecutionFailed = { macro, error ->
+                onMacroExecutionFailed(macro)
+                tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                repository.sendData("currency_spent", (-BillingConstants.TOKENS_PER_MACRO_PRESS).toString())
+                repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                onExecutionFailedToast("Macro '$macro' failed: $error")
+            },
+            onSettingsPushed = { params ->
+                params["theme"]?.let { themeStr ->
+                    try {
+                        settingsViewModel.setTheme(AppTheme.valueOf(themeStr))
+                    } catch (e: Exception) {}
+                }
+                params["analyticsEnabled"]?.let { settingsViewModel.setAnalyticsEnabled(it.toBoolean()) }
+                params["slamFireEnabled"]?.let { settingsViewModel.setSlamFireEnabled(it.toBoolean()) }
+                params["macroExecutionEnabled"]?.let { setMacroExecutionEnabled(it.toBoolean()) }
+            },
+            onMarketplaceItemsReceived = { items ->
+                setMarketplaceItems(items)
+            }
+        )
+    }
+
+    fun disconnect() {
+        repository.disconnect()
+    }
+
+    fun sendMacro(macroName: String) {
+        repository.sendMacro(macroName)
+    }
+
+    fun submitPairingCode(code: String) {
+        repository.submitPairingCode(code)
+    }
+
+    fun requestMacros() {
+        repository.requestMacros()
+    }
 
     fun updateConnection(status: String, server: String?, reason: String?, code: String?) {
         _uiState.update { it.copy(
@@ -142,6 +228,19 @@ class ClientViewModel : ViewModel() {
         _uiState.update { it.copy(dashboardMacros = macros) }
     }
 
+    fun requestMarketplace() {
+        _uiState.update { it.copy(isMarketplaceLoading = true) }
+        repository.requestMarketplace()
+    }
+
+    fun setMarketplaceItems(items: List<MarketplaceItem>) {
+        _uiState.update { it.copy(marketplaceItems = items, isMarketplaceLoading = false) }
+    }
+
+    fun downloadMarketplaceItem(item: MarketplaceItem) {
+        repository.downloadMarketplaceItem(item.id)
+    }
+
     fun addToDashboard(macro: String) {
         _uiState.update { state ->
             if (state.dashboardMacros.contains(macro)) state
@@ -152,6 +251,19 @@ class ClientViewModel : ViewModel() {
     fun removeFromDashboard(macro: String) {
         _uiState.update { state ->
             state.copy(dashboardMacros = state.dashboardMacros - macro)
+        }
+    }
+
+    fun moveDashboardMacro(fromIndex: Int, toIndex: Int) {
+        _uiState.update { state ->
+            val list = state.dashboardMacros.toMutableList()
+            if (fromIndex in list.indices && toIndex in list.indices) {
+                val item = list.removeAt(fromIndex)
+                list.add(toIndex, item)
+                state.copy(dashboardMacros = list)
+            } else {
+                state
+            }
         }
     }
 

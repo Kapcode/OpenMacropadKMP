@@ -71,7 +71,8 @@ enum class ControlCommand {
     EXECUTION_START,
     EXECUTION_COMPLETE,
     EXECUTION_FAILED,
-    PUSH_SETTINGS
+    PUSH_SETTINGS,
+    MARKETPLACE_LIST
 }
 
 /**
