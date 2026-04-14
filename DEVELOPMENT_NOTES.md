@@ -300,6 +300,19 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Dev Branch**: Created as the primary workspace for all ongoing development. This allows for rapid iteration and testing without affecting the stability of the `main` branch.
     - **Protected Branches**: Enabled GitHub branch protection on `main` to prevent accidental force-pushes or deletions.
 
+## 36. Battery Drain & Scanner Optimizations
+
+**Problem**: Long-running scanner sessions (e.g., when the device is mounted and left on for hours) cause significant battery drain, sometimes exceeding the charging rate of slow chargers.
+
+**Solution**:
+1. **Configurable Timeout**: Implemented a "Scanner Timeout" (1-48 hours) slider in Settings. The scanner automatically stops and shows a "Timed Out" overlay to save power.
+2. **Low Power Scanner Mode**: After 1 hour of continuous scanning, the UI transitions to a "Low Power Mode":
+    - **FPS Reduction**: Camera capture is throttled to 5-10 FPS via `CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE`.
+    - **Lower Resolution**: ML Kit target resolution is dropped to 640x480.
+    - **Throttled Metering**: Focus/Exposure updates are slowed from 2.5s to 5s intervals.
+    - **Visual Feedback**: The scanner overlay dims to signal the state.
+3. **State Reset**: Closing the scanner or manually resuming resets the power-saving timers.
+
 ## 29. De-bouncing and Token Sync Reliability
 
 ### Challenge: Multiple Token Deductions per Macro

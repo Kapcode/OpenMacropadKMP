@@ -41,6 +41,9 @@ class SettingsViewModel {
     private val _slamFireDoubleThreshold = MutableStateFlow(300L) // Default 300ms
     val slamFireDoubleThreshold = _slamFireDoubleThreshold.asStateFlow()
 
+    private val _scannerTimeoutHours = MutableStateFlow(2) // Default 2 hours
+    val scannerTimeoutHours = _scannerTimeoutHours.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -75,6 +78,10 @@ class SettingsViewModel {
 
     fun setSlamFireDoubleThreshold(threshold: Long) {
         _slamFireDoubleThreshold.value = threshold
+    }
+
+    fun setScannerTimeoutHours(hours: Int) {
+        _scannerTimeoutHours.value = hours
     }
 }
 

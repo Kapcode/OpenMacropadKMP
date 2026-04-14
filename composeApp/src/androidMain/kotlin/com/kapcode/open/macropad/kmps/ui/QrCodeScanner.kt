@@ -53,7 +53,8 @@ fun QrCodeScanner(
     onManualFocusChange: (Float) -> Unit = {},
     onAutoZoomToggle: (Boolean) -> Unit = {},
     onAutoFocusToggle: (Boolean) -> Unit = {},
-    onCameraReady: (Camera) -> Unit = {}
+    onCameraReady: (Camera) -> Unit = {},
+    isLowPowerMode: Boolean = false
 ) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -124,7 +125,7 @@ fun QrCodeScanner(
         }
     }
 
-    LaunchedEffect(cameraSelector) {
+    LaunchedEffect(cameraSelector, isLowPowerMode) {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
         cameraProviderFuture.addListener({
             val cameraProvider = cameraProviderFuture.get()
@@ -138,11 +139,32 @@ fun QrCodeScanner(
 
                 val imageAnalysisBuilder = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                
+                if (isLowPowerMode) {
+                    imageAnalysisBuilder.setTargetResolution(android.util.Size(640, 480))
+                } else {
+                    // Higher resolution for better distance/small code detection in performance mode
+                    imageAnalysisBuilder.setTargetResolution(android.util.Size(1280, 720))
+                }
 
-                Camera2Interop.Extender(imageAnalysisBuilder).setCaptureRequestOption(
+                val camera2Extender = Camera2Interop.Extender(imageAnalysisBuilder)
+                camera2Extender.setCaptureRequestOption(
                     CaptureRequest.CONTROL_AE_TARGET_FPS_RANGE,
-                    android.util.Range(20, 30)
+                    if (isLowPowerMode) android.util.Range(5, 10) else android.util.Range(25, 30)
                 )
+
+                if (!isLowPowerMode) {
+                    // Optimize for barcode scanning specifically
+                    camera2Extender.setCaptureRequestOption(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_USE_SCENE_MODE)
+                    camera2Extender.setCaptureRequestOption(CaptureRequest.CONTROL_SCENE_MODE, CaptureRequest.CONTROL_SCENE_MODE_BARCODE)
+                    
+                    // Boost exposure for screen scanning
+                    camera2Extender.setCaptureRequestOption(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    camera2Extender.setCaptureRequestOption(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, 2) 
+                    
+                    // Force continuous focus in performance mode
+                    camera2Extender.setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
+                }
 
                 val imageAnalysis = imageAnalysisBuilder.build()
 
@@ -188,7 +210,7 @@ fun QrCodeScanner(
     }
 
     // Auto-Focus/Zoom Controller
-    LaunchedEffect(camera, isAutoZoomEnabled, isAutoFocusEnabled, manualZoomRatio, manualFocusDistance) {
+    LaunchedEffect(camera, isAutoZoomEnabled, isAutoFocusEnabled, manualZoomRatio, manualFocusDistance, isLowPowerMode) {
         val cam = camera ?: return@LaunchedEffect
         
         // Loop for auto-focus or auto-zoom
@@ -215,12 +237,12 @@ fun QrCodeScanner(
                     val factory = SurfaceOrientedMeteringPointFactory(1f, 1f)
                     val centerPoint = factory.createPoint(0.5f, 0.5f)
                     val action = FocusMeteringAction.Builder(centerPoint, FocusMeteringAction.FLAG_AF or FocusMeteringAction.FLAG_AE or FocusMeteringAction.FLAG_AWB)
-                        .setAutoCancelDuration(2, TimeUnit.SECONDS)
+                        .setAutoCancelDuration(if (isLowPowerMode) 5 else 2, TimeUnit.SECONDS)
                         .build()
                     
                     cam.cameraControl.startFocusAndMetering(action)
-                    // Frequent refocusing with AE/AWB help for screen scanning
-                    delay(2500)
+                    // Ultra-fast refocusing in performance mode to find codes quicker
+                    delay(if (isLowPowerMode) 5000 else 1000)
                 } else {
                     // Manual focus mode within the loop if auto-zoom is on
                     val camera2Control = Camera2CameraControl.from(cam.cameraControl)
@@ -228,7 +250,7 @@ fun QrCodeScanner(
                         .setCaptureRequestOption(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_OFF)
                         .setCaptureRequestOption(CaptureRequest.LENS_FOCUS_DISTANCE, manualFocusDistance * 10f)
                         .build()
-                    delay(2000)
+                    delay(if (isLowPowerMode) 4000 else 2000)
                 }
 
                 currentIndex = (currentIndex + 1) % intervals.size
@@ -270,8 +292,16 @@ fun QrCodeScanner(
             modifier = Modifier
                 .size(250.dp)
                 .align(Alignment.Center)
-                .border(2.dp, Color.White.copy(alpha = 0.7f), RoundedCornerShape(12.dp))
+                .border(2.dp, Color.White.copy(alpha = if (isLowPowerMode) 0.3f else 0.7f), RoundedCornerShape(12.dp))
         ) {
+            if (isLowPowerMode) {
+                Text(
+                    "Low Power Mode",
+                    color = Color.White.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
+                )
+            }
             // Target reticle / Corner accents
             val cornerSize = 40.dp
             val cornerWidth = 4.dp

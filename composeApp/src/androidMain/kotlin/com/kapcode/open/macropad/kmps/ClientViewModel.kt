@@ -29,6 +29,7 @@ data class ClientUiState(
     val manualFocusDistance: Float = 0f,
     val currentActualZoom: Float = 1f,
     val currentFocusState: String = "Idle",
+    val isScannerTimedOut: Boolean = false,
     val currency: Long = 0L,
     val isMacroExecutionEnabled: Boolean = true,
     val activeProcess: String? = null,
@@ -140,7 +141,14 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     }
 
     fun setQrScannerVisible(visible: Boolean) {
-        _uiState.update { it.copy(showQrScanner = visible) }
+        _uiState.update { it.copy(
+            showQrScanner = visible,
+            isScannerTimedOut = false // Reset timeout when visibility changes
+        ) }
+    }
+
+    fun setScannerTimedOut(timedOut: Boolean) {
+        _uiState.update { it.copy(isScannerTimedOut = timedOut) }
     }
 
     fun setAutoZoomEnabled(enabled: Boolean) {

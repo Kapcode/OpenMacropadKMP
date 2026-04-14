@@ -45,7 +45,7 @@ class ServerDiscoveryAnnouncer {
                             }
                         }
                     }
-                    delay(5000) // Check every 5 seconds
+                    delay(2000) // Match ClientDiscovery.RATE_LIMIT_MS (2s) for faster discovery
                 }
             } catch (e: Exception) {
                 System.err.println("Failed to start discovery announcer: ${e.message}")

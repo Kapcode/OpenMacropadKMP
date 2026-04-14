@@ -35,6 +35,7 @@ import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.MarketplaceScreen
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -65,12 +66,37 @@ fun ClientScreen(
     val isAutoFocusEnabled_State = uiState.isAutoFocusEnabled
     val manualZoomRatio_State = uiState.manualZoomRatio
     val manualFocusDistance_State = uiState.manualFocusDistance
+    val isScannerTimedOut = uiState.isScannerTimedOut
+
+    val scannerTimeoutHours by settingsViewModel.scannerTimeoutHours.collectAsState()
 
     var showSettings by remember { mutableStateOf(false) }
     var activeCamera by remember { mutableStateOf<Camera?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showMacroPicker by remember { mutableStateOf(false) }
+
+    var scannerStartTime by remember(showQrScanner) { mutableStateOf(System.currentTimeMillis()) }
+    var isLowPowerScannerMode by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showQrScanner) {
+        if (showQrScanner) {
+            scannerStartTime = System.currentTimeMillis()
+            isLowPowerScannerMode = false
+        }
+    }
+
+    LaunchedEffect(showQrScanner, isLowPowerScannerMode) {
+        if (showQrScanner && !isLowPowerScannerMode) {
+            while (true) {
+                if (System.currentTimeMillis() - scannerStartTime > 3600_000L) { // 1 hour
+                    isLowPowerScannerMode = true
+                    break
+                }
+                delay(60_000L) // Check every minute
+            }
+        }
+    }
 
     LaunchedEffect(onBackToMain) {
         onCancelTriggerSet(onBackToMain)
@@ -106,6 +132,13 @@ fun ClientScreen(
 
     BackHandler(enabled = showSettings) {
         showSettings = false
+    }
+
+    LaunchedEffect(showQrScanner, isScannerTimedOut, scannerTimeoutHours) {
+        if (showQrScanner && !isScannerTimedOut && scannerTimeoutHours < 48) {
+            delay(scannerTimeoutHours * 3600 * 1000L)
+            clientViewModel.setScannerTimedOut(true)
+        }
     }
 
     Scaffold(
@@ -468,31 +501,62 @@ fun ClientScreen(
                                     modifier = Modifier.fillMaxSize().padding(16.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    val configuration = LocalConfiguration.current
-                                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                    Box(
-                                        modifier = if (isLandscape) {
-                                            Modifier.fillMaxHeight().aspectRatio(1f)
-                                        } else {
-                                            Modifier.fillMaxWidth().aspectRatio(1f)
+                                    if (isScannerTimedOut) {
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.BatteryAlert,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(64.dp),
+                                                tint = MaterialTheme.colorScheme.error
+                                            )
+                                            Spacer(Modifier.height(16.dp))
+                                            Text(
+                                                "Scanner Timed Out",
+                                                style = MaterialTheme.typography.headlineSmall
+                                            )
+                                            Text(
+                                                "Paused to save battery after $scannerTimeoutHours hours.",
+                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                style = MaterialTheme.typography.bodyMedium
+                                            )
+                                            Spacer(Modifier.height(24.dp))
+                                            Button(onClick = { clientViewModel.setScannerTimedOut(false) }) {
+                                                Icon(Icons.Default.Refresh, contentDescription = null)
+                                                Spacer(Modifier.width(8.dp))
+                                                Text("Resume Scanning")
+                                            }
                                         }
-                                    ) {
-                                        QrCodeScanner(
-                                            onCodeScanned = { code: String ->
-                                                onPairingCodeEntered(code)
-                                                onQrScannerToggle(false)
-                                            },
-                                            onClose = { onQrScannerToggle(false) },
-                                            isAutoZoomEnabled = isAutoZoomEnabled_State,
-                                            isAutoFocusEnabled = isAutoFocusEnabled_State,
-                                            manualZoomRatio = manualZoomRatio_State,
-                                            manualFocusDistance = manualFocusDistance_State,
-                                            onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
-                                            onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
-                                            onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
-                                            onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
-                                            onCameraReady = { activeCamera = it }
-                                        )
+                                    } else {
+                                        val configuration = LocalConfiguration.current
+                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                        Box(
+                                            modifier = if (isLandscape) {
+                                                Modifier.fillMaxHeight().aspectRatio(1f)
+                                            } else {
+                                                Modifier.fillMaxWidth().aspectRatio(1f)
+                                            }
+                                        ) {
+                                            QrCodeScanner(
+                                                onCodeScanned = { code: String ->
+                                                    onPairingCodeEntered(code)
+                                                    onQrScannerToggle(false)
+                                                },
+                                                onClose = { onQrScannerToggle(false) },
+                                                isAutoZoomEnabled = isAutoZoomEnabled_State,
+                                                isAutoFocusEnabled = isAutoFocusEnabled_State,
+                                                manualZoomRatio = manualZoomRatio_State,
+                                                manualFocusDistance = manualFocusDistance_State,
+                                                onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
+                                                onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
+                                                onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                                                onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
+                                                onCameraReady = { activeCamera = it },
+                                                isLowPowerMode = isLowPowerScannerMode
+                                            )
+                                        }
                                     }
                                 }
                             } else {

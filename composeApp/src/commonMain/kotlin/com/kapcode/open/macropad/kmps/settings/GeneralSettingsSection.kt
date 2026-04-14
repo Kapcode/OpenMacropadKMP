@@ -10,6 +10,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -99,7 +100,29 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
 
         val slamFireEnabled by viewModel.slamFireEnabled.collectAsState()
         val slamFireTrigger by viewModel.slamFireTrigger.collectAsState()
+        val scannerTimeoutHours by viewModel.scannerTimeoutHours.collectAsState()
         
+        Text("Scanner Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            Text(
+                "Scanner Timeout: ${if (scannerTimeoutHours >= 48) "Never" else "$scannerTimeoutHours Hours"}",
+                style = MaterialTheme.typography.bodyLarge
+            )
+            Text(
+                "Stops scanning after a period of time to save battery.",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
+            Slider(
+                value = scannerTimeoutHours.toFloat(),
+                onValueChange = { viewModel.setScannerTimeoutHours(it.toInt()) },
+                valueRange = 1f..48f,
+                steps = 46 // 48 - 1 - 1 = 46 steps for integer values from 1 to 48
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
         Text("Slam Fire", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(
             Modifier
