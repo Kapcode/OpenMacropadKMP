@@ -202,6 +202,13 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Result: 
 **Total Startup Time reduced from ~20s to ~1.2s - 2.2s on modern hardware (e.g., Pixel 7, Pixel 9a), and ~8s on budget/older hardware like the Amazon Fire HD 8 (10th Gen).**
 
+**R8 vs. No-R8 Comparison (Amazon Fire 8 10th Gen):**
+- **Non-minified (No R8):** ~15 seconds to first frame.
+- **Minified (R8 Enabled):** ~8.7 seconds to first frame.
+- **Improvement:** ~42% faster startup.
+
+> **Note**: R8 is now configurable in development via the `debugR8` build variant.
+
 ## 15. UI Feedback & Interactive Loading
 
 ### Challenge: Invisible Startup Progress

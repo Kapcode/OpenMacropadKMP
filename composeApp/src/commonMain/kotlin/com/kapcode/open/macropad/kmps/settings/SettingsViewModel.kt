@@ -1,7 +1,9 @@
 package com.kapcode.open.macropad.kmps.settings
 
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 enum class AppTheme {
     LightBlue,
@@ -44,6 +46,9 @@ class SettingsViewModel {
     private val _scannerTimeoutHours = MutableStateFlow(2) // Default 2 hours
     val scannerTimeoutHours = _scannerTimeoutHours.asStateFlow()
 
+    private val _serverHistory = MutableStateFlow<List<TrustedServer>>(emptyList())
+    val serverHistory = _serverHistory.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -82,6 +87,18 @@ class SettingsViewModel {
 
     fun setScannerTimeoutHours(hours: Int) {
         _scannerTimeoutHours.value = hours
+    }
+
+    fun setServerHistory(history: List<TrustedServer>) {
+        _serverHistory.value = history.sortedByDescending { it.lastConnectedTimestamp }
+    }
+
+    fun updateServerHistory(server: TrustedServer) {
+        _serverHistory.update { history ->
+            val newList = history.filterNot { it.serverId == server.serverId }.toMutableList()
+            newList.add(0, server)
+            newList.sortedByDescending { it.lastConnectedTimestamp }.take(10)
+        }
     }
 }
 

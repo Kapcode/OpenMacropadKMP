@@ -2,6 +2,7 @@ package com.kapcode.open.macropad.kmps
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.settings.AppTheme
 import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -11,6 +12,8 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 
 class SettingsStorage(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -97,6 +100,20 @@ class SettingsStorage(context: Context) {
         return if (value.isEmpty()) emptyList() else value.split(",")
     }
 
+    fun saveServerHistory(history: List<TrustedServer>) {
+        val json = Json.encodeToString(history)
+        prefs.edit().putString("server_history", json).apply()
+    }
+
+    fun getServerHistory(): List<TrustedServer> {
+        val json = prefs.getString("server_history", null) ?: return emptyList()
+        return try {
+            Json.decodeFromString<List<TrustedServer>>(json)
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
     fun bindViewModel(viewModel: SettingsViewModel, clientViewModel: ClientViewModel, scope: CoroutineScope) {
         // Load initial values
         viewModel.setTheme(getTheme())
@@ -107,6 +124,7 @@ class SettingsStorage(context: Context) {
         viewModel.setSlamFireSelectedMacro(getSlamFireSelectedMacro())
         viewModel.setSlamFireDoubleSelectedMacro(getSlamFireDoubleSelectedMacro())
         viewModel.setSlamFireDoubleThreshold(getSlamFireDoubleThreshold())
+        viewModel.setServerHistory(getServerHistory())
         clientViewModel.setDashboardMacros(getDashboardMacros())
 
         // Sync changes back to storage
@@ -118,7 +136,11 @@ class SettingsStorage(context: Context) {
         viewModel.slamFireSelectedMacro.onEach { saveSlamFireSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleSelectedMacro.onEach { saveSlamFireDoubleSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleThreshold.onEach { saveSlamFireDoubleThreshold(it) }.launchIn(scope)
-        
+        viewModel.serverHistory.onEach { 
+            saveServerHistory(it)
+            clientViewModel.setServerHistory(it)
+        }.launchIn(scope)
+
         clientViewModel.uiState
             .map { it.dashboardMacros }
             .distinctUntilChanged()

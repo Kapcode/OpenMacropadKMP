@@ -132,6 +132,13 @@ android {
             isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
+        create("debugR8") {
+            initWith(getByName("debug"))
+            isMinifyEnabled = true
+            isShrinkResources = false // Keeping this false to avoid resource shrinking issues in debug
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            matchingFallbacks += listOf("debug")
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

@@ -96,6 +96,21 @@ class MainActivity : ComponentActivity() {
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
         
+        // Move discovery and heavy initialization to immediately after binding ViewModel
+        lifecycleScope.launch(Dispatchers.IO) {
+            clientDiscovery.start()
+            TokenManager.getInstance(this@MainActivity)
+            try {
+                IdentityManager().getIdentityPublicKey()
+            } catch (e: Exception) {
+                Log.e(TAG, "IdentityManager initialization failed", e)
+            }
+            if (settingsViewModel.analyticsEnabled.value) {
+                FirebaseApp.initializeApp(this@MainActivity)
+            }
+            MobileAds.initialize(this@MainActivity)
+        }
+        
         slamFireManager = SlamFireManager(this, settingsViewModel, lifecycleScope) { isDouble ->
             if (isDouble) {
                 // In MainActivity, we don't really have a 'Cancel' action for double slam
@@ -113,20 +128,6 @@ class MainActivity : ComponentActivity() {
                 // Start blinking immediately as we enter Compose splash
                 isBlinking = true
                 
-                launch(Dispatchers.IO) {
-                    TokenManager.getInstance(this@MainActivity)
-                    try {
-                        IdentityManager().getIdentityPublicKey()
-                    } catch (e: Exception) {
-                        Log.e(TAG, "IdentityManager initialization failed", e)
-                    }
-                    if (settingsViewModel.analyticsEnabled.value) {
-                        FirebaseApp.initializeApp(this@MainActivity)
-                    }
-                    MobileAds.initialize(this@MainActivity)
-                    clientDiscovery.start()
-                }
-
                 delay(1500) // Show the blinking cursor for a moment before entering the app
                 splashScreenVisible.value = false
             }
@@ -182,7 +183,11 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         slamFireManager.start()
-        // Removed eager discovery start to save resources until user clicks "Scan"
+        // Discovery is now started early in onCreate, so we don't need to trigger it here
+        // unless it was explicitly stopped.
+        if (!clientDiscovery.isDiscovering()) {
+            clientDiscovery.start()
+        }
     }
 
     override fun onPause() {

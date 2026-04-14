@@ -51,6 +51,7 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 ### Prerequisites
 *   **JDK 17 or higher:** Required to build and run from source.
 *   **Android 8.0+**: Required for the mobile client.
+*   **R8 Minification**: Recommended for Android production builds to significantly reduce startup latency.
 
 ### Building from Source
 
@@ -64,6 +65,7 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 #### Android
 1. Open the project in Android Studio.
 2. Build and deploy the `composeApp` module to your device.
+3. **Performance Tip**: For the fastest startup times (e.g. ~8s on Amazon Fire 8 10th Gen vs ~15s without), use the `debugR8` build variant or a `release` build to enable R8 minification.
 
 ### Linux Setup
 To use global hotkeys on Linux, the user must be part of the `input` group:
