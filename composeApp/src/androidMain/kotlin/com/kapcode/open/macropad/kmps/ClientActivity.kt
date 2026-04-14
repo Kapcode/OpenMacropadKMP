@@ -224,7 +224,11 @@ class ClientActivity : ComponentActivity() {
                     onBackToMain = { finish() },
                     onOkayTriggerSet = { trigger -> onOkayPressed = trigger },
                     onCancelTriggerSet = { trigger -> onCancelPressed = trigger },
-                    onSlamTriggerSet = { trigger -> onSlamTriggered = trigger }
+                    onSlamTriggerSet = { trigger -> onSlamTriggered = trigger },
+                    tokenManager = tokenManager,
+                    onExecutionFailedToast = { message ->
+                        Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
+                    }
                 )
             }
         }

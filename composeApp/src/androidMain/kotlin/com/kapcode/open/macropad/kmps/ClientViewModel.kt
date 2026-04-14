@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.network.ClientRepository
 import com.kapcode.open.macropad.kmps.settings.AppTheme
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -41,7 +42,8 @@ data class ClientUiState(
     val isMarketplaceLoading: Boolean = false,
     val searchQuery: String = "",
     val currentTab: Int = 0, // 0: My Dashboard, 1: Active Pack, 2: Marketplace
-    val isEditMode: Boolean = false
+    val isEditMode: Boolean = false,
+    val serverHistory: List<TrustedServer> = emptyList()
 )
 
 class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
@@ -66,6 +68,17 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             discoveryFingerprint = discoveryFingerprint,
             onUpdate = { status, name, reason, code ->
                 updateConnection(status, name, reason, code)
+                if (status == "Connected") {
+                    val server = TrustedServer(
+                        serverId = discoveryFingerprint ?: "$ipAddress:$port", // Use fingerprint as ID if available
+                        displayName = name ?: ipAddress,
+                        lastIpAddress = ipAddress,
+                        port = port,
+                        isSecure = isSecure,
+                        lastConnectedTimestamp = System.currentTimeMillis()
+                    )
+                    settingsViewModel.updateServerHistory(server)
+                }
             },
             onMacrosReceived = { macros ->
                 setMacros(macros)
@@ -234,6 +247,29 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setDashboardMacros(macros: List<String>) {
         _uiState.update { it.copy(dashboardMacros = macros) }
+    }
+
+    fun setServerHistory(history: List<TrustedServer>) {
+        _uiState.update { it.copy(serverHistory = history) }
+    }
+
+    fun connectToServer(
+        server: TrustedServer,
+        deviceName: String,
+        tokenManager: TokenManager,
+        settingsViewModel: SettingsViewModel,
+        onExecutionFailedToast: (String) -> Unit
+    ) {
+        connect(
+            ipAddress = server.lastIpAddress,
+            port = server.port,
+            deviceName = deviceName,
+            isSecure = server.isSecure,
+            discoveryFingerprint = if (server.serverId.contains(":")) null else server.serverId,
+            tokenManager = tokenManager,
+            settingsViewModel = settingsViewModel,
+            onExecutionFailedToast = onExecutionFailedToast
+        )
     }
 
     fun requestMarketplace() {

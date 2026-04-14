@@ -7,6 +7,7 @@ import androidx.camera.core.ExperimentalGetImage
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -33,6 +34,7 @@ import com.kapcode.open.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.MarketplaceScreen
 import kotlinx.coroutines.delay
@@ -53,7 +55,9 @@ fun ClientScreen(
     onOkayTriggerSet: (() -> Unit) -> Unit = {},
     onCancelTriggerSet: (() -> Unit) -> Unit = {},
     onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
-    onQrScannerToggle: (Boolean) -> Unit = {}
+    onQrScannerToggle: (Boolean) -> Unit = {},
+    tokenManager: TokenManager? = null,
+    onExecutionFailedToast: (String) -> Unit = {}
 ) {
     val connectionStatus = uiState.connectionStatus
     val serverName = uiState.serverName
@@ -69,6 +73,7 @@ fun ClientScreen(
     val isScannerTimedOut = uiState.isScannerTimedOut
 
     val scannerTimeoutHours by settingsViewModel.scannerTimeoutHours.collectAsState()
+    val serverHistory = uiState.serverHistory
 
     var showSettings by remember { mutableStateOf(false) }
     var activeCamera by remember { mutableStateOf<Camera?>(null) }
@@ -569,6 +574,42 @@ fun ClientScreen(
                                     verticalArrangement = Arrangement.Center,
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    if (connectionStatus != "Connected" && serverHistory.isNotEmpty()) {
+                                        Column(
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                                            horizontalAlignment = Alignment.Start
+                                        ) {
+                                            Text(
+                                                "Reconnect to:",
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            LazyRow(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                items(serverHistory.take(3)) { server ->
+                                                    SuggestionChip(
+                                                        onClick = {
+                                                            if (tokenManager != null) {
+                                                                clientViewModel.connectToServer(
+                                                                    server = server,
+                                                                    deviceName = android.os.Build.MODEL,
+                                                                    tokenManager = tokenManager,
+                                                                    settingsViewModel = settingsViewModel,
+                                                                    onExecutionFailedToast = onExecutionFailedToast
+                                                                )
+                                                            }
+                                                        },
+                                                        label = { Text(server.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                                        icon = { Icon(Icons.Default.History, null, modifier = Modifier.size(16.dp)) }
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+
                                     if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
                                         var enteredCode by remember { mutableStateOf("") }
                                         val focusRequester = remember { FocusRequester() }

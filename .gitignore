@@ -20,3 +20,4 @@ node_modules/
 keystore.properties
 keystore.p12
 *.jks
+google-services.json
