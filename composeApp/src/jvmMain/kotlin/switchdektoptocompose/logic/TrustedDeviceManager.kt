@@ -100,6 +100,11 @@ object TrustedDeviceManager {
         save()
     }
 
+    fun unbanAllDevices() {
+        bannedDevices.clear()
+        save()
+    }
+
     fun getTrustedDevices(): Map<String, String> {
         return trustedDevices.toMap()
     }

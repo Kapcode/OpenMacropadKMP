@@ -320,12 +320,12 @@ fun ClientScreen(
                                 Tab(
                                     selected = uiState.currentTab == 0,
                                     onClick = { clientViewModel.setTab(0) },
-                                    text = { Text("Active Pack") }
+                                    text = { Text("My Dashboard") }
                                 )
                                 Tab(
                                     selected = uiState.currentTab == 1,
                                     onClick = { clientViewModel.setTab(1) },
-                                    text = { Text("My Dashboard") }
+                                    text = { Text("Active Pack") }
                                 )
                                 Tab(
                                     selected = uiState.currentTab == 2,
@@ -353,13 +353,13 @@ fun ClientScreen(
                         Box(modifier = Modifier.weight(1f)) {
                             if (macros.isNotEmpty() && !showQrScanner) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    val displayMacros = if (uiState.currentTab == 0) {
+                                    val displayMacros = if (uiState.currentTab == 1) {
                                         uiState.activePack?.widgets?.map { it.label } ?: macros
                                     } else {
                                         uiState.dashboardMacros.ifEmpty { macros }
                                     }
 
-                                    if (uiState.currentTab == 0 && uiState.installedPacks.isEmpty()) {
+                                    if (uiState.currentTab == 1 && uiState.installedPacks.isEmpty()) {
                                         EmptyPacksPlaceholder(onNavigateToMarket = {
                                             clientViewModel.setTab(2)
                                             clientViewModel.requestMarketplace()
@@ -383,13 +383,17 @@ fun ClientScreen(
                                             isEditMode = uiState.isEditMode,
                                             onMacroClick = onMacroClick,
                                             onMacroLongClick = { macroName ->
-                                                if (uiState.currentTab == 1) {
+                                                if (uiState.currentTab == 0) {
                                                     clientViewModel.removeFromDashboard(macroName)
                                                 } else {
                                                     clientViewModel.addToDashboard(macroName)
                                                 }
                                             },
-                                            onMoveMacro = { from, to -> clientViewModel.moveDashboardMacro(from, to) },
+                                            onMoveMacro = { from, to -> 
+                                                if (uiState.currentTab == 0) {
+                                                    clientViewModel.moveDashboardMacro(from, to)
+                                                }
+                                            },
                                             currency = uiState.currency,
                                             modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
                                         )
@@ -413,7 +417,7 @@ fun ClientScreen(
                                         }
                                     }
                                     
-                                    if (uiState.currentTab == 1) {
+                                    if (uiState.currentTab == 0) {
                                         FloatingActionButton(
                                             onClick = { 
                                                 if (uiState.isEditMode) {

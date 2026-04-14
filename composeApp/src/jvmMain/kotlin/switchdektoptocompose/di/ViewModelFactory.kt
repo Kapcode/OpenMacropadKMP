@@ -2,10 +2,13 @@ package switchdektoptocompose.di
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
 import switchdektoptocompose.viewmodel.*
 
 data class DesktopViewModels(
     val desktopViewModel: DesktopViewModel,
+    val serverViewModel: ServerViewModel,
+    val clientCommunicationViewModel: ClientCommunicationViewModel,
     val consoleViewModel: ConsoleViewModel,
     val inspectorViewModel: InspectorViewModel,
     val recordMacroViewModel: RecordMacroViewModel,
@@ -15,7 +18,9 @@ data class DesktopViewModels(
     val sharedSettingsViewModel: com.kapcode.open.macropad.kmps.settings.SettingsViewModel,
     val macroTimelineViewModel: MacroTimelineViewModel,
     val newEventViewModel: NewEventViewModel,
-    val marketplaceViewModel: MarketplaceViewModel
+    val marketplaceViewModel: MarketplaceViewModel,
+    val pairingViewModel: PairingViewModel,
+    val layoutViewModel: LayoutViewModel
 )
 
 object ViewModelFactory {
@@ -26,17 +31,51 @@ object ViewModelFactory {
         val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
         val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
-        val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel, inspectorViewModel) }
         
+        val clientCommunicationViewModel = remember { 
+            ClientCommunicationViewModel(settingsViewModel, consoleViewModel) 
+        }
+
+        val serverViewModel = remember {
+            ServerViewModel(
+                settingsViewModel = settingsViewModel,
+                consoleViewModel = consoleViewModel,
+                onMessageReceived = { clientId, dataModel -> 
+                    clientCommunicationViewModel.onDataReceived(clientId, dataModel) 
+                },
+                onClientConnected = { clientId, name -> 
+                    clientCommunicationViewModel.onClientConnected(clientId, name) 
+                },
+                onClientDisconnected = { clientId -> 
+                    clientCommunicationViewModel.onClientDisconnected(clientId) 
+                },
+                onPairingRequest = { clientId, name -> 
+                    clientCommunicationViewModel.onPairingRequest(clientId, name) 
+                }
+            )
+        }
+
+        val desktopViewModel = remember { 
+            DesktopViewModel(
+                settingsViewModel, 
+                consoleViewModel, 
+                inspectorViewModel,
+                serverViewModel,
+                clientCommunicationViewModel
+            ) 
+        }
+        
+        var macroManagerViewModelRef: MacroManagerViewModel? = null
         val macroManagerViewModel = remember {
             MacroManagerViewModel(
                 settingsViewModel = settingsViewModel,
                 consoleViewModel = consoleViewModel,
                 onEditMacroRequested = { }, // Wired below
                 onMacrosUpdated = {
-                    desktopViewModel.sendMacroListToAllClients()
+                    val macroNames = macroManagerViewModelRef?.macroFiles?.value?.map { it.name } ?: emptyList()
+                    serverViewModel.sendToAll(macroListMessage(macroNames))
                 }
-            )
+            ).also { macroManagerViewModelRef = it }
         }
         
         val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
@@ -48,19 +87,25 @@ object ViewModelFactory {
         }
 
         // Wire up late dependencies and circular references
-        remember(macroManagerViewModel, macroEditorViewModel) {
+        remember(macroManagerViewModel, macroEditorViewModel, serverViewModel, clientCommunicationViewModel) {
             macroManagerViewModel.onEditMacroRequested = { macroState ->
                 macroEditorViewModel.openOrSwitchToTab(macroState)
             }
+            clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
+            clientCommunicationViewModel.serverViewModel = serverViewModel
             desktopViewModel.macroManagerViewModel = macroManagerViewModel
             Unit
         }
 
         val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
         val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
+        val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
+        val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
 
         return DesktopViewModels(
             desktopViewModel = desktopViewModel,
+            serverViewModel = serverViewModel,
+            clientCommunicationViewModel = clientCommunicationViewModel,
             consoleViewModel = consoleViewModel,
             inspectorViewModel = inspectorViewModel,
             recordMacroViewModel = recordMacroViewModel,
@@ -70,7 +115,9 @@ object ViewModelFactory {
             sharedSettingsViewModel = sharedSettingsViewModel,
             macroTimelineViewModel = macroTimelineViewModel,
             newEventViewModel = newEventViewModel,
-            marketplaceViewModel = marketplaceViewModel
+            marketplaceViewModel = marketplaceViewModel,
+            pairingViewModel = pairingViewModel,
+            layoutViewModel = layoutViewModel
         )
     }
 }

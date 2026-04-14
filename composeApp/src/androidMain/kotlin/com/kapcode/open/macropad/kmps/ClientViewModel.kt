@@ -39,7 +39,7 @@ data class ClientUiState(
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
     val isMarketplaceLoading: Boolean = false,
     val searchQuery: String = "",
-    val currentTab: Int = 0, // 0: Active Pack, 1: My Dashboard, 2: Marketplace
+    val currentTab: Int = 0, // 0: My Dashboard, 1: Active Pack, 2: Marketplace
     val isEditMode: Boolean = false
 )
 

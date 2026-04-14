@@ -44,7 +44,8 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
 - **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
 
 ### Desktop Motion & Layout
-- **Split Pane Navigation**: The Desktop layout utilizes a `MoveableVerticalSplitPane` and `MoveableHorizontalSplitPane` for root and nested views, dividing major functional areas. This allows users to adjust their focus between active control, monitoring, and editing.
+- **Root Split Pane**: The Desktop layout uses a primary horizontal split between the **Left Sidebar** (Console/Inspector) and the **Main Workspace** (Connections/Macros).
+- **Nested Split Panes**: Within the Main Workspace, a vertical split separates **Connections** (left) from **Macros** (right).
 - **Ghost Image Resizing**: To provide real-time visual feedback, splitters display a "Ghost Image" (a semi-transparent representation of the new divider position) during active dragging.
 - **Dynamic Splitter Highlighting**: All split panes use custom-styled "pill" handles (pulltabs). These handles feature dynamic transparency:
     - **Idle**: 5% alpha.
@@ -76,6 +77,10 @@ To assist users on touchscreens or with hidden system scrollbars, all major scro
 ### Android
 - **Splash Screen**: Follows the Android 12+ standard using `androidx.core:core-splashscreen`.
 - **Adaptive Icons**: 512px source wrapped in a 192dp container to fit within the OS-enforced "safe circle" without clipping or "black ring" artifacts.
+- **Navigation Order**: The main navigation uses a bottom-bar or top-tab system with the following order:
+    1.  **[0] My Dashboard**: The primary, user-curated view.
+    2.  **[1] Active Pack**: Context-aware macros based on the current desktop process.
+    3.  **[2] Marketplace**: Full-screen overlay or dedicated tab for downloading new packs.
 
 ### Dashboard & Edit Mode (Android)
 To allow users to customize their experience, the "My Dashboard" tab features an interactive grid:

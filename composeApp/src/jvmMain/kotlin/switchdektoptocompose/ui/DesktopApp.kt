@@ -41,7 +41,26 @@ fun DesktopAppPreview() {
     val settingsViewModel = remember { DesktopSettingsViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
     val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
-    val desktopViewModel = remember { DesktopViewModel(settingsViewModel, consoleViewModel, inspectorViewModel) }
+    val clientCommunicationViewModel = remember { ClientCommunicationViewModel(settingsViewModel, consoleViewModel) }
+    val serverViewModel = remember {
+        ServerViewModel(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            onMessageReceived = { clientId, dataModel -> clientCommunicationViewModel.onDataReceived(clientId, dataModel) },
+            onClientConnected = { clientId, name -> clientCommunicationViewModel.onClientConnected(clientId, name) },
+            onClientDisconnected = { clientId -> clientCommunicationViewModel.onClientDisconnected(clientId) },
+            onPairingRequest = { clientId, name -> clientCommunicationViewModel.onPairingRequest(clientId, name) }
+        )
+    }
+    val desktopViewModel = remember {
+        DesktopViewModel(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            inspectorViewModel = inspectorViewModel,
+            serverViewModel = serverViewModel,
+            clientCommunicationViewModel = clientCommunicationViewModel
+        )
+    }
     val macroManagerViewModel = remember {
         MacroManagerViewModel(
             settingsViewModel = settingsViewModel,
@@ -50,15 +69,27 @@ fun DesktopAppPreview() {
             onMacrosUpdated = { }
         )
     }
+    // Wire up circular references for preview
+    remember(macroManagerViewModel, serverViewModel, clientCommunicationViewModel) {
+        clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
+        clientCommunicationViewModel.serverViewModel = serverViewModel
+        desktopViewModel.macroManagerViewModel = macroManagerViewModel
+        Unit
+    }
+    
     val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
     val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel) { } }
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
     val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
+    val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
+    val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
 
     val viewModels = DesktopViewModels(
         desktopViewModel = desktopViewModel,
+        serverViewModel = serverViewModel,
+        clientCommunicationViewModel = clientCommunicationViewModel,
         consoleViewModel = consoleViewModel,
         inspectorViewModel = inspectorViewModel,
         recordMacroViewModel = recordMacroViewModel,
@@ -68,7 +99,9 @@ fun DesktopAppPreview() {
         sharedSettingsViewModel = sharedSettingsViewModel,
         macroTimelineViewModel = macroTimelineViewModel,
         newEventViewModel = newEventViewModel,
-        marketplaceViewModel = marketplaceViewModel
+        marketplaceViewModel = marketplaceViewModel,
+        pairingViewModel = pairingViewModel,
+        layoutViewModel = layoutViewModel
     )
 
     val desktopWindowState = rememberDesktopWindowState(settingsViewModel = settingsViewModel)
@@ -95,6 +128,8 @@ fun DesktopApp(
     onShowSettingsDialogChange: (Boolean) -> Unit = {}
 ) {
     val desktopViewModel = viewModels.desktopViewModel
+    val serverViewModel = viewModels.serverViewModel
+    val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
     val consoleViewModel = viewModels.consoleViewModel
     val inspectorViewModel = viewModels.inspectorViewModel
     val recordMacroViewModel = viewModels.recordMacroViewModel
@@ -105,6 +140,7 @@ fun DesktopApp(
     val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val newEventViewModel = viewModels.newEventViewModel
     val marketplaceViewModel = viewModels.marketplaceViewModel
+    val layoutViewModel = viewModels.layoutViewModel
 
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
@@ -130,14 +166,16 @@ fun DesktopApp(
     }
 
 
-    val uiState by desktopViewModel.uiState.collectAsState()
-    val connectedDevices = uiState.connectedDevices
-    val pendingPairingRequests = uiState.pendingPairingRequests
-    val isServerRunning = uiState.isServerRunning
-    val serverError = uiState.serverError
-    val serverIpAddress = uiState.serverIpAddress
-    val encryptionEnabled = uiState.encryptionEnabled
-    val isMacroExecutionEnabled = uiState.isMacroExecutionEnabled
+    val connectedDevices by clientCommunicationViewModel.connectedDevices.collectAsState()
+    val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
+    val isServerRunning by serverViewModel.isServerRunning.collectAsState()
+    val serverError by serverViewModel.serverError.collectAsState()
+    val serverIpAddress by serverViewModel.serverIpAddress.collectAsState()
+    val encryptionEnabled by serverViewModel.encryptionEnabled.collectAsState()
+    val isMacroExecutionEnabled by clientCommunicationViewModel.isMacroExecutionEnabled.collectAsState()
+    val connectionHistory by clientCommunicationViewModel.connectionHistory.collectAsState()
+    val trustedDevices by clientCommunicationViewModel.trustedDevices.collectAsState()
+    val totalCurrencySpent by clientCommunicationViewModel.totalCurrencySpent.collectAsState()
 
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
@@ -147,10 +185,10 @@ fun DesktopApp(
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
     val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
 
-    var showNewEventDialog by remember { mutableStateOf(false) }
-    var showRecordDialog by remember { mutableStateOf(false) }
-    var showExitDialogInternal by remember { mutableStateOf(false) }
-    var showMarketplace by remember { mutableStateOf(false) }
+    val showNewEventDialog by layoutViewModel.showNewEventDialog.collectAsState()
+    val showRecordDialog by layoutViewModel.showRecordDialog.collectAsState()
+    val showExitDialogInternal by layoutViewModel.showExitDialogInternal.collectAsState()
+    val showMarketplace by layoutViewModel.showMarketplace.collectAsState()
     val showExitDialogResolved = showExitDialog || showExitDialogInternal
 
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
@@ -160,7 +198,7 @@ fun DesktopApp(
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             MarketplaceScreen(
                 viewModel = marketplaceViewModel,
-                onBack = { showMarketplace = false }
+                onBack = { layoutViewModel.setShowMarketplace(false) }
             )
         }
         return
@@ -173,12 +211,12 @@ fun DesktopApp(
             onExitNow = onExit,
             onExitToTray = {
                 onShowExitDialogChange(false)
-                showExitDialogInternal = false
+                layoutViewModel.setShowExitDialogInternal(false)
                 desktopWindowState.animateToTray()
             },
             onDismiss = {
                 onShowExitDialogChange(false)
-                showExitDialogInternal = false
+                layoutViewModel.setShowExitDialogInternal(false)
             }
         )
     }
@@ -235,7 +273,7 @@ fun DesktopApp(
             viewModel = newEventViewModel,
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
-            onDismissRequest = { showNewEventDialog = false },
+            onDismissRequest = { layoutViewModel.setShowNewEventDialog(false) },
             onAddEvent = {
                 if (newEventViewModel.isTriggerEvent.value) {
                     macroTimelineViewModel.addOrUpdateTrigger(
@@ -246,7 +284,7 @@ fun DesktopApp(
                     val events = newEventViewModel.createEvents()
                     macroTimelineViewModel.addEvents(events)
                 }
-                showNewEventDialog = false
+                layoutViewModel.setShowNewEventDialog(false)
             }
         )
     }
@@ -256,10 +294,10 @@ fun DesktopApp(
             viewModel = recordMacroViewModel,
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
-            onDismissRequest = { showRecordDialog = false },
+            onDismissRequest = { layoutViewModel.setShowRecordDialog(false) },
             onStartRecording = {
                 macroManagerViewModel.startRecording(recordMacroViewModel)
-                showRecordDialog = false
+                layoutViewModel.setShowRecordDialog(false)
             }
         )
     }
@@ -269,8 +307,7 @@ fun DesktopApp(
             requests = pendingPairingRequests,
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
-            desktopSettingsViewModel = settingsViewModel,
-            sharedSettingsViewModel = sharedSettingsViewModel,
+            pairingViewModel = viewModels.pairingViewModel,
             isAlwaysAllowAvailable = !allowOnceOnly,
             onApprove = { id, name, persistent -> desktopViewModel.approveDevice(id, name, persistent) },
             onDeny = { id -> desktopViewModel.rejectDevice(id) },
@@ -301,16 +338,16 @@ fun DesktopApp(
         ) { paddingValues ->
             Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 val rootVerticalSplitter = rememberSplitPaneState(
-                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Root Layout", 0.0254f)
+                    initialPositionPercentage = layoutViewModel.getSplitterPosition("Root Layout", 0.0254f)
                 )
                 val mainHorizontalSplitter = rememberSplitPaneState(
-                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Main Horizontal", 0.2965f)
+                    initialPositionPercentage = layoutViewModel.getSplitterPosition("Main Horizontal", 0.2965f)
                 )
                 val secondaryPanelSplitter = rememberSplitPaneState(
-                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Secondary Panel", 0.1564f)
+                    initialPositionPercentage = layoutViewModel.getSplitterPosition("Secondary Panel", 0.1564f)
                 )
                 val sidebarSplitter = rememberSplitPaneState(
-                    initialPositionPercentage = settingsViewModel.getSplitterPosition("Sidebar Split", 0.7073f)
+                    initialPositionPercentage = layoutViewModel.getSplitterPosition("Sidebar Split", 0.7073f)
                 )
 
                 MoveableVerticalSplitPane(
@@ -323,185 +360,26 @@ fun DesktopApp(
                     firstMinSize = 48.dp,
                     secondMinSize = 200.dp,
                     first = {
-                        Row(
-                            modifier = Modifier.fillMaxSize().background(panelBackground(0)).padding(horizontal = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            var menuExpanded by remember { mutableStateOf(false) }
-                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Menu", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                                IconButton(onClick = { menuExpanded = true }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Menu")
-                                }
-                            }
-                            DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("Start Server") },
-                                    onClick = { desktopViewModel.startServer(); menuExpanded = false },
-                                    enabled = !isServerRunning,
-                                    leadingIcon = { Icon(Icons.Default.PlayArrow, null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Stop Server") },
-                                    onClick = { desktopViewModel.stopServer(); menuExpanded = false },
-                                    enabled = isServerRunning,
-                                    leadingIcon = { Icon(Icons.Default.Stop, null) }
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Settings") },
-                                    onClick = { onShowSettingsDialogChange(true); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Default.Settings, null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Shortcuts & Keymap") },
-                                    onClick = { onShowShortcutsDialogChange(true); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Default.Keyboard, null) }
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Bulk Settings Pusher") },
-                                    onClick = { onShowPushSettingsDialogChange(true); menuExpanded = false },
-                                    leadingIcon = { Icon(Icons.Default.Send, null) }
-                                )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text("Exit") },
-                                    onClick = {
-                                        menuExpanded = false
-                                        if (exitBehavior == "ASK") {
-                                            onShowExitDialogChange(true)
-                                        } else {
-                                            onExit()
-                                        }
-                                    },
-                                    leadingIcon = { Icon(Icons.AutoMirrored.Filled.ExitToApp, null) }
-                                )
-                            }
-                            
-                            Spacer(Modifier.width(16.dp))
-
-                            Box(
-                                modifier = Modifier.weight(1f).fillMaxHeight().padding(vertical = 4.dp, horizontal = 8.dp),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                Column {
-                                    val statusColor = if (isServerRunning) {
-                                        if (selectedTheme == "Dark Blue") Color.Green else Color(0xFF008000)
-                                    } else {
-                                        Color.Red
-                                    }
-                                    
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor, style = MaterialTheme.typography.bodySmall)
-                                        Spacer(Modifier.width(12.dp))
-                                        Text("Connected: ${connectedDevices.size}", style = MaterialTheme.typography.bodySmall)
-                                        Spacer(Modifier.width(12.dp))
-                                        Text(
-                                            "Macros: ${if (isMacroExecutionEnabled) "Enabled" else "Disabled"}", 
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = if (isMacroExecutionEnabled) Color.Unspecified else Color.Red
-                                        )
-                                        Spacer(Modifier.width(12.dp))
-                                        Text("Address: $serverIpAddress:$currentPort", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                    
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    
-                                    TooltipArea(
-                                        tooltip = {
-                                            Surface(
-                                                modifier = Modifier.padding(4.dp),
-                                                shape = MaterialTheme.shapes.small,
-                                                shadowElevation = 4.dp
-                                            ) {
-                                                Text("Security Status (Click to edit)", modifier = Modifier.padding(4.dp))
-                                            }
-                                        },
-                                        delayMillis = 500
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.small)
-                                                .clickable {
-                                                    onShowSettingsDialogChange(true)
-                                                }
-                                                .padding(horizontal = 4.dp, vertical = 2.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Icon(
-                                                if (encryptionEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(12.dp),
-                                                tint = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
-                                            )
-                                            Spacer(Modifier.width(4.dp))
-                                            Text(
-                                                "Security: ${if (encryptionEnabled) "Encrypted" else "Unencrypted"}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (encryptionEnabled) statusColor else MaterialTheme.colorScheme.error
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                "One-Time: ${if (allowOnceOnly) "Yes" else "No"}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (allowOnceOnly) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
-                                            Spacer(Modifier.width(8.dp))
-                                            Text(
-                                                "Discovery: ${if (allowNewConnections) "On" else "Off"}",
-                                                style = MaterialTheme.typography.labelSmall,
-                                                color = if (allowNewConnections) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                            
-                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Emergency Stop Key", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                                var eStopMenuExpanded by remember { mutableStateOf(false) }
-                                Box {
-                                    OutlinedButton(
-                                        onClick = { eStopMenuExpanded = true },
-                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                                        modifier = Modifier.height(32.dp)
-                                    ) {
-                                        Text("E-Stop: $eStopKey", style = MaterialTheme.typography.labelMedium)
-                                    }
-                                    DropdownMenu(
-                                        expanded = eStopMenuExpanded,
-                                        onDismissRequest = { eStopMenuExpanded = false },
-                                        modifier = Modifier.heightIn(max = 300.dp)
-                                    ) {
-                                        Box(modifier = Modifier.sizeIn(maxHeight = 300.dp)) {
-                                            Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                                                val fKeys = (1..12).map { "F$it" }
-                                                fKeys.forEach { key ->
-                                                    DropdownMenuItem(
-                                                        text = { Text(key) },
-                                                        onClick = {
-                                                            settingsViewModel.setEStopKey(key)
-                                                            eStopMenuExpanded = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(Modifier.width(16.dp))
-
-                            TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.Power, contentDescription = "Macros Enabled", modifier = Modifier.size(20.dp))
-                                    Switch(
-                                        checked = isMacroExecutionEnabled,
-                                        onCheckedChange = { desktopViewModel.setMacroExecutionEnabled(it) },
-                                        modifier = Modifier.scale(0.8f)
-                                    )
-                                }
-                            }
-                        }
+                        DesktopTopBar(
+                            desktopViewModel = desktopViewModel,
+                            settingsViewModel = settingsViewModel,
+                            isServerRunning = isServerRunning,
+                            connectedDevicesCount = connectedDevices.size,
+                            isMacroExecutionEnabled = isMacroExecutionEnabled,
+                            serverIpAddress = serverIpAddress,
+                            currentPort = currentPort,
+                            encryptionEnabled = encryptionEnabled,
+                            allowOnceOnly = allowOnceOnly,
+                            allowNewConnections = allowNewConnections,
+                            selectedTheme = selectedTheme,
+                            exitBehavior = exitBehavior,
+                            eStopKey = eStopKey,
+                            onShowSettings = { onShowSettingsDialogChange(true) },
+                            onShowShortcuts = { onShowShortcutsDialogChange(true) },
+                            onShowPushSettings = { onShowPushSettingsDialogChange(true) },
+                            onExit = onExit,
+                            onShowExitDialog = { layoutViewModel.setShowExitDialogInternal(true) }
+                        )
                     },
                     second = {
                         MoveableHorizontalSplitPane(
@@ -557,9 +435,9 @@ fun DesktopApp(
                                         Box(modifier = Modifier.fillMaxSize().background(panelBackground(3)).padding(8.dp)) {
                                             ConnectedDevicesScreen(
                                                 devices = connectedDevices,
-                                                history = uiState.connectionHistory,
-                                                trustedDevices = uiState.trustedDevices,
-                                                totalCurrencySpent = uiState.totalCurrencySpent,
+                                                history = connectionHistory,
+                                                trustedDevices = trustedDevices,
+                                                totalCurrencySpent = totalCurrencySpent,
                                                 onDisconnect = { desktopViewModel.disconnectClient(it) },
                                                 onUnpair = { desktopViewModel.unpairDevice(it) },
                                                 onBan = { desktopViewModel.banDevice(it.id, it.name) },
@@ -578,14 +456,14 @@ fun DesktopApp(
                                             selectedTheme = selectedTheme,
                                             onAddEventClicked = {
                                                 newEventViewModel.reset()
-                                                showNewEventDialog = true
+                                                layoutViewModel.setShowNewEventDialog(true)
                                             },
                                             onRecordMacroClicked = {
                                                 recordMacroViewModel.reset()
-                                                showRecordDialog = true
+                                                layoutViewModel.setShowRecordDialog(true)
                                             },
                                             onMarketplaceClicked = {
-                                                showMarketplace = true
+                                                layoutViewModel.setShowMarketplace(true)
                                             }
                                         )
                                     }

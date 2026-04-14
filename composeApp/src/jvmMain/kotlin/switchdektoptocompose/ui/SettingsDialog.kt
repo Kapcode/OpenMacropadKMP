@@ -2,30 +2,19 @@ package switchdektoptocompose.ui
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
-import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import switchdektoptocompose.ui.settings.*
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsDialog(
     desktopViewModel: DesktopViewModel,
@@ -40,14 +29,14 @@ fun SettingsDialog(
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
-    val uiState by desktopViewModel.uiState.collectAsState()
-    val encryptionEnabled = uiState.encryptionEnabled
-    val isServerRunning = uiState.isServerRunning
-    val bannedDevices = uiState.bannedDevices
-    val trustedDevices = uiState.trustedDevices
+    val serverViewModel = desktopViewModel.serverViewModel
+    val clientCommunicationViewModel = desktopViewModel.clientCommunicationViewModel
+    val isServerRunning by serverViewModel.isServerRunning.collectAsState()
+    val encryptionEnabled by serverViewModel.encryptionEnabled.collectAsState()
+    val bannedDevices by clientCommunicationViewModel.bannedDevices.collectAsState()
+    val trustedDevices by clientCommunicationViewModel.trustedDevices.collectAsState()
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
-    val hardEstop by settingsViewModel.hardEstop.collectAsState()
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val fleetModeEnabled by settingsViewModel.fleetModeEnabled.collectAsState()
@@ -86,464 +75,45 @@ fun SettingsDialog(
                     .padding(16.dp)
                     .verticalScroll(scrollState)
             ) {
-                        // --- Theme Selection ---
-                        Text("Theme", style = MaterialTheme.typography.titleMedium)
-                        Column(Modifier.selectableGroup()) {
-                            settingsViewModel.availableThemes.forEach { theme ->
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(56.dp)
-                                        .selectable(
-                                            selected = (theme == selectedTheme),
-                                            onClick = { settingsViewModel.selectTheme(theme) },
-                                            role = Role.RadioButton
-                                        )
-                                        .padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = (theme == selectedTheme),
-                                        onClick = null // null recommended for accessibility with screenreaders
-                                    )
-                                    Text(
-                                        text = theme,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(start = 16.dp)
-                                    )
-                                }
-                            }
-                        }
+                ThemeSettings(selectedTheme, settingsViewModel)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                BehaviorSettings(exitBehavior, clickTrayToToggle, settingsViewModel, onShowShortcutsRequest)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel, onShowPushSettingsRequest)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                NetworkSettings(
+                    serverPort, secureServerPort, encryptionEnabled, isServerRunning,
+                    defaultPairingModeQr, allowNewConnections, multiQrEnabled, fleetModeEnabled,
+                    allowOnceOnly, enableWebsocketPings, settingsViewModel, sharedSettingsViewModel,
+                    serverViewModel, onShowPushSettingsRequest
+                ) { securitySectionOffset = it }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                DeviceManagement(trustedDevices, bannedDevices, clientCommunicationViewModel)
 
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        
-                        // --- Behavior Settings ---
-                         Text("App Exit Behavior", style = MaterialTheme.typography.titleMedium)
-                         Column(Modifier.selectableGroup()) {
-                            listOf(
-                                "ASK" to "Ask every time",
-                                "TRAY" to "Exit to system tray",
-                                "EXIT" to "Just exit the application"
-                            ).forEach { (value, label) ->
-                                Row(
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .height(48.dp)
-                                        .selectable(
-                                            selected = (exitBehavior == value),
-                                            onClick = { settingsViewModel.setExitBehavior(value) },
-                                            role = Role.RadioButton
-                                        )
-                                        .padding(horizontal = 16.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(
-                                        selected = (exitBehavior == value),
-                                        onClick = null
-                                    )
-                                    Text(
-                                        text = label,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        modifier = Modifier.padding(start = 16.dp)
-                                    )
-                                }
-                            }
-                         }
+                Spacer(Modifier.height(16.dp))
 
-                        Spacer(Modifier.height(8.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
-                            Checkbox(
-                                checked = clickTrayToToggle,
-                                onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
-                            )
-                        }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                        // --- Shortcuts Section ---
-                        Text("Shortcuts & Keymap", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Button(
-                            onClick = { 
-                                onShowShortcutsRequest()
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Configure Global & App Shortcuts")
-                        }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                        // --- Connected Clients Section ---
-                        Text("Connected Clients (Global Push)", style = MaterialTheme.typography.titleMedium)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text("Default Client Theme", style = MaterialTheme.typography.bodyMedium)
-                        Row(Modifier.selectableGroup()) {
-                            settingsViewModel.availableThemes.forEach { theme ->
-                                Row(
-                                    Modifier
-                                        .selectable(
-                                            selected = (theme == clientTheme),
-                                            onClick = { settingsViewModel.setClientTheme(theme) },
-                                            role = Role.RadioButton
-                                        )
-                                        .padding(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    RadioButton(selected = (theme == clientTheme), onClick = null)
-                                    Text(text = theme, modifier = Modifier.padding(start = 8.dp))
-                                }
-                            }
-                        }
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Enable Client Analytics", modifier = Modifier.weight(1f))
-                            Switch(
-                                checked = clientAnalyticsEnabled,
-                                onCheckedChange = { settingsViewModel.setClientAnalyticsEnabled(it) }
-                            )
-                        }
-                        
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Slam Fire Trigger", modifier = Modifier.weight(1f))
-                            Switch(
-                                checked = clientSlamFireEnabled,
-                                onCheckedChange = { settingsViewModel.setClientSlamFireEnabled(it) }
-                            )
-                        }
-                        if (clientSlamFireEnabled) {
-                            OutlinedTextField(
-                                value = clientSlamFireAction,
-                                onValueChange = { settingsViewModel.setClientSlamFireAction(it) },
-                                label = { Text("Slam Fire Action/Button") },
-                                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp)
-                            )
-                        }
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-                        // --- Network/Security Settings ---
-                        Text(
-                            "Security & Privacy",
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.onGloballyPositioned { coordinates ->
-                                securitySectionOffset = coordinates.positionInParent().y
-                            }
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "Sets whether the Android client defaults to QR scanning (On) or PIN entry (Off) when starting a pairing request.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Default to QR Scanning", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = defaultPairingModeQr,
-                                    onCheckedChange = { settingsViewModel.setDefaultPairingModeQr(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "When enabled, new devices can find this server and request to pair.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Device Discovery", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = allowNewConnections,
-                                    onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "When enabled, multiple QR codes can be used for pairing.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Multi-QR Pairing Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = multiQrEnabled,
-                                    onCheckedChange = { sharedSettingsViewModel.setMultiQrEnabled(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Pairing & Sync (Fleet) Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = fleetModeEnabled,
-                                    onCheckedChange = { settingsViewModel.setFleetModeEnabled(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(12.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("Ask Every Time (One-Time Approvals) ONLY", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = allowOnceOnly,
-                                    onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        TooltipArea(
-                            tooltip = {
-                                Surface(
-                                    modifier = Modifier.padding(4.dp),
-                                    shape = MaterialTheme.shapes.small,
-                                    shadowElevation = 4.dp
-                                ) {
-                                    Text(
-                                        "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors.",
-                                        modifier = Modifier.padding(8.dp),
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                            }
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Text("WebSocket Protocol Heartbeats", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                                Switch(
-                                    checked = enableWebsocketPings,
-                                    onCheckedChange = { settingsViewModel.setEnableWebsocketPings(it) }
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            OutlinedTextField(
-                                value = serverPort.toString(),
-                                onValueChange = { settingsViewModel.onServerPortChange(it) },
-                                label = { Text("Server Port (WS)") },
-                                modifier = Modifier.weight(1f),
-                                enabled = !isServerRunning
-                            )
-                            Spacer(modifier = Modifier.width(16.dp))
-                            OutlinedTextField(
-                                value = secureServerPort.toString(),
-                                onValueChange = { settingsViewModel.onSecureServerPortChange(it) },
-                                label = { Text("Secure Server Port (WSS)") },
-                                modifier = Modifier.weight(1f),
-                                enabled = !isServerRunning
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // --- Encryption Setting ---
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
-                            Checkbox(
-                                checked = encryptionEnabled,
-                                onCheckedChange = { desktopViewModel.setEncryption(it) },
-                                enabled = !isServerRunning
-                            )
-                        }
-                        Text(
-                            text = "Requires a restart of the server to apply.",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Button(
-                            onClick = onShowPushSettingsRequest,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("Open Bulk Settings Pusher")
-                        }
-
-                        // --- Device Management ---
-                        Text("Trusted Devices", style = MaterialTheme.typography.titleMedium)
-                        if (trustedDevices.isEmpty()) {
-                            Text("No trusted devices.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
-                        } else {
-                            trustedDevices.forEach { (id, name) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(name, style = MaterialTheme.typography.bodyLarge)
-                                        Text(id, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    Row {
-                                        TextButton(onClick = { desktopViewModel.unpairDevice(id) }) {
-                                            Text("Unpair")
-                                        }
-                                        TextButton(onClick = { desktopViewModel.banDevice(id, name) }) {
-                                            Text("Ban", color = MaterialTheme.colorScheme.error)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Banned Devices", style = MaterialTheme.typography.titleMedium)
-                            if (bannedDevices.isNotEmpty()) {
-                                TextButton(onClick = { desktopViewModel.unbanAllDevices() }) {
-                                    Icon(Icons.Default.Delete, contentDescription = null)
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Unban All")
-                                }
-                            }
-                        }
-                        if (bannedDevices.isEmpty()) {
-                            Text("No banned devices.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(8.dp))
-                        } else {
-                            bannedDevices.forEach { (id, name) ->
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(name, style = MaterialTheme.typography.bodyLarge)
-                                        Text(id, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                    }
-                                    TextButton(onClick = { desktopViewModel.unbanDevice(id) }) {
-                                        Text("Unban")
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.height(16.dp))
-
-                        // --- Close Button ---
-                        Box(modifier = Modifier.fillMaxWidth()) {
-                            IconButton(
-                                onClick = onDismissRequest,
-                                modifier = Modifier.align(Alignment.BottomEnd)
-                            ) {
-                                Icon(Icons.Default.Close, contentDescription = "Close")
-                            }
-                        }
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    IconButton(
+                        onClick = onDismissRequest,
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        Icon(Icons.Default.Close, contentDescription = "Close")
                     }
-
-                    VerticalScrollbar(
-                        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
-                        adapter = rememberScrollbarAdapter(scrollState),
-                        style = ScrollbarStyle(
-                            minimalHeight = 16.dp,
-                            thickness = 8.dp,
-                            shape = MaterialTheme.shapes.small,
-                            hoverDurationMillis = 300,
-                            unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                            hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
-                        )
-                    )
                 }
+            }
+
+            VerticalScrollbar(
+                modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+                adapter = rememberScrollbarAdapter(scrollState),
+                style = ScrollbarStyle(
+                    minimalHeight = 16.dp,
+                    thickness = 8.dp,
+                    shape = MaterialTheme.shapes.small,
+                    hoverDurationMillis = 300,
+                    unhoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                    hoverColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.50f)
+                )
+            )
+        }
     }
 }

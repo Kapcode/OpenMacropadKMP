@@ -1,0 +1,261 @@
+package switchdektoptocompose.ui.settings
+
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.TooltipArea
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import switchdektoptocompose.viewmodel.ServerViewModel
+import switchdektoptocompose.viewmodel.SettingsViewModel
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun NetworkSettings(
+    serverPort: Int,
+    secureServerPort: Int,
+    encryptionEnabled: Boolean,
+    isServerRunning: Boolean,
+    defaultPairingModeQr: Boolean,
+    allowNewConnections: Boolean,
+    multiQrEnabled: Boolean,
+    fleetModeEnabled: Boolean,
+    allowOnceOnly: Boolean,
+    enableWebsocketPings: Boolean,
+    settingsViewModel: SettingsViewModel,
+    sharedSettingsViewModel: SharedSettingsViewModel,
+    serverViewModel: ServerViewModel,
+    onShowPushSettingsRequest: () -> Unit,
+    onSecuritySectionPositioned: (Float) -> Unit
+) {
+    Text(
+        "Security & Privacy",
+        style = MaterialTheme.typography.titleMedium,
+        modifier = Modifier.onGloballyPositioned { coordinates ->
+            onSecuritySectionPositioned(coordinates.positionInParent().y)
+        }
+    )
+    Spacer(modifier = Modifier.height(8.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "Sets whether the Android client defaults to QR scanning (On) or PIN entry (Off) when starting a pairing request.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Default to QR Scanning", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = defaultPairingModeQr,
+                onCheckedChange = { settingsViewModel.setDefaultPairingModeQr(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "When enabled, new devices can find this server and request to pair.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Device Discovery", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = allowNewConnections,
+                onCheckedChange = { settingsViewModel.setAllowNewConnections(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "When enabled, multiple QR codes can be used for pairing.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Multi-QR Pairing Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = multiQrEnabled,
+                onCheckedChange = { sharedSettingsViewModel.setMultiQrEnabled(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Pairing & Sync (Fleet) Mode", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = fleetModeEnabled,
+                onCheckedChange = { settingsViewModel.setFleetModeEnabled(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(12.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Ask Every Time (One-Time Approvals) ONLY", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = allowOnceOnly,
+                onCheckedChange = { settingsViewModel.setAllowOnceOnly(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    TooltipArea(
+        tooltip = {
+            Surface(
+                modifier = Modifier.padding(4.dp),
+                shape = MaterialTheme.shapes.small,
+                shadowElevation = 4.dp
+            ) {
+                Text(
+                    "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors.",
+                    modifier = Modifier.padding(8.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("WebSocket Protocol Heartbeats", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableWebsocketPings,
+                onCheckedChange = { settingsViewModel.setEnableWebsocketPings(it) }
+            )
+        }
+    }
+    Spacer(modifier = Modifier.height(8.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        OutlinedTextField(
+            value = serverPort.toString(),
+            onValueChange = { settingsViewModel.onServerPortChange(it) },
+            label = { Text("Server Port (WS)") },
+            modifier = Modifier.weight(1f),
+            enabled = !isServerRunning
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        OutlinedTextField(
+            value = secureServerPort.toString(),
+            onValueChange = { settingsViewModel.onSecureServerPortChange(it) },
+            label = { Text("Secure Server Port (WSS)") },
+            modifier = Modifier.weight(1f),
+            enabled = !isServerRunning
+        )
+    }
+    Spacer(modifier = Modifier.height(16.dp))
+
+    // --- Encryption Setting ---
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
+        Checkbox(
+            checked = encryptionEnabled,
+            onCheckedChange = { serverViewModel.setEncryption(it) },
+            enabled = !isServerRunning
+        )
+    }
+    Text(
+        text = "Requires a restart of the server to apply.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(start = 8.dp)
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+    Spacer(modifier = Modifier.height(16.dp))
+
+    Button(
+        onClick = onShowPushSettingsRequest,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
+        Spacer(Modifier.width(8.dp))
+        Text("Open Bulk Settings Pusher")
+    }
+}
+

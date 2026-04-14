@@ -49,8 +49,8 @@ fun main(args: Array<String>) = application {
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
-    val uiState by desktopViewModel.uiState.collectAsState()
-    val pendingPairingRequests = uiState.pendingPairingRequests
+    val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
+    val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
     val icon = painterResource("macropadIcon512.png")
 
     // Update triggers in the application scope so they stay active even when window is hidden

@@ -12,11 +12,7 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 2. Desktop "X" Close Button Optimization
 - **Description**: Clicking the standard "X" (close) button on the Desktop application immediately terminates the process or minimizes to tray based on settings, without a unified confirmation dialog that offers all options.
-- **Required Behavior**: Clicking "X" should trigger the `ExitConfirmDialog` (or a similar specialized dialog) that explicitly offers:
-    1. **Minimize to Tray**: Continue running in the background.
-    2. **Exit Application**: Fully terminate the server and all macros.
-    3. **Cancel**: Return to the application.
-- **Status**: 🔴 **Planned**.
+- **Status**: ✅ **Fixed**. Implemented a three-option `exitBehavior` system (**Ask, Exit to Tray, Just Exit**) that is consistently applied across the Window [X] button, Tray Menu, and UI Header.
 
 ---
 
@@ -24,7 +20,7 @@ This document tracks identified security risks that have not yet been fully miti
 
 ### 1. Security Audit of Pairing Process
 - **Description**: With the introduction of "Sync (Fleet)" and multi-QR grids, the pairing process has increased in complexity. A formal security audit is needed to ensure no race conditions or unauthorized bypasses exist in the mass-provisioning flow.
-- **Status**: ✅ **Fixed**. Implemented a three-option `exitBehavior` system (**Ask, Exit to Tray, Just Exit**) that is consistently applied across the Window [X] button, Tray Menu, and UI Header.
+- **Status**: 🔴 **Planned**.
 
 ---
 

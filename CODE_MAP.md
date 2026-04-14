@@ -19,7 +19,7 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `logic/`: Core automation logic (MacroPlayer, TriggerListener, ServerDiscovery, KeyParser).
             - `model/`: Desktop-specific state models (MacroModels, ClientInfo).
             - `ui/`: Desktop-specific Compose screens, themes, and specialized components (SwingCodeEditor).
-            - `viewmodel/`: Desktop ViewModels for state management.
+            - `viewmodel/`: Desktop ViewModels for state management (`ServerViewModel`, `ClientCommunicationViewModel`, `MacroManagerViewModel`).
             - `main.kt`: JVM Application entry point.
         - **`MacroKTOR/`**: Ktor 3.x server implementation (`MacroKtorServer.kt`).
         - **`com.kapcode.open.macropad.kmps/`**: JVM implementations of `DeviceInfo` and `IdentityManager`.
@@ -45,7 +45,7 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
-| **Client** | Connects to server, spends tokens, and triggers macros. Moved token deduction to `onExecutionStart` to prevent double-spending. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **Client** | Connects to server, spends tokens, and triggers macros. Moved token deduction to `onExecutionStart` to prevent double-spending. Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
 | **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. | `androidMain/com/.../TokenManager.kt` |
 | **AppSettings** | Persists global metrics like `totalCurrencySpent` and `totalMacrosExecuted`. | `commonMain/com/.../settings/AppSettings.kt` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
