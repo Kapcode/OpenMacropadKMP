@@ -50,7 +50,7 @@ fun DeviceManagement(
     ) {
         Text("Banned Devices", style = MaterialTheme.typography.titleMedium)
         if (bannedDevices.isNotEmpty()) {
-            TextButton(onClick = { /* TODO: Implement unbanAll in ViewModel if needed */ }) {
+            TextButton(onClick = { clientCommunicationViewModel.unbanAllDevices() }) {
                 Icon(Icons.Default.Delete, contentDescription = null)
                 Spacer(Modifier.width(4.dp))
                 Text("Unban All")

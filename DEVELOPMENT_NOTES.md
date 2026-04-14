@@ -437,6 +437,7 @@ Automated macros could cause loss of system control if they ran too long or went
 
 
 - [x] **Physical Consent & QR Support**: Implemented a "Physical Consent Pairing" security feature with **QR code scanning** for seamless setup. Untrusted devices must be manually approved on the server. Added support for persistent "Banning" and "Unpairing" with "Device Discovery" control and a "One-Time Approvals ONLY" mode.
+- [x] **Pairing Brute-Force Protection**: Added a "3-strikes" rule for the 6-digit verification code. Exceeding 3 incorrect attempts results in an automatic device ban, preventing exhaustive search attacks.
 - [x] **OS-Level Secret Vault**: Integrated native secure storage for identity keys using macOS Keychain, Windows Credential Manager, and Linux Libsecret via `SecretManager`.
 - [x] **Smart QR Grid**: Implemented "Fleet Mode" for dynamic scaling of pairing requests.
 - [x] **Stable Hardware Fingerprinting**: Replaced `FINGERPRINT` with a combination of `MANUFACTURER|MODEL|BOARD|HARDWARE` to ensure persistent device identity across Android OS updates.

@@ -16,15 +16,15 @@ This document tracks identified security risks that have not yet been fully miti
 
 ---
 
-## 🟡 Medium Priority
+## ✅ Resolved
 
 ### 1. Security Audit of Pairing Process
-- **Description**: With the introduction of "Sync (Fleet)" and multi-QR grids, the pairing process has increased in complexity. A formal security audit is needed to ensure no race conditions or unauthorized bypasses exist in the mass-provisioning flow.
-- **Status**: 🔴 **Planned**.
-
----
-
-## ✅ Resolved
+- **Description**: Conducted a formal security audit of the pairing handshake and manual approval flow.
+- **Improvements**:
+    - **Brute-Force Protection**: Implemented a "3-strikes" rule for the 6-digit pairing code. Any device exceeding 3 incorrect attempts is automatically banned.
+    - **State Hardening**: Improved robustness of `approveDevice` to handle edge cases where a pending request might be missing or already cleared, preventing potential null pointer exceptions or inconsistent states.
+    - **Identity Binding**: Re-verified that `clientId` is cryptographically bound to hardware metadata to prevent spoofing during the pairing phase.
+- **Status**: ✅ **Fixed**.
 
 ### 2. Trust On First Use (TOFU) Gap
 - **Description**: During the initial pairing of a new device, the client must "trust" the server's identity certificate without prior verification.

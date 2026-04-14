@@ -115,7 +115,12 @@ class ClientCommunicationViewModel(
 
     fun approveDevice(clientId: String, clientName: String, persistent: Boolean = true) {
         val request = _pendingPairingRequests.value.find { it.id == clientId }
-        if (request != null && !request.codeMatched) {
+        if (request == null) {
+            consoleViewModel.addLog(LogLevel.Error, "Attempted to approve $clientName ($clientId) but no pending request found.")
+            return
+        }
+        
+        if (!request.codeMatched) {
             consoleViewModel.addLog(LogLevel.Warn, "Attempted to approve $clientName ($clientId) before code was correctly entered.")
             return
         }
@@ -220,16 +225,29 @@ class ClientCommunicationViewModel(
                     ControlCommand.PAIRING_RESPONSE -> {
                         val enteredCode = params["code"]
                         val pendingRequest = _pendingPairingRequests.value.find { it.id == clientId }
-                        if (pendingRequest != null && pendingRequest.verificationCode == enteredCode) {
-                            consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
-                            _pendingPairingRequests.update { requests ->
-                                requests.map { if (it.id == clientId) it.copy(codeMatched = true) else it }
+                        if (pendingRequest != null) {
+                            if (pendingRequest.verificationCode == enteredCode) {
+                                consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
+                                _pendingPairingRequests.update { requests ->
+                                    requests.map { if (it.id == clientId) it.copy(codeMatched = true) else it }
+                                }
+                                viewModelScope.launch {
+                                    serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_CODE_MATCHED))
+                                }
+                            } else {
+                                val newAttempts = pendingRequest.pairingAttempts + 1
+                                consoleViewModel.addLog(LogLevel.Warn, "Incorrect pairing code entered from $clientId (Attempt $newAttempts/3).")
+                                
+                                if (newAttempts >= 3) {
+                                    consoleViewModel.addLog(LogLevel.Error, "Too many failed pairing attempts from $clientId. Banning device.")
+                                    banDevice(clientId, pendingRequest.name)
+                                    _pendingPairingRequests.update { it.filterNot { req -> req.id == clientId } }
+                                } else {
+                                    _pendingPairingRequests.update { requests ->
+                                        requests.map { if (it.id == clientId) it.copy(pairingAttempts = newAttempts) else it }
+                                    }
+                                }
                             }
-                            viewModelScope.launch {
-                                serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_CODE_MATCHED))
-                            }
-                        } else {
-                            consoleViewModel.addLog(LogLevel.Warn, "Incorrect pairing code entered from $clientId.")
                         }
                     }
                     else -> {}

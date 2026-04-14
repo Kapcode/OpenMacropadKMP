@@ -48,6 +48,7 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Description:** Any device could previously connect and send macro commands if they knew the server IP.
 *   **Mitigation:**
     *   **Trust on First Use (TOFU) with Physical Consent:** ✅ **Fixed**. Untrusted devices trigger a modal pairing dialog on the server's physical screen. Implemented out-of-band verification using a random 6-digit code displayed on the server and a **QR Code** for scanning. A human must manually verify or scan the code and "Approve" the connection. **Note:** Sensitive PINs are no longer transmitted over the network in the `PAIRING_PENDING` message, preventing passive sniffing of pairing codes.
+    *   **Pairing Brute-Force Protection:** ✅ **Fixed**. Implemented a "3-strikes" rule for the 6-digit verification code. If a device submits an incorrect code 3 times, it is automatically banned from the server to prevent exhaustive search attacks.
     *   **Persistent Whitelisting:** Approved devices are stored by their unique Device ID fingerprint in `trusted_devices.json`.
     *   **Banning System:** Malicious or spammy devices can be "Banned," adding them to a `banned_devices.json` blacklist. Banned devices are blocked at the network level and cannot trigger further pairing prompts.
     *   **Unpairing:** Users can "Unpair" a device, which removes its trusted status and forces a new pairing request upon the next connection attempt.

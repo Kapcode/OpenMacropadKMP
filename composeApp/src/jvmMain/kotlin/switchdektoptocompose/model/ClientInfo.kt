@@ -7,5 +7,6 @@ data class ClientInfo(
     val verificationCode: String? = null,
     val codeMatched: Boolean = false,
     val metadata: String? = null,
-    val currency: Long = 0
+    val currency: Long = 0,
+    val pairingAttempts: Int = 0
 )
