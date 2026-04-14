@@ -1,6 +1,7 @@
 package com.kapcode.open.macropad.kmps
 
 import androidx.lifecycle.ViewModel
+import com.kapcode.open.macropad.kmps.models.MacroPack
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +23,15 @@ data class ClientUiState(
     val currentActualZoom: Float = 1f,
     val currentFocusState: String = "Idle",
     val currency: Long = 0L,
-    val isMacroExecutionEnabled: Boolean = true
+    val isMacroExecutionEnabled: Boolean = true,
+    val activeProcess: String? = null,
+    val activePack: MacroPack? = null,
+    val installedPacks: List<MacroPack> = emptyList(),
+    val filteredPacks: List<MacroPack> = emptyList(),
+    val dashboardMacros: List<String> = emptyList(),
+    val searchQuery: String = "",
+    val currentTab: Int = 0, // 0: Active Pack, 1: My Dashboard
+    val isEditMode: Boolean = false
 )
 
 class ClientViewModel : ViewModel() {
@@ -78,6 +87,72 @@ class ClientViewModel : ViewModel() {
 
     fun setMacroExecutionEnabled(enabled: Boolean) {
         _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
+    }
+
+    fun setInstalledPacks(packs: List<MacroPack>) {
+        _uiState.update { state ->
+            state.copy(
+                installedPacks = packs,
+                filteredPacks = filterPacks(packs, state.searchQuery)
+            )
+        }
+    }
+
+    fun setSearchQuery(query: String) {
+        _uiState.update { state ->
+            state.copy(
+                searchQuery = query,
+                filteredPacks = filterPacks(state.installedPacks, query)
+            )
+        }
+    }
+
+    private fun filterPacks(packs: List<MacroPack>, query: String): List<MacroPack> {
+        if (query.isBlank()) return packs
+        return packs.filter { 
+            it.name.contains(query, ignoreCase = true) || 
+            it.author.contains(query, ignoreCase = true) ||
+            it.targetProcess?.contains(query, ignoreCase = true) == true
+        }
+    }
+
+    fun setActiveProcess(process: String?) {
+        _uiState.update { state ->
+            val matchingPack = state.installedPacks.find { it.targetProcess?.equals(process, ignoreCase = true) == true }
+            state.copy(
+                activeProcess = process,
+                activePack = matchingPack ?: state.activePack
+            )
+        }
+    }
+
+    fun setActivePack(pack: MacroPack?) {
+        _uiState.update { it.copy(activePack = pack) }
+    }
+
+    fun setTab(index: Int) {
+        _uiState.update { it.copy(currentTab = index) }
+    }
+
+    fun setEditMode(enabled: Boolean) {
+        _uiState.update { it.copy(isEditMode = enabled) }
+    }
+
+    fun setDashboardMacros(macros: List<String>) {
+        _uiState.update { it.copy(dashboardMacros = macros) }
+    }
+
+    fun addToDashboard(macro: String) {
+        _uiState.update { state ->
+            if (state.dashboardMacros.contains(macro)) state
+            else state.copy(dashboardMacros = state.dashboardMacros + macro)
+        }
+    }
+
+    fun removeFromDashboard(macro: String) {
+        _uiState.update { state ->
+            state.copy(dashboardMacros = state.dashboardMacros - macro)
+        }
     }
 
     fun onMacroExecutionStart(macro: String) {

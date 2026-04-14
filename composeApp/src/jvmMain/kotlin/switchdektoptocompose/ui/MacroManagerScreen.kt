@@ -24,7 +24,8 @@ fun MacroManagerScreen(
     viewModel: MacroManagerViewModel,
     consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
-    onNewMacroClicked: () -> Unit
+    onNewMacroClicked: () -> Unit,
+    onMarketplaceClicked: () -> Unit
 ) {
     val macroFiles by viewModel.macroFiles.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
@@ -44,6 +45,11 @@ fun MacroManagerScreen(
         TopAppBar(
             title = { Text("Macro Manager") },
             actions = {
+                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Marketplace", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    IconButton(onClick = onMarketplaceClicked) {
+                        Icon(Icons.Default.ShoppingBag, contentDescription = "Marketplace")
+                    }
+                }
                 TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
                     IconButton(onClick = onNewMacroClicked) {
                         Icon(Icons.Default.Add, contentDescription = "New Macro")

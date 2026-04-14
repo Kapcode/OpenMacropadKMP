@@ -27,8 +27,10 @@ This document serves as a guide for AI assistants to navigate the project effect
     - **`src/androidMain/kotlin/`**: Android Client implementation.
         - **`com.kapcode.open.macropad.kmps/`**: Android app logic.
             - `MainActivity.kt`: Server discovery and initial setup.
-            - `ClientActivity.kt`: Remote control UI and token management.
-            - `TokenManager.kt` & `RewardedAd.kt`: Monetization and persistent storage logic.
+            - `ClientActivity.kt`: Remote control UI, tab navigation, and gesture handling.
+            - `ClientViewModel.kt`: Central state management for search, tabs, and dashboard logic.
+            - `SettingsStorage.kt`: SharedPreferences-backed persistence for user-curated dashboards.
+            - `TokenManager.kt` & `RewardedAd.kt`: Monetization and persistent token storage logic.
             - `DeviceInfo.kt` & `IdentityManager.kt`: Android hardware-backed security.
             - `MacroApplication.kt`: Android Application class for initialization.
 

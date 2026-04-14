@@ -222,7 +222,7 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
         Log.d("ClientActivity", "Targeting $ipAddress:$port (Secure: $isSecure)")
 
         settingsStorage = SettingsStorage(this)
-        settingsStorage.bindViewModel(settingsViewModel, activityScope)
+        settingsStorage.bindViewModel(settingsViewModel, clientViewModel, activityScope)
 
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
@@ -510,6 +510,13 @@ class ClientActivity : ComponentActivity(), SensorEventListener {
                                     },
                                     onHeartbeat = {
                                         lastHeartbeat = System.currentTimeMillis()
+                                    },
+                                    onCommand = { command, params ->
+                                        if (command == "active_process") {
+                                            val processName = params["name"]
+                                            Log.d("ClientActivity", "Active process updated: $processName")
+                                            clientViewModel.setActiveProcess(processName)
+                                        }
                                     },
                                     onData = { key, value ->
                                         if (key == "currency_update") {
@@ -1029,6 +1036,7 @@ fun ClientScreen(
     onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
     onQrScannerToggle: (Boolean) -> Unit = {}
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val connectionStatus = uiState.connectionStatus
     val serverName = uiState.serverName
     val disconnectReason = uiState.disconnectReason
@@ -1299,257 +1307,336 @@ fun ClientScreen(
                         .padding(innerPadding),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (macros.isNotEmpty() && !showQrScanner) {
-                        Box(modifier = Modifier.fillMaxSize()) {
-                            MacroButtonsScreen(
-                                macros = macros, 
-                                executingMacros = executingMacros,
-                                failedMacros = failedMacros,
-                                currency = uiState.currency,
-                                onMacroClick = onMacroClick,
-                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
-                            )
-                            
-                            if (!uiState.isMacroExecutionEnabled) {
-                                Surface(
-                                    modifier = Modifier.fillMaxSize(),
-                                    color = Color.Black.copy(alpha = 0.3f)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Card(
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.errorContainer,
-                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                            ),
-                                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(16.dp),
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Icon(Icons.Default.Block, contentDescription = null)
-                                                Spacer(Modifier.width(8.dp))
-                                                Text(
-                                                    "Execution Disabled (E-STOP)",
-                                                    style = MaterialTheme.typography.titleMedium,
-                                                    fontWeight = FontWeight.Bold
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    } else if (showQrScanner) {
-                        Box(
-                            modifier = Modifier.fillMaxSize().padding(16.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val configuration = LocalConfiguration.current
-                            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                            Box(
-                                modifier = if (isLandscape) {
-                                    Modifier.fillMaxHeight().aspectRatio(1f)
-                                } else {
-                                    Modifier.fillMaxWidth().aspectRatio(1f)
-                                }
-                            ) {
-                                QrCodeScanner(
-                                    onCodeScanned = { code: String ->
-                                        onPairingCodeEntered(code)
-                                        onQrScannerToggle(false)
-                                    },
-                                    onClose = { onQrScannerToggle(false) },
-                                    isAutoZoomEnabled = isAutoZoomEnabled_State,
-                                    isAutoFocusEnabled = isAutoFocusEnabled_State,
-                                    manualZoomRatio = manualZoomRatio_State,
-                                    manualFocusDistance = manualFocusDistance_State,
-                                    onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
-                                    onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
-                                    onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
-                                    onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
-                                    onCameraReady = { activeCamera = it }
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        if (connectionStatus == "Connected") {
+                            TabRow(selectedTabIndex = uiState.currentTab) {
+                                Tab(
+                                    selected = uiState.currentTab == 0,
+                                    onClick = { clientViewModel.setTab(0) },
+                                    text = { Text("Active Pack") }
+                                )
+                                Tab(
+                                    selected = uiState.currentTab == 1,
+                                    onClick = { clientViewModel.setTab(1) },
+                                    text = { Text("My Dashboard") }
                                 )
                             }
                         }
-                    } else {
-                        val scrollState = rememberScrollState()
-                        Column(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(16.dp)
-                                .verticalScroll(scrollState),
-                            verticalArrangement = Arrangement.Center,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
-                                var enteredCode by remember { mutableStateOf("") }
-                                val focusRequester = remember { FocusRequester() }
-                                val keyboardController = LocalSoftwareKeyboardController.current
-                                val focusManager = LocalFocusManager.current
-                                val configuration = LocalConfiguration.current
-                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
 
-                                LaunchedEffect(Unit) {
-                                    if (connectionStatus == "Pending Approval") {
-                                        focusRequester.requestFocus()
+                        if (uiState.currentTab == 1) {
+                            SearchBar(
+                                query = uiState.searchQuery,
+                                onQueryChange = { clientViewModel.setSearchQuery(it) }
+                            )
+                            NavigationHeader(
+                                packs = uiState.filteredPacks,
+                                activePack = uiState.activePack,
+                                onPackSelected = { clientViewModel.setActivePack(it) }
+                            )
+                        }
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (macros.isNotEmpty() && !showQrScanner) {
+                                Box(modifier = Modifier.fillMaxSize()) {
+                                    val displayMacros = if (uiState.currentTab == 0) {
+                                        uiState.activePack?.widgets?.map { it.label } ?: macros
+                                    } else {
+                                        uiState.dashboardMacros.ifEmpty { macros }
+                                    }
+
+                                    MacroButtonsScreen(
+                                        macros = displayMacros,
+                                        executingMacros = executingMacros,
+                                        failedMacros = failedMacros,
+                                        isEditMode = uiState.isEditMode,
+                                        onMacroClick = onMacroClick,
+                                        onMacroLongClick = { macroName ->
+                                            if (uiState.currentTab == 1) {
+                                                clientViewModel.removeFromDashboard(macroName)
+                                            } else {
+                                                clientViewModel.addToDashboard(macroName)
+                                                Toast.makeText(context, "Added to Dashboard", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        currency = uiState.currency,
+                                        modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
+                                    )
+                                    
+                                    if (uiState.currentTab == 1) {
+                                        FloatingActionButton(
+                                            onClick = { clientViewModel.setEditMode(!uiState.isEditMode) },
+                                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                                            containerColor = if (uiState.isEditMode) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                                        ) {
+                                            Icon(if (uiState.isEditMode) Icons.Default.Check else Icons.Default.Edit, contentDescription = "Edit")
+                                        }
+                                    }
+                                    
+                                    if (!uiState.isMacroExecutionEnabled) {
+                                        Surface(
+                                            modifier = Modifier.fillMaxSize(),
+                                            color = Color.Black.copy(alpha = 0.3f)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Card(
+                                                    colors = CardDefaults.cardColors(
+                                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                                    ),
+                                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(16.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Icon(Icons.Default.Block, contentDescription = null)
+                                                        Spacer(Modifier.width(8.dp))
+                                                        Text(
+                                                            "Execution Disabled (E-STOP)",
+                                                            style = MaterialTheme.typography.titleMedium,
+                                                            fontWeight = FontWeight.Bold
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
                                     }
                                 }
-
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Bottom
+                            } else if (showQrScanner) {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().padding(16.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    if (connectionStatus == "Code Matched") {
-                                        Column(
-                                            modifier = Modifier.weight(1f),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Icon(
-                                                Icons.Default.CheckCircle,
-                                                contentDescription = null,
-                                                tint = Color(0xFF008000),
-                                                modifier = Modifier.size(64.dp)
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            Text(
-                                                "Code Matched!",
-                                                style = MaterialTheme.typography.headlineSmall,
-                                                color = Color(0xFF008000)
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            Text(
-                                                "Please click 'Allow' on your Desktop to finish pairing.",
-                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                            )
+                                    val configuration = LocalConfiguration.current
+                                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                    Box(
+                                        modifier = if (isLandscape) {
+                                            Modifier.fillMaxHeight().aspectRatio(1f)
+                                        } else {
+                                            Modifier.fillMaxWidth().aspectRatio(1f)
                                         }
-                                    } else {
-                                        if (!isKeyboardOpen) {
-                                            Column(
-                                                modifier = Modifier.weight(1f),
-                                                horizontalAlignment = Alignment.CenterHorizontally,
-                                                verticalArrangement = Arrangement.Center
-                                            ) {
-                                                Text(
-                                                    "Please enter the 6-digit code shown on your Desktop:",
-                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                                )
-                                                Spacer(Modifier.height(16.dp))
-                                                CircularProgressIndicator()
-                                                Spacer(Modifier.height(24.dp))
-                                                OutlinedButton(
-                                                    onClick = { onQrScannerToggle(true) }
-                                                ) {
-                                                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                                                    Spacer(Modifier.width(8.dp))
-                                                    Text("Scan QR Code")
-                                                }
-                                            }
-                                        }
-
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.Center,
-                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                                        ) {
-                                            IconButton(onClick = onBackToMain) {
-                                                Icon(Icons.Default.Close, contentDescription = "Cancel")
-                                            }
-
-                                            OutlinedTextField(
-                                                value = enteredCode,
-                                                onValueChange = {
-                                                    if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                                                        enteredCode = it
-                                                    }
-                                                },
-                                                label = { if (!isKeyboardOpen) Text("6-Digit Code") },
-                                                placeholder = { if (isKeyboardOpen) Text("Code") },
-                                                singleLine = true,
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                modifier = Modifier
-                                                    .width(if (isLandscape && isKeyboardOpen) 120.dp else 180.dp)
-                                                    .focusRequester(focusRequester)
-                                            )
-
-                                            IconButton(
-                                                onClick = {
-                                                    if (isKeyboardOpen) {
-                                                        keyboardController?.hide()
-                                                        focusManager.clearFocus()
-                                                    } else {
-                                                        focusRequester.requestFocus()
-                                                        keyboardController?.show()
-                                                    }
-                                                }
-                                            ) {
-                                                Icon(
-                                                    if (isKeyboardOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                                                    contentDescription = "Toggle Keyboard"
-                                                )
-                                            }
-
-                                            IconButton(onClick = { onQrScannerToggle(true) }) {
-                                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
-                                            }
-
-                                            Button(
-                                                onClick = { onPairingCodeEntered(enteredCode) },
-                                                enabled = enteredCode.length == 6,
-                                                contentPadding = PaddingValues(0.dp),
-                                                modifier = Modifier.size(48.dp)
-                                            ) {
-                                                Icon(Icons.Default.Done, contentDescription = "Submit")
-                                            }
-                                        }
-
-                                        if (isKeyboardOpen) {
-                                            LaunchedEffect(Unit) {
-                                                focusRequester.requestFocus()
-                                            }
-                                        }
-                                    }
-
-                                    if (!isKeyboardOpen) {
-                                        Text(
-                                            "Verification required to secure the connection.",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            modifier = Modifier.padding(bottom = 8.dp)
+                                    ) {
+                                        QrCodeScanner(
+                                            onCodeScanned = { code: String ->
+                                                onPairingCodeEntered(code)
+                                                onQrScannerToggle(false)
+                                            },
+                                            onClose = { onQrScannerToggle(false) },
+                                            isAutoZoomEnabled = isAutoZoomEnabled_State,
+                                            isAutoFocusEnabled = isAutoFocusEnabled_State,
+                                            manualZoomRatio = manualZoomRatio_State,
+                                            manualFocusDistance = manualFocusDistance_State,
+                                            onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
+                                            onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
+                                            onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                                            onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
+                                            onCameraReady = { activeCamera = it }
                                         )
                                     }
                                 }
-                            } else if (disconnectReason != null) {
-                                val configuration = LocalConfiguration.current
-                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                
-                                if (isLandscape) {
-                                    Row(
-                                        modifier = Modifier.fillMaxSize(),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Center
-                                    ) {
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            } else {
+                                val scrollState = rememberScrollState()
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(16.dp)
+                                        .verticalScroll(scrollState),
+                                    verticalArrangement = Arrangement.Center,
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
+                                        var enteredCode by remember { mutableStateOf("") }
+                                        val focusRequester = remember { FocusRequester() }
+                                        val keyboardController = LocalSoftwareKeyboardController.current
+                                        val focusManager = LocalFocusManager.current
+                                        val configuration = LocalConfiguration.current
+                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                        val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
+                                        LaunchedEffect(Unit) {
+                                            if (connectionStatus == "Pending Approval") {
+                                                focusRequester.requestFocus()
+                                            }
+                                        }
+
+                                        Column(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            verticalArrangement = Arrangement.Bottom
+                                        ) {
+                                            if (connectionStatus == "Code Matched") {
+                                                Column(
+                                                    modifier = Modifier.weight(1f),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.CheckCircle,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF008000),
+                                                        modifier = Modifier.size(64.dp)
+                                                    )
+                                                    Spacer(Modifier.height(16.dp))
+                                                    Text(
+                                                        "Code Matched!",
+                                                        style = MaterialTheme.typography.headlineSmall,
+                                                        color = Color(0xFF008000)
+                                                    )
+                                                    Spacer(Modifier.height(8.dp))
+                                                    Text(
+                                                        "Please click 'Allow' on your Desktop to finish pairing.",
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                    )
+                                                }
+                                            } else {
+                                                if (!isKeyboardOpen) {
+                                                    Column(
+                                                        modifier = Modifier.weight(1f),
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.Center
+                                                    ) {
+                                                        Text(
+                                                            "Please enter the 6-digit code shown on your Desktop:",
+                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                        )
+                                                        Spacer(Modifier.height(16.dp))
+                                                        CircularProgressIndicator()
+                                                        Spacer(Modifier.height(24.dp))
+                                                        OutlinedButton(
+                                                            onClick = { onQrScannerToggle(true) }
+                                                        ) {
+                                                            Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                                                            Spacer(Modifier.width(8.dp))
+                                                            Text("Scan QR Code")
+                                                        }
+                                                    }
+                                                }
+
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.Center,
+                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                                ) {
+                                                    IconButton(onClick = onBackToMain) {
+                                                        Icon(Icons.Default.Close, contentDescription = "Cancel")
+                                                    }
+
+                                                    OutlinedTextField(
+                                                        value = enteredCode,
+                                                        onValueChange = {
+                                                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                                                enteredCode = it
+                                                            }
+                                                        },
+                                                        label = { if (!isKeyboardOpen) Text("6-Digit Code") },
+                                                        placeholder = { if (isKeyboardOpen) Text("Code") },
+                                                        singleLine = true,
+                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                        modifier = Modifier
+                                                            .width(if (isLandscape && isKeyboardOpen) 120.dp else 180.dp)
+                                                            .focusRequester(focusRequester)
+                                                    )
+
+                                                    IconButton(
+                                                        onClick = {
+                                                            if (isKeyboardOpen) {
+                                                                keyboardController?.hide()
+                                                                focusManager.clearFocus()
+                                                            } else {
+                                                                focusRequester.requestFocus()
+                                                                keyboardController?.show()
+                                                            }
+                                                        }
+                                                    ) {
+                                                        Icon(
+                                                            if (isKeyboardOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                                            contentDescription = "Toggle Keyboard"
+                                                        )
+                                                    }
+
+                                                    IconButton(onClick = { onQrScannerToggle(true) }) {
+                                                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
+                                                    }
+
+                                                    Button(
+                                                        onClick = { onPairingCodeEntered(enteredCode) },
+                                                        enabled = enteredCode.length == 6,
+                                                        contentPadding = PaddingValues(0.dp),
+                                                        modifier = Modifier.size(48.dp)
+                                                    ) {
+                                                        Icon(Icons.Default.Done, contentDescription = "Submit")
+                                                    }
+                                                }
+
+                                                if (isKeyboardOpen) {
+                                                    LaunchedEffect(Unit) {
+                                                        focusRequester.requestFocus()
+                                                    }
+                                                }
+                                            }
+
+                                            if (!isKeyboardOpen) {
+                                                Text(
+                                                    "Verification required to secure the connection.",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(bottom = 8.dp)
+                                                )
+                                            }
+                                        }
+                                    } else if (disconnectReason != null) {
+                                        val configuration = LocalConfiguration.current
+                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                        
+                                        if (isLandscape) {
+                                            Row(
+                                                modifier = Modifier.fillMaxSize(),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center
+                                            ) {
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Icon(
+                                                        Icons.AutoMirrored.Filled.ArrowBack, 
+                                                        contentDescription = null, 
+                                                        modifier = Modifier.size(64.dp),
+                                                        tint = MaterialTheme.colorScheme.error
+                                                    )
+                                                }
+                                                Spacer(Modifier.width(32.dp))
+                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                                    Spacer(Modifier.height(8.dp))
+                                                    Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
+                                                    Spacer(Modifier.height(16.dp))
+                                                    Button(onClick = onBackToMain) {
+                                                        Text("Back to Server List")
+                                                    }
+                                                    if (slamFireEnabled) {
+                                                        Spacer(Modifier.height(8.dp))
+                                                        Text(
+                                                            "Tip: You can slam to go back",
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        } else {
                                             Icon(
                                                 Icons.AutoMirrored.Filled.ArrowBack, 
                                                 contentDescription = null, 
                                                 modifier = Modifier.size(64.dp),
                                                 tint = MaterialTheme.colorScheme.error
                                             )
-                                        }
-                                        Spacer(Modifier.width(32.dp))
-                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Spacer(Modifier.height(16.dp))
                                             Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
                                             Spacer(Modifier.height(8.dp))
                                             Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
-                                            Spacer(Modifier.height(16.dp))
+                                            Spacer(Modifier.height(32.dp))
                                             Button(onClick = onBackToMain) {
                                                 Text("Back to Server List")
                                             }
                                             if (slamFireEnabled) {
-                                                Spacer(Modifier.height(8.dp))
+                                                Spacer(Modifier.height(16.dp))
                                                 Text(
                                                     "Tip: You can slam to go back",
                                                     style = MaterialTheme.typography.labelSmall,
@@ -1557,40 +1644,17 @@ fun ClientScreen(
                                                 )
                                             }
                                         }
-                                    }
-                                } else {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack, 
-                                        contentDescription = null, 
-                                        modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
-                                    Spacer(Modifier.height(16.dp))
-                                    Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
-                                    Spacer(Modifier.height(8.dp))
-                                    Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
-                                    Spacer(Modifier.height(32.dp))
-                                    Button(onClick = onBackToMain) {
-                                        Text("Back to Server List")
-                                    }
-                                    if (slamFireEnabled) {
+                                    } else {
+                                        CircularProgressIndicator()
                                         Spacer(Modifier.height(16.dp))
+                                        Text("Connected to:")
                                         Text(
-                                            "Tip: You can slam to go back",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            serverName ?: "N/A",
+                                            style = MaterialTheme.typography.headlineMedium
                                         )
+                                        Text("Status: $connectionStatus")
                                     }
                                 }
-                            } else {
-                                CircularProgressIndicator()
-                                Spacer(Modifier.height(16.dp))
-                                Text("Connected to:")
-                                Text(
-                                    serverName ?: "N/A",
-                                    style = MaterialTheme.typography.headlineMedium
-                                )
-                                Text("Status: $connectionStatus")
                             }
                         }
                     }

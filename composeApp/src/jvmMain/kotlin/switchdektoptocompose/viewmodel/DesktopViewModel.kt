@@ -14,6 +14,8 @@ import kotlinx.coroutines.launch
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.ServerDiscoveryAnnouncer
 import switchdektoptocompose.model.*
+import com.kapcode.open.macropad.kmps.network.sockets.model.activeProcessMessage
+import switchdektoptocompose.logic.ProcessWatcher
 import java.net.Inet4Address
 import java.net.NetworkInterface
 
@@ -49,6 +51,7 @@ class DesktopViewModel(
     val uiState: StateFlow<DesktopUiState> = _uiState.asStateFlow()
 
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
+    private val processWatcher = ProcessWatcher(viewModelScope)
 
     private val server = MacroKtorServer(
         appSettings = AppSettings,
@@ -61,6 +64,14 @@ class DesktopViewModel(
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
 
     init {
+        viewModelScope.launch {
+            processWatcher.activeProcess.collect { processName ->
+                if (server.isRunning()) {
+                    server.sendToAll(activeProcessMessage(processName))
+                    consoleViewModel.addLog(LogLevel.Verbose, "Active process changed: ${processName ?: "None"}")
+                }
+            }
+        }
         findLocalIpAddresses()
         updateHistoryState()
         _uiState.update { it.copy(
@@ -152,6 +163,7 @@ class DesktopViewModel(
             server.start(port, encryptionEnabled)
             _uiState.update { it.copy(isServerRunning = server.isRunning()) }
             if (server.isRunning()) {
+                processWatcher.startWatching()
                 val serverName = System.getProperty("user.name") ?: "OpenMacropad Server"
                 discoveryAnnouncer.start(serverName, port, encryptionEnabled)
                 consoleViewModel.addLog(LogLevel.Info, "Server started on port $port")
@@ -169,6 +181,7 @@ class DesktopViewModel(
         if (!server.isRunning()) return
         consoleViewModel.addLog(LogLevel.Info, "Stopping server...")
         discoveryAnnouncer.stop()
+        processWatcher.stopWatching()
         viewModelScope.launch {
             server.stop()
             _uiState.update { it.copy(isServerRunning = false) }

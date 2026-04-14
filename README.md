@@ -28,6 +28,11 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
     *   **Single Slam**: Execute a primary macro or "OK" action.
     *   **Double Slam**: Execute a secondary macro or "Cancel/Back" action with configurable timing thresholds.
     *   **Context Aware**: Automatically acts as a QR scanner toggle during setup, then transitions to macro triggering once connected.
+*   **Dual-Mode Interface**: Features two primary views:
+    *   **Active Pack**: Context-aware grid that automatically swaps based on the focused application on the Desktop.
+    *   **My Dashboard**: A user-curated collection of favorite macros persisted to local storage.
+*   **Gestures & Management**: Long-press any macro to toggle its presence in the "My Dashboard" tab.
+*   **Search & Filtering**: Real-time search bar for filtering macro packs and finding specific automation tools.
 *   **Animation & Polish**: Smooth window transitions to the tray (respecting user preferences), high-quality 512px taskbar icons, and Material 3 dialog notifications.
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.

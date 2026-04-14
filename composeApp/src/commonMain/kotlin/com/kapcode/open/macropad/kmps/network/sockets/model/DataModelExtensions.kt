@@ -77,6 +77,9 @@ fun macroListMessage(macros: List<String>): DataModel =
 fun playMacroMessage(macroName: String): DataModel =
     commandMessage("play:$macroName")
 
+fun activeProcessMessage(processName: String?): DataModel =
+    commandMessage("active_process", mapOf("name" to (processName ?: "")))
+
 fun getMacrosRequest(): DataModel =
     textMessage("getMacros")
 

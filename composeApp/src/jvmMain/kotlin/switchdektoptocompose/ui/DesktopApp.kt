@@ -55,6 +55,7 @@ fun DesktopAppPreview() {
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel() }
+    val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
 
     val viewModels = DesktopViewModels(
         desktopViewModel = desktopViewModel,
@@ -66,7 +67,8 @@ fun DesktopAppPreview() {
         settingsViewModel = settingsViewModel,
         sharedSettingsViewModel = sharedSettingsViewModel,
         macroTimelineViewModel = macroTimelineViewModel,
-        newEventViewModel = newEventViewModel
+        newEventViewModel = newEventViewModel,
+        marketplaceViewModel = marketplaceViewModel
     )
 
     val desktopWindowState = rememberDesktopWindowState(settingsViewModel = settingsViewModel)
@@ -102,6 +104,7 @@ fun DesktopApp(
     val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
     val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val newEventViewModel = viewModels.newEventViewModel
+    val marketplaceViewModel = viewModels.marketplaceViewModel
 
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
@@ -147,10 +150,21 @@ fun DesktopApp(
     var showNewEventDialog by remember { mutableStateOf(false) }
     var showRecordDialog by remember { mutableStateOf(false) }
     var showExitDialogInternal by remember { mutableStateOf(false) }
+    var showMarketplace by remember { mutableStateOf(false) }
     val showExitDialogResolved = showExitDialog || showExitDialogInternal
 
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     // Using the desktopWindowState passed from main.kt
+
+    if (showMarketplace) {
+        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+            MarketplaceScreen(
+                viewModel = marketplaceViewModel,
+                onBack = { showMarketplace = false }
+            )
+        }
+        return
+    }
 
     if (showExitDialogResolved) {
         ExitConfirmDialog(
@@ -170,7 +184,6 @@ fun DesktopApp(
     }
 
     if (showSettingsDialog) {
-        val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
         SettingsDialog(
             desktopViewModel = desktopViewModel,
             settingsViewModel = settingsViewModel,
@@ -570,6 +583,9 @@ fun DesktopApp(
                                             onRecordMacroClicked = {
                                                 recordMacroViewModel.reset()
                                                 showRecordDialog = true
+                                            },
+                                            onMarketplaceClicked = {
+                                                showMarketplace = true
                                             }
                                         )
                                     }

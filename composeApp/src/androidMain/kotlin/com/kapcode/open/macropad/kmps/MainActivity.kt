@@ -77,6 +77,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private val clientDiscovery by lazy { ClientDiscovery() }
     private val settingsViewModel = SettingsViewModel()
+    private val clientViewModel = ClientViewModel()
     private lateinit var settingsStorage: SettingsStorage
     private var onOkayPressed: (() -> Unit)? = null
     
@@ -93,7 +94,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         proximitySensor = sensorManager?.getDefaultSensor(Sensor.TYPE_PROXIMITY)
 
         settingsStorage = SettingsStorage(this)
-        settingsStorage.bindViewModel(settingsViewModel, lifecycleScope)
+        settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
         
         setContent {
             val splashScreenVisible = remember { mutableStateOf(true) }

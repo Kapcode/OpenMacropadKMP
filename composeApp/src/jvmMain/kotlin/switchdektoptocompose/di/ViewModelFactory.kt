@@ -14,7 +14,8 @@ data class DesktopViewModels(
     val settingsViewModel: SettingsViewModel,
     val sharedSettingsViewModel: com.kapcode.open.macropad.kmps.settings.SettingsViewModel,
     val macroTimelineViewModel: MacroTimelineViewModel,
-    val newEventViewModel: NewEventViewModel
+    val newEventViewModel: NewEventViewModel,
+    val marketplaceViewModel: MarketplaceViewModel
 )
 
 object ViewModelFactory {
@@ -56,6 +57,7 @@ object ViewModelFactory {
         }
 
         val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+        val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
 
         return DesktopViewModels(
             desktopViewModel = desktopViewModel,
@@ -67,7 +69,8 @@ object ViewModelFactory {
             settingsViewModel = settingsViewModel,
             sharedSettingsViewModel = sharedSettingsViewModel,
             macroTimelineViewModel = macroTimelineViewModel,
-            newEventViewModel = newEventViewModel
+            newEventViewModel = newEventViewModel,
+            marketplaceViewModel = marketplaceViewModel
         )
     }
 }

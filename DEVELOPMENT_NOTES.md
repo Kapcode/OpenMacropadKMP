@@ -347,8 +347,11 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Contextual UI Control**: Integrated with the QR scanner (Single=Open, Double=Close) during the discovery phase.
     - **Persistence**: Built a `SettingsStorage` handler using `SharedPreferences` to persist Slam Fire bindings, thresholds, and overall app state across activity restarts.
     - **Toast Management**: Centralized `showSlamToast` to prevent UI "pileup" when triggering hardware inputs rapidly.
+- [x] **Dashboard Persistence**: Implemented local persistence for the "My Dashboard" tab using `SharedPreferences` and Flow-based sync.
+- [x] **Context-Aware Resolution**: Implemented automatic "Active Pack" switching based on the Desktop's active process broadcast.
+- [x] **Advanced Gestures**: Refactored macro buttons to use `pointerInput` for reliable long-press detection.
 - [ ] **Background Connectivity**: Maintain a heartbeat connection with the desktop server while the app is in the background to avoid reconnect delays.
-- [ ] **Customizable UI**: Allow users to rearrange macro buttons on the mobile interface.
+- [ ] **Editable User Grid**: Implement drag-and-drop or reordering logic for macro buttons.
 
 ### Desktop Server
 - [x] **Architectural Refactoring**: Cleaned up the `jvmMain` package structure, separating UI, ViewModels, Models, Logic, and DI.
@@ -427,6 +430,36 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Cross-Platform / Common
 - [ ] **UDP Discovery Polish**: Improve the reliability of server discovery on complex local network topologies (e.g., multiple subnets).
 - [ ] **End-to-End Testing**: Implement automated integration tests for the cryptographic handshake process.
+
+## 32. Android Dashboard Persistence & Context Awareness
+
+### Challenge: Persisting User-Curated Macro Lists
+- **Problem**: Users wanted a "My Dashboard" tab that persists their favorite macros even after the app restarts or the server disconnects.
+- **Solution**:
+    - **SharedPrefs + JSON**: Implemented `SettingsStorage` on Android to serialize the list of dashboard macro IDs into a JSON string stored in `SharedPreferences`.
+    - **Flow-Based Sync**: Used a `MutableStateFlow` in `SettingsStorage` to broadcast changes. The `ClientViewModel` binds to this Flow, ensuring the UI stays in sync with disk state in real-time.
+    - **Atomic Toggles**: Implemented a `toggleDashboardMacro` logic that prevents duplicates and handles atomic updates to the underlying storage.
+
+### Challenge: Active Process to MacroPack Resolution
+- **Problem**: The Android client receives a raw process name (e.g., "photoshop.exe") from the Desktop but needs to map this to a specific UI layout.
+- **Solution**:
+    - **Metadata Mapping**: Added a `targetProcess` field to `MacroPack`.
+    - **Resolution Engine**: Updated `ClientViewModel` to scan all installed/synced packs whenever the `activeProcess` changes, automatically promoting the matching pack to the "Active Pack" tab.
+
+## 33. PointerInput for Advanced Gestures
+
+### Challenge: Reliable Long-Press in Scrollable Containers
+- **Problem**: Standard `Modifier.combinedClickable` often conflicted with the scroll behavior of the macro grid, leading to missed long-presses or "janky" scrolling.
+- **Solution**:
+    - **Custom PointerInput**: Migrated `MacroButton` to use `Modifier.pointerInput(Unit) { detectTapGestures(onLongPress = { ... }) }`. This provides more granular control over gesture consumption and improved reliability when managing the dashboard (adding/removing items via long-press).
+
+## 34. Robust ViewModel-to-Storage Synchronization
+
+### Challenge: Initialization Race Conditions & Context Crashes
+- **Problem**: Initializing the `ClientViewModel` before `SettingsStorage` was ready, or showing Toasts from background threads, led to `NullPointerException` or "Window Leaks."
+- **Solution**:
+    - **Explicit Binding**: Created a `bindViewModel` pattern where the `MainActivity` explicitly connects the storage layer to the VM after both are fully initialized.
+    - **Lifecycle-Aware Toasts**: Wrapped all Toast calls in `MainScope().launch` and ensured they use the `Activity` context rather than a potentially stale `Application` context for UI-bound feedback.
 
 ### Ideas
 - **Cursor Hotbar**: I have a prompt for this, but the general idea is to have a hotbar of cursor locations that you can scroll through, making UI navigation faster. It would be JSON backed, use the Macro Manager UI as well as use the Editor.

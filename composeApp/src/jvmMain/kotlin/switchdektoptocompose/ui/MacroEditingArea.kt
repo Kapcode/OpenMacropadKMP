@@ -20,7 +20,8 @@ fun MacroEditingArea(
     consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
     onAddEventClicked: () -> Unit,
-    onRecordMacroClicked: () -> Unit
+    onRecordMacroClicked: () -> Unit,
+    onMarketplaceClicked: () -> Unit
 ) {
     val verticalSplitter = rememberSplitPaneState(
         initialPositionPercentage = settingsViewModel.getSplitterPosition("Macro Editor Vertical", 0.5716f)
@@ -54,7 +55,8 @@ fun MacroEditingArea(
                             viewModel = macroManagerViewModel,
                             consoleViewModel = consoleViewModel,
                             selectedTheme = selectedTheme,
-                            onNewMacroClicked = onRecordMacroClicked
+                            onNewMacroClicked = onRecordMacroClicked,
+                            onMarketplaceClicked = onMarketplaceClicked
                         )
                     }
                 },

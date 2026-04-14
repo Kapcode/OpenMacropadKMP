@@ -9,6 +9,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 class SettingsStorage(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("app_settings", Context.MODE_PRIVATE)
@@ -79,7 +81,15 @@ class SettingsStorage(context: Context) {
         return prefs.getLong("slam_fire_threshold", 300L)
     }
 
-    fun bindViewModel(viewModel: SettingsViewModel, scope: CoroutineScope) {
+    fun saveDashboardMacros(macros: List<String>) {
+        prefs.edit().putStringSet("dashboard_macros", macros.toSet()).apply()
+    }
+
+    fun getDashboardMacros(): List<String> {
+        return prefs.getStringSet("dashboard_macros", emptySet())?.toList() ?: emptyList()
+    }
+
+    fun bindViewModel(viewModel: SettingsViewModel, clientViewModel: ClientViewModel, scope: CoroutineScope) {
         // Load initial values
         viewModel.setTheme(getTheme())
         viewModel.setAnalyticsEnabled(getAnalyticsEnabled())
@@ -89,6 +99,7 @@ class SettingsStorage(context: Context) {
         viewModel.setSlamFireSelectedMacro(getSlamFireSelectedMacro())
         viewModel.setSlamFireDoubleSelectedMacro(getSlamFireDoubleSelectedMacro())
         viewModel.setSlamFireDoubleThreshold(getSlamFireDoubleThreshold())
+        clientViewModel.setDashboardMacros(getDashboardMacros())
 
         // Sync changes back to storage
         viewModel.theme.onEach { saveTheme(it) }.launchIn(scope)
@@ -99,5 +110,11 @@ class SettingsStorage(context: Context) {
         viewModel.slamFireSelectedMacro.onEach { saveSlamFireSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleSelectedMacro.onEach { saveSlamFireDoubleSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleThreshold.onEach { saveSlamFireDoubleThreshold(it) }.launchIn(scope)
+        
+        clientViewModel.uiState
+            .map { it.dashboardMacros }
+            .distinctUntilChanged()
+            .onEach { saveDashboardMacros(it) }
+            .launchIn(scope)
     }
 }
