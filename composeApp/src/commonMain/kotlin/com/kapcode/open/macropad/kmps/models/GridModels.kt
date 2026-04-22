@@ -3,6 +3,12 @@ package com.kapcode.open.macropad.kmps.models
 import kotlinx.serialization.Serializable
 
 @Serializable
+enum class WidgetType { BUTTON, TOGGLE, SLIDER_HORIZONTAL, SLIDER_VERTICAL }
+
+@Serializable
+enum class SliderUpdateMode { LIVE, ON_RELEASE }
+
+@Serializable
 data class GridWidget(
     val id: String,
     val macroId: String,
@@ -10,7 +16,15 @@ data class GridWidget(
     val color: Long, // Hex color e.g. 0xFFBB86FC
     val icon: String? = null,
     val row: Int,
-    val col: Int
+    val col: Int,
+    val type: WidgetType = WidgetType.BUTTON,
+    // State
+    val state: Boolean = false,
+    val value: Float = 0f,
+    // Config
+    val minValue: Float = 0f,
+    val maxValue: Float = 100f,
+    val sliderUpdateMode: SliderUpdateMode = SliderUpdateMode.ON_RELEASE
 )
 
 @Serializable

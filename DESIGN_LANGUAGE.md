@@ -25,6 +25,14 @@ The application supports two primary themes: **Dark Blue** (default) and **Light
 - **Directional Icons**: Use `AutoMirrored` variants (e.g., `ArrowBack`, `ExitToApp`) to support RTL layouts automatically.
 - **Brand Icon**: A high-resolution 512px icon is used for desktop taskbars and Android splash screens to ensure crispness across all DPI levels.
 
+### Rich Widget Components
+- **Macro Buttons**: Fixed-height (90dp) tiles with centered labels and icons.
+- **Toggles**: Feature a built-in `Switch` component. The background color or elevation shift denotes the "On" state.
+- **Sliders**: 
+    - **Horizontal**: Standard width with integrated slider.
+    - **Vertical**: Double-height (180dp) tiles for fine-grained vertical control.
+- **Dynamic Contrast**: Text and icons automatically adjust between White (`#FFFFFF`) and Black (`#000000`) based on the calculated luminance of the widget's background color to ensure accessibility on custom-colored buttons.
+
 ## 2. Shared Interaction & Feedback
 
 ### Terminal-Inspired Aesthetics (Cross-Platform)
@@ -90,8 +98,14 @@ To allow users to customize their experience, the "My Dashboard" tab features an
     - **Rotation**: A subtle `2-degree` rotation is applied to create a "loose" or "floating" feel.
     - **Shadows**: Elevation is increased while dragging to distinguish the active item from the grid.
 - **Dynamic Reordering**: The grid automatically shifts items to fill gaps in real-time as the dragged macro moves over other positions.
-- **Macro Picker**: A prominent **Floating Action Button (FAB)** opens a searchable dialog containing all macros from the server, allowing users to "pin" their favorites to the dashboard.
-- **Persistence**: Any additions, removals, or reordering are immediately persisted to local storage (`SharedPreferences`).
+- **Macro Picker**: A prominent **Floating Action Button (FAB)** opens a stateful, two-step dialog:
+    1.  **Macro Selection**: Choose the macro from the server.
+    2.  **Variant Selection**: Choose the widget type (Button, Toggle, or Slider).
+- **Drag-to-Trash**: 
+    - When a drag operation starts in Edit Mode, a **Trash Can** icon appears at the bottom center of the screen.
+    - **Collision Awareness**: The trash can scales up (`1.5x`) and turns red (`MaterialTheme.colorScheme.error`) when a widget is hovered over it.
+    - **Confirmation**: Dropping an item onto the trash can immediately removes it from the dashboard.
+- **Persistence**: Any additions, removals, or reordering are immediately persisted to local storage using a JSON-based schema in `SharedPreferences`.
 
 ### Mobile Pairing & QR Scanning
 To ensure secure and ergonomic device pairing on mobile:

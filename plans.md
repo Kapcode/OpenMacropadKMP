@@ -66,3 +66,11 @@ The Android app gains a dynamic, searchable interface for managing macros and pa
     - [DONE] `ACTIVE_PROCESS_CHANGED` (String)
     - [DONE] `SYNC_INSTALLED_PACKS` (List of MacroPacks)
     - [DONE] `TRIGGER_MACRO` (Existing)
+
+## Phase 5: Rich Interactive Controls [DONE]
+- [DONE] Stateful Widgets: Implement Toggles and Sliders (Horizontal/Vertical) in addition to Buttons.
+- [DONE] Slider Logic: Support `LIVE` and `ON_RELEASE` update modes to optimize network traffic.
+- [DONE] Material Icon Resolver: Enable string-to-icon mapping for server-defined visual styles.
+- [DONE] Drag-to-Trash: Interactive widget removal in Edit Mode with collision feedback.
+- [DONE] Multi-Step Picker: Support choosing widget variants (Button vs. Slider) when adding to the dashboard.
+- [DONE] Persistence Migration: Upgrade SharedPreferences storage to support complex `GridWidget` objects with backward compatibility.

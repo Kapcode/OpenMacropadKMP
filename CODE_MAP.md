@@ -45,9 +45,11 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
-| **Client** | Connects to server, spends tokens, and triggers macros. Moved token deduction to `onExecutionStart` to prevent double-spending. Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **Client** | Connects to server, spends tokens, and triggers macros. Supports **Rich Widgets** (Buttons, Toggles, Sliders). Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
 | **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. | `androidMain/com/.../TokenManager.kt` |
-| **AppSettings** | Persists global metrics like `totalCurrencySpent` and `totalMacrosExecuted`. | `commonMain/com/.../settings/AppSettings.kt` |
+| **IconMapper** | Maps string-based icon IDs from the server to Android Material Icons. | `androidMain/com/.../MacroButtonsScreen.kt` |
+| **GridWidget** | Shared model for UI items. Defines type (Button, Toggle, Slider), color, position, and state. | `commonMain/com/.../models/GridModels.kt` |
+| **SettingsStorage** | Manages Android persistence. Includes JSON-based storage for custom dashboards and migration logic. | `androidMain/com/.../SettingsStorage.kt` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
 | **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
 

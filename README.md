@@ -34,11 +34,14 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging. The toolbar supports **mouse-wheel horizontal scrolling** and features a high-visibility **custom scrollbar**.
 
 ### Android Client
-*   **Remote Triggering:** Interface to execute desktop macros from a mobile device with real-time execution feedback (progress bars and status).
+*   **Rich Widget Support:** Interface to execute desktop macros from a mobile device with real-time execution feedback. Supports multiple widget variants:
+    *   **Buttons**: Traditional triggers with Material Icon support.
+    *   **Toggles**: Stateful switches that reflect server-side status.
+    *   **Sliders**: Horizontal and Vertical sliders for continuous control (e.g., volume, brightness) with `LIVE` or `ON_RELEASE` update modes.
 *   **Dual-Mode Interface**: Features two primary views:
     *   **Active Pack**: Context-aware grid that automatically swaps based on the focused application on the Desktop.
     *   **My Dashboard**: A user-curated collection of favorite macros persisted to local storage.
-*   **Editable Dashboard:** Fully customizable "My Dashboard" tab. Users can add macros from any connected server pack using the **Macro Picker** dialog and remove them via long-press.
+*   **Editable Dashboard:** Fully customizable "My Dashboard" tab. Users can add macros from any connected server pack using the **Macro Picker** dialog, choose their preferred **Widget Variant**, and remove them via **Drag-to-Trash**.
 *   **Drag-and-Drop Reordering:** Intuitive long-press gesture to enter "Edit Mode," allowing users to rearrange macros in their dashboard with real-time visual feedback (scaling and rotation).
 *   **Search & Filtering**: Real-time search bar for filtering macro packs and finding specific automation tools.
 *   **Token System:** A rewarded ad-supported model for macro execution.
@@ -78,6 +81,14 @@ This project uses Kotlin Multiplatform (KMP) to share code between platforms:
 *   **commonMain**: Shared business logic, models, and UI themes.
 *   **jvmMain**: Desktop server implementation using Compose for Desktop, Ktor 3.x, JNativeHook, and Java AWT Robot. Organized into a clean, multi-layered package structure (`ui`, `viewmodel`, `model`, `logic`, `di`).
 *   **androidMain**: Android client implementation using standard Android components and AdMob.
+
+## Help & Feedback
+
+If you encounter any issues, have questions, or would like to suggest new features, please feel free to:
+
+*   **Open an Issue:** Report bugs or request features via the [GitHub Issues](https://github.com/kapcode/OpenMacropadKMP/issues) tracker.
+*   **Security Concerns:** For security-related reports, please refer to [SECURITY.md](SECURITY.md).
+*   **Contributions:** Pull requests are welcome! For technical guidance and project standards, refer to the [Developer Documentation](#developer-documentation) and [AGENTS.md](AGENTS.md).
 
 ## Developer Documentation
 For detailed technical notes on the implementation, including the migration from Ktor 2 to Ktor 3, refer to [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md). For a guide on the codebase structure, see [CODE_MAP.md](CODE_MAP.md).

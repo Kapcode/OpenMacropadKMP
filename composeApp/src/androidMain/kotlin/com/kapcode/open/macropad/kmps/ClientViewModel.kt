@@ -37,7 +37,7 @@ data class ClientUiState(
     val activePack: MacroPack? = null,
     val installedPacks: List<MacroPack> = emptyList(),
     val filteredPacks: List<MacroPack> = emptyList(),
-    val dashboardMacros: List<String> = emptyList(),
+    val dashboardMacros: List<GridWidget> = emptyList(),
     val marketplaceItems: List<MarketplaceItem> = emptyList(),
     val isMarketplaceLoading: Boolean = false,
     val searchQuery: String = "",
@@ -245,8 +245,8 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         _uiState.update { it.copy(isEditMode = enabled) }
     }
 
-    fun setDashboardMacros(macros: List<String>) {
-        _uiState.update { it.copy(dashboardMacros = macros) }
+    fun setDashboardMacros(widgets: List<GridWidget>) {
+        _uiState.update { it.copy(dashboardMacros = widgets) }
     }
 
     fun setServerHistory(history: List<TrustedServer>) {
@@ -285,16 +285,16 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         repository.downloadMarketplaceItem(item.id)
     }
 
-    fun addToDashboard(macro: String) {
+    fun addToDashboard(widget: GridWidget) {
         _uiState.update { state ->
-            if (state.dashboardMacros.contains(macro)) state
-            else state.copy(dashboardMacros = state.dashboardMacros + macro)
+            if (state.dashboardMacros.any { it.id == widget.id }) state
+            else state.copy(dashboardMacros = state.dashboardMacros + widget)
         }
     }
 
-    fun removeFromDashboard(macro: String) {
+    fun removeFromDashboard(widgetId: String) {
         _uiState.update { state ->
-            state.copy(dashboardMacros = state.dashboardMacros - macro)
+            state.copy(dashboardMacros = state.dashboardMacros.filter { it.id != widgetId })
         }
     }
 

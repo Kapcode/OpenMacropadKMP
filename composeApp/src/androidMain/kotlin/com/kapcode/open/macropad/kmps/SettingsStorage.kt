@@ -2,7 +2,7 @@ package com.kapcode.open.macropad.kmps
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.kapcode.open.macropad.kmps.models.TrustedServer
+import com.kapcode.open.macropad.kmps.models.*
 import com.kapcode.open.macropad.kmps.settings.AppTheme
 import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -84,20 +84,39 @@ class SettingsStorage(context: Context) {
         return prefs.getLong("slam_fire_threshold", 300L)
     }
 
-    fun saveDashboardMacros(macros: List<String>) {
-        prefs.edit().putString("dashboard_macros", macros.joinToString(",")).apply()
+    fun saveDashboardMacros(widgets: List<GridWidget>) {
+        val json = Json.encodeToString(widgets)
+        prefs.edit().putString("dashboard_widgets", json).apply()
     }
 
-    fun getDashboardMacros(): List<String> {
-        val value = try {
+    fun getDashboardMacros(): List<GridWidget> {
+        val json = prefs.getString("dashboard_widgets", null)
+        if (json != null) {
+            return try { Json.decodeFromString<List<GridWidget>>(json) } catch (e: Exception) { emptyList() }
+        }
+        
+        // Migration from old string-based dashboard
+        val oldMacros = try {
             prefs.getString("dashboard_macros", "")
-        } catch (e: ClassCastException) {
-            val set = prefs.getStringSet("dashboard_macros", emptySet()) ?: emptySet()
-            val joined = set.joinToString(",")
-            prefs.edit().putString("dashboard_macros", joined).apply()
-            joined
-        } ?: ""
-        return if (value.isEmpty()) emptyList() else value.split(",")
+        } catch (e: Exception) { "" } ?: ""
+        
+        if (oldMacros.isNotEmpty()) {
+            val list = oldMacros.split(",").mapIndexed { index, name ->
+                GridWidget(
+                    id = "migrated_$index",
+                    macroId = name,
+                    label = name,
+                    color = 0xFF6200EE,
+                    row = index / 2,
+                    col = index % 2
+                )
+            }
+            saveDashboardMacros(list)
+            prefs.edit().remove("dashboard_macros").apply()
+            return list
+        }
+        
+        return emptyList()
     }
 
     fun saveServerHistory(history: List<TrustedServer>) {

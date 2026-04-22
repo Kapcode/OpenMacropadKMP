@@ -320,6 +320,38 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Visual Feedback**: The scanner overlay dims to signal the state.
 3. **State Reset**: Closing the scanner or manually resuming resets the power-saving timers.
 
+## 37. Rich Widget Ecosystem (Toggles, Sliders, & Icons)
+
+### Challenge: Beyond Simple Buttons
+- **Problem**: Users needed more than just "fire-and-forget" buttons. Controlling volume, toggling lights, or adjusting brightness required stateful widgets.
+- **Solution**:
+    - **Stateful Models**: Expanded `GridWidget` to include `WidgetType`, `state` (boolean), and `value` (float).
+    - **Specialized Components**:
+        - **Toggles**: Optimized for On/Off states with visual `Switch` feedback.
+        - **Sliders**: Implemented both Horizontal and Vertical orientations. Added two communication modes: `LIVE` (updates as you drag) and `ON_RELEASE` (updates only when lifted) to balance network traffic vs. responsiveness.
+    - **Material Icon Resolver**: Created an `IconMapper` to map server-provided string IDs (e.g., "volume_up") to Android's `Icons.Default` library, allowing the server to define the visual style.
+    - **Dynamic Contrast**: Implemented a luminance-based calculation to automatically switch between White and Black text/icons depending on the custom background color of the widget.
+
+### Challenge: Dashboard Migration & Complex Persistence
+- **Problem**: Moving from a simple `List<String>` (macro names) to a complex `List<GridWidget>` for the dashboard threatened to break existing user data.
+- **Solution**: 
+    - **JSON Persistence**: Migrated `SettingsStorage` to use `kotlinx.serialization` to store the full `GridWidget` list as a JSON blob.
+    - **Migration Path**: Added a "Lazy Migration" block that detects old string-based dashboard lists, converts them into basic `GridWidget` objects, saves the new format, and cleans up the old key.
+
+## 38. UI Polish & Interaction Design
+
+### Challenge: Intuitive Dashboard Management
+- **Problem**: Removing items from the dashboard via just a long-press felt disconnected and lacked visual impact.
+- **Solution**:
+    - **Drag-to-Trash**: Implemented a "Trash Can" UI at the bottom of the screen that only appears in Edit Mode when a drag operation starts.
+    - **Collision Logic**: Used the pointer offset to detect when a widget is hovered over the trash can.
+    - **Animated Feedback**: The trash can uses `animateColorAsState` and `animateFloatAsState` to scale up and turn red when an item is "caught," making the deletion action feel satisfying and intentional.
+
+### Challenge: Multi-Step Configuration
+- **Problem**: Adding a macro as a specific variant (e.g., as a Slider instead of a Button) was difficult with a single-click picker.
+- **Solution**:
+    - **Two-Step Macro Picker**: Refactored the `MacroPicker` into a stateful, two-step dialog. Step 1 selects the macro from the list; Step 2 presents the available widget variants with descriptive icons. This ensures users can configure their dashboard without needing a separate "Edit Properties" screen.
+
 ## 29. De-bouncing and Token Sync Reliability
 
 ### Challenge: Multiple Token Deductions per Macro

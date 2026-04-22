@@ -67,6 +67,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kapcode.open.macropad.kmps.network.ClientRepository
+import com.kapcode.open.macropad.kmps.models.GridWidget
+import com.kapcode.open.macropad.kmps.models.WidgetType
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
@@ -219,7 +221,18 @@ class ClientActivity : ComponentActivity() {
                         clientViewModel.setQrScannerVisible(show)
                     },
                     onGetMacros = { clientViewModel.requestMacros() },
-                    onMacroClick = { clientViewModel.sendMacro(it) },
+                    onWidgetInteraction = { widget -> 
+                        when (widget.type) {
+                            WidgetType.BUTTON -> clientViewModel.sendMacro(widget.macroId)
+                            WidgetType.TOGGLE -> {
+                                // For toggle, we send the new state
+                                clientRepository.sendData("widget_state", "${widget.id}|${!widget.state}")
+                            }
+                            WidgetType.SLIDER_HORIZONTAL, WidgetType.SLIDER_VERTICAL -> {
+                                clientRepository.sendData("widget_value", "${widget.id}|${widget.value}")
+                            }
+                        }
+                    },
                     onPairingCodeEntered = { clientViewModel.submitPairingCode(it) },
                     onBackToMain = { finish() },
                     onOkayTriggerSet = { trigger -> onOkayPressed = trigger },

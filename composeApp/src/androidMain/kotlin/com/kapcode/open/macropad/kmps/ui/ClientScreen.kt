@@ -31,6 +31,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.models.GridWidget
+import com.kapcode.open.macropad.kmps.models.WidgetType
+import com.kapcode.open.macropad.kmps.models.SliderUpdateMode
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -49,7 +52,7 @@ fun ClientScreen(
     clientViewModel: ClientViewModel,
     currency: Long = 0,
     onGetMacros: () -> Unit,
-    onMacroClick: (String) -> Unit,
+    onWidgetInteraction: (GridWidget) -> Unit,
     onPairingCodeEntered: (String) -> Unit,
     onBackToMain: () -> Unit,
     onOkayTriggerSet: (() -> Unit) -> Unit = {},
@@ -391,10 +394,22 @@ fun ClientScreen(
                         Box(modifier = Modifier.weight(1f)) {
                             if (macros.isNotEmpty() && !showQrScanner) {
                                 Box(modifier = Modifier.fillMaxSize()) {
-                                    val displayMacros = if (uiState.currentTab == 1) {
-                                        uiState.activePack?.widgets?.map { it.label } ?: macros
+                                    val displayWidgets = if (uiState.currentTab == 1) {
+                                        uiState.activePack?.widgets ?: emptyList()
                                     } else {
-                                        uiState.dashboardMacros.ifEmpty { macros }
+                                        uiState.dashboardMacros.ifEmpty { 
+                                            // Fallback to basic buttons for raw macros if dashboard is empty
+                                            macros.mapIndexed { index, name -> 
+                                                GridWidget(
+                                                    id = "raw_$name",
+                                                    macroId = name,
+                                                    label = name,
+                                                    color = 0xFF6200EE, // Default purple
+                                                    row = index / 2,
+                                                    col = index % 2
+                                                )
+                                            }
+                                        }
                                     }
 
                                     if (uiState.currentTab == 1 && uiState.installedPacks.isEmpty()) {
@@ -415,19 +430,24 @@ fun ClientScreen(
                                         }
                                     } else {
                                         MacroButtonsScreen(
-                                            macros = displayMacros,
+                                            widgets = displayWidgets,
                                             executingMacros = executingMacros,
                                             failedMacros = failedMacros,
                                             isEditMode = uiState.isEditMode,
-                                            onMacroClick = onMacroClick,
-                                            onMacroLongClick = { macroName ->
+                                            onWidgetInteraction = onWidgetInteraction,
+                                            onWidgetLongClick = { widget ->
                                                 if (uiState.currentTab == 0) {
-                                                    clientViewModel.removeFromDashboard(macroName)
+                                                    clientViewModel.removeFromDashboard(widget.id)
                                                 } else {
-                                                    clientViewModel.addToDashboard(macroName)
+                                                    clientViewModel.addToDashboard(widget)
                                                 }
                                             },
-                                            onMoveMacro = { from, to -> 
+                                            onRemoveWidget = { widget ->
+                                                if (uiState.currentTab == 0) {
+                                                    clientViewModel.removeFromDashboard(widget.id)
+                                                }
+                                            },
+                                            onMoveWidget = { from, to ->
                                                 if (uiState.currentTab == 0) {
                                                     clientViewModel.moveDashboardMacro(from, to)
                                                 }
@@ -440,7 +460,19 @@ fun ClientScreen(
                                     if (showMacroPicker) {
                                         MacroPicker(
                                             macros = macros,
-                                            onMacroSelected = { clientViewModel.addToDashboard(it) },
+                                            onMacroSelected = { macroName, type ->
+                                                clientViewModel.addToDashboard(
+                                                    GridWidget(
+                                                        id = "dash_${System.currentTimeMillis()}",
+                                                        macroId = macroName,
+                                                        label = macroName,
+                                                        type = type,
+                                                        color = 0xFF6200EE,
+                                                        row = 0,
+                                                        col = 0
+                                                    )
+                                                )
+                                            },
                                             onDismiss = { showMacroPicker = false }
                                         )
                                     }
