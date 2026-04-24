@@ -1,5 +1,6 @@
 package MacroKTOR
 
+import com.kapcode.open.macropad.kmps.ProjectConfig
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
 import io.ktor.server.application.*
@@ -28,7 +29,8 @@ class MacroKtorServer(
     private val onMessageReceived: (clientId: String, DataModel) -> Unit,
     private val onClientConnected: (clientId: String, clientName: String) -> Unit,
     private val onClientDisconnected: (clientId: String) -> Unit,
-    private val onPairingRequest: (clientId: String, clientName: String) -> Unit
+    private val onPairingRequest: (clientId: String, clientName: String) -> Unit,
+    private val onUpgradeRequest: (clientId: String, jarBytes: ByteArray, hash: String, isSimulation: Boolean) -> Unit
 ) {
     private val logger = LoggerFactory.getLogger(MacroKtorServer::class.java)
     private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
@@ -286,6 +288,23 @@ class MacroKtorServer(
             
             if (client.authStatus == AuthStatus.AUTHENTICATED) {
                 logger.info("Received message from authenticated client {}: {}", client.id, dataModel.messageType)
+                
+                // Special handling for Upgrade Data payloads
+                dataModel.handle(
+                    onData = { key, value ->
+                        when (key) {
+                            "upgrade_jar" -> {
+                                val hash = dataModel.metadata["hash"] ?: ""
+                                onUpgradeRequest(client.id, value, hash, false)
+                            }
+                            "test_upgrade_jar" -> {
+                                val hash = dataModel.metadata["hash"] ?: ""
+                                onUpgradeRequest(client.id, value, hash, true)
+                            }
+                        }
+                    }
+                )
+
                 onMessageReceived(client.id, dataModel)
             } else {
                 handleUnauthenticatedMessage(client, dataModel)
@@ -376,6 +395,15 @@ class MacroKtorServer(
 
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
                 
+                // Send Server Info
+                val os = System.getProperty("os.name")
+                val arch = System.getProperty("os.arch")
+                client.session.send(Frame.Binary(true, serverInfoMessage(
+                    version = ProjectConfig.VERSION,
+                    platform = "$os ($arch)",
+                    serverId = KeystoreUtils.getCertificateFingerprint(KeystoreUtils.getOrCreateKeystore(File(System.getProperty("user.home"), ".openmacropad")))
+                ).toBytes()))
+
                 // Push current global settings to the newly authenticated client
                 val settingsMap = mapOf(
                     "theme" to appSettings.clientTheme,

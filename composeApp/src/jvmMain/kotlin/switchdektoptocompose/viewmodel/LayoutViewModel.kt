@@ -18,10 +18,14 @@ class LayoutViewModel(private val settingsViewModel: SettingsViewModel) {
     private val _showMarketplace = MutableStateFlow(false)
     val showMarketplace: StateFlow<Boolean> = _showMarketplace.asStateFlow()
 
+    private val _showUpdateConfirmDialog = MutableStateFlow(false)
+    val showUpdateConfirmDialog: StateFlow<Boolean> = _showUpdateConfirmDialog.asStateFlow()
+
     fun setShowNewEventDialog(show: Boolean) { _showNewEventDialog.value = show }
     fun setShowRecordDialog(show: Boolean) { _showRecordDialog.value = show }
     fun setShowExitDialogInternal(show: Boolean) { _showExitDialogInternal.value = show }
     fun setShowMarketplace(show: Boolean) { _showMarketplace.value = show }
+    fun setShowUpdateConfirmDialog(show: Boolean) { _showUpdateConfirmDialog.value = show }
 
     fun getSplitterPosition(name: String, default: Float): Float {
         return settingsViewModel.getSplitterPosition(name, default)

@@ -55,7 +55,10 @@ fun DesktopAppPreview() {
             onMessageReceived = { clientId, dataModel -> clientCommunicationViewModel.onDataReceived(clientId, dataModel) },
             onClientConnected = { clientId, name -> clientCommunicationViewModel.onClientConnected(clientId, name) },
             onClientDisconnected = { clientId -> clientCommunicationViewModel.onClientDisconnected(clientId) },
-            onPairingRequest = { clientId, name -> clientCommunicationViewModel.onPairingRequest(clientId, name) }
+            onPairingRequest = { clientId, name -> clientCommunicationViewModel.onPairingRequest(clientId, name) },
+            onUpgradeRequest = { clientId, jarBytes, hash, isSimulation -> 
+                clientCommunicationViewModel.onUpgradeRequest(clientId, jarBytes, hash, isSimulation)
+            }
         )
     }
     val desktopViewModel = remember {
@@ -197,11 +200,12 @@ fun DesktopApp(
     val showNewEventDialog by layoutViewModel.showNewEventDialog.collectAsState()
     val showRecordDialog by layoutViewModel.showRecordDialog.collectAsState()
     val showExitDialogInternal by layoutViewModel.showExitDialogInternal.collectAsState()
+    val showUpdateConfirmDialog by layoutViewModel.showUpdateConfirmDialog.collectAsState()
     val showMarketplace by layoutViewModel.showMarketplace.collectAsState()
     val showExitDialogResolved = showExitDialog || showExitDialogInternal
 
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
-    // Using the desktopWindowState passed from main.kt
+    val pendingUpdate by clientCommunicationViewModel.pendingUpdate.collectAsState()
 
     if (showMarketplace) {
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
@@ -257,6 +261,19 @@ fun DesktopApp(
             onConfirm = { consoleViewModel.confirmLoggingToFile() },
             onDismiss = { consoleViewModel.dismissLoggingWarning() }
         )
+    }
+
+    if (showUpdateConfirmDialog) {
+        pendingUpdate?.let { update ->
+            UpdateConfirmDialog(
+                selectedTheme = selectedTheme,
+                consoleViewModel = consoleViewModel,
+                clientName = update.clientName,
+                isSimulation = update.isSimulation,
+                onAccept = { clientCommunicationViewModel.approveUpdate() },
+                onReject = { clientCommunicationViewModel.rejectUpdate() }
+            )
+        }
     }
 
     filePendingDeletion?.let { file ->

@@ -25,7 +25,8 @@ class ServerViewModel(
     private val onMessageReceived: (String, DataModel) -> Unit,
     private val onClientConnected: (String, String) -> Unit,
     private val onClientDisconnected: (String) -> Unit,
-    private val onPairingRequest: (String, String) -> Unit
+    private val onPairingRequest: (String, String) -> Unit,
+    private val onUpgradeRequest: (String, ByteArray, String, Boolean) -> Unit
 ) {
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
     
@@ -47,7 +48,8 @@ class ServerViewModel(
         onMessageReceived = onMessageReceived,
         onClientConnected = onClientConnected,
         onClientDisconnected = onClientDisconnected,
-        onPairingRequest = onPairingRequest
+        onPairingRequest = onPairingRequest,
+        onUpgradeRequest = onUpgradeRequest
     )
 
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()

@@ -168,6 +168,20 @@ class ClientRepository(private val context: Context) {
                                                 val error = params["error"] ?: "Unknown error"
                                                 onExecutionFailed(macro, error)
                                             }
+                                            ControlCommand.SERVER_INFO -> {
+                                                val version = params["version"] ?: "Unknown"
+                                                val platform = params["platform"] ?: "Unknown"
+                                                Log.i("ClientRepository", "Connected to Server $version on $platform")
+                                            }
+                                            ControlCommand.UPGRADE_RESPONSE -> {
+                                                val success = params["success"]?.toBoolean() ?: false
+                                                val message = params["message"] ?: "No message"
+                                                if (success) {
+                                                    Log.i("ClientRepository", "Server Upgrade Success: $message")
+                                                } else {
+                                                    Log.e("ClientRepository", "Server Upgrade Failed: $message")
+                                                }
+                                            }
                                             else -> {}
                                         }
                                     },
@@ -281,6 +295,27 @@ class ClientRepository(private val context: Context) {
         scope.launch {
             client?.send(commandMessage("downloadMarketplaceItem", mapOf("id" to itemId)).toBytes())
         }
+    }
+
+    fun upgradeServer(jarBytes: ByteArray) {
+        scope.launch(Dispatchers.Default) {
+            val hash = calculateHash(jarBytes)
+            client?.send(upgradeServerMessage(jarBytes, hash).toBytes())
+        }
+    }
+
+    fun sendTestUpgrade() {
+        scope.launch(Dispatchers.Default) {
+            val dummyData = "This is dummy upgrade data for testing".encodeToByteArray()
+            val hash = calculateHash(dummyData)
+            client?.send(testUpgradeMessage(dummyData, hash).toBytes())
+        }
+    }
+
+    private fun calculateHash(data: ByteArray): String {
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(data)
+        return hash.joinToString("") { "%02x".format(it) }
     }
 
     fun sendData(key: String, value: String) {

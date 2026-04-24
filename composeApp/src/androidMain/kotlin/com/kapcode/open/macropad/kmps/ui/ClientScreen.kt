@@ -338,7 +338,7 @@ fun ClientScreen(
                 viewModel = settingsViewModel,
                 modifier = Modifier.padding(innerPadding)
             ) {
-                ClientSettingsSection()
+                ClientSettingsSection(clientViewModel = clientViewModel)
             }
         } else {
             ModalNavigationDrawer(

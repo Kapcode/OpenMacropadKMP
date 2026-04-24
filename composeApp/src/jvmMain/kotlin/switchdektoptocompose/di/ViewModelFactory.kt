@@ -5,7 +5,6 @@ import androidx.compose.runtime.remember
 import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.encodeToString
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import switchdektoptocompose.logic.ProcessWatcher
@@ -36,6 +35,7 @@ object ViewModelFactory {
         val sharedSettingsViewModel = remember { com.kapcode.open.macropad.kmps.settings.SettingsViewModel() }
         val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
+        val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
         
         val processWatcher = remember { ProcessWatcher(CoroutineScope(Dispatchers.Main)) }
         val inspectorViewModel = remember { InspectorViewModel(consoleViewModel, processWatcher) }
@@ -60,6 +60,9 @@ object ViewModelFactory {
                 },
                 onPairingRequest = { clientId, name -> 
                     clientCommunicationViewModel.onPairingRequest(clientId, name) 
+                },
+                onUpgradeRequest = { clientId, jarBytes, hash, isSimulation ->
+                    clientCommunicationViewModel.onUpgradeRequest(clientId, jarBytes, hash, isSimulation)
                 }
             )
         }
@@ -108,14 +111,13 @@ object ViewModelFactory {
             }
             clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
             clientCommunicationViewModel.serverViewModel = serverViewModel
+            clientCommunicationViewModel.layoutViewModel = layoutViewModel
             desktopViewModel.macroManagerViewModel = macroManagerViewModel
-            Unit
         }
 
         val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
         val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
         val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
-        val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
 
         return DesktopViewModels(
             desktopViewModel = desktopViewModel,

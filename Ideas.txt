@@ -1,0 +1,35 @@
+Preamble: AI must not edit this file, this is for human developer to reference and dump ideas.
+
+
+1.  We have logic to send files (via them update mechanism), we can use this else where in an item called push file... push image... etc
+
+
+2.      Controller support, for triggers, presses. So for triggers(triggering events,
+    in conjunction with keypresses and mouse listening), this is easier,
+    but for presses in a macro simulating gamepad presses, we must act as a common used controller.
+    Xbox one or PlayStation dual shock 4-5 latest.
+    the layer for controller spoofing, needs to be modular/standalone
+     I plan to use it in another project. might make it its own project.
+
+
+
+
+
+
+3.      Controller navigation through the server ui, and the clients ui.
+      so if a controller is bt connected to android,
+      we can pass that down the line through network connection to the  server.
+      this allows for controlling macros, triggers, allowing button map changes on controller,
+      truly spoofed in a way system won't get confused what controller toi use.
+      Adds abstraction for easy adding more supported controller models.
+
+        the navigation must work with dpad,
+      and focus traversal both android and desktop, making ui navigable from both,
+       a button, likely select, or a select/start hold will switch controller mode,
+       MODES = ::: nav client/nav server/macros&packs trigger.
+        and we can have triggers/and nav either server(desktop)
+        or client(android) at the same time
+
+
+
+

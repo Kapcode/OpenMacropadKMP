@@ -105,6 +105,35 @@ fun disconnectMessage(reason: String? = null): DataModel =
         parameters = reason?.let { mapOf("reason" to it) } ?: emptyMap()
     )
 
+// Update System builders
+fun serverInfoMessage(version: String, platform: String, serverId: String): DataModel =
+    controlMessage(
+        ControlCommand.SERVER_INFO,
+        parameters = mapOf(
+            "version" to version,
+            "platform" to platform,
+            "serverId" to serverId
+        )
+    )
+
+fun upgradeServerMessage(jarBytes: ByteArray, hash: String): DataModel =
+    DataModelBuilder()
+        .data("upgrade_jar", jarBytes)
+        .addMetadata("hash", hash)
+        .build()
+
+fun upgradeResponseMessage(success: Boolean, message: String): DataModel =
+    controlMessage(
+        ControlCommand.UPGRADE_RESPONSE,
+        parameters = mapOf("success" to success.toString(), "message" to message)
+    )
+
+fun testUpgradeMessage(dummyData: ByteArray, hash: String): DataModel =
+    DataModelBuilder()
+        .data("test_upgrade_jar", dummyData)
+        .addMetadata("hash", hash)
+        .build()
+
 // Added errorMessage function
 fun errorMessage(message: String, context: String = "general", throwable: Throwable? = null): DataModel {
     val metadata = mutableMapOf("context" to context)

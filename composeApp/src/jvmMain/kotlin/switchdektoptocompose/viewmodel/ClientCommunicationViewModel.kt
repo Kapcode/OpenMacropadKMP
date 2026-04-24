@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import switchdektoptocompose.logic.AppSettings
@@ -14,6 +15,7 @@ import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.TrustedDeviceManager
 import switchdektoptocompose.model.ClientInfo
 import switchdektoptocompose.model.LogLevel
+import java.io.File
 
 class ClientCommunicationViewModel(
     private val settingsViewModel: SettingsViewModel,
@@ -21,6 +23,7 @@ class ClientCommunicationViewModel(
 ) {
     lateinit var macroManagerViewModel: MacroManagerViewModel
     lateinit var serverViewModel: ServerViewModel
+    lateinit var layoutViewModel: LayoutViewModel
 
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
@@ -44,6 +47,17 @@ class ClientCommunicationViewModel(
 
     private val _isMacroExecutionEnabled = MutableStateFlow(true)
     val isMacroExecutionEnabled = _isMacroExecutionEnabled.asStateFlow()
+
+    // Update Request State
+    data class PendingUpdate(
+        val clientId: String,
+        val clientName: String,
+        val jarBytes: ByteArray,
+        val hash: String,
+        val isSimulation: Boolean
+    )
+    private val _pendingUpdate = MutableStateFlow<PendingUpdate?>(null)
+    val pendingUpdate = _pendingUpdate.asStateFlow()
 
     init {
         updateHistoryState()
@@ -201,6 +215,62 @@ class ClientCommunicationViewModel(
         TrustedDeviceManager.removeTrustedDevice(clientId)
         _trustedDevices.value = TrustedDeviceManager.getTrustedDevices()
         consoleViewModel.addLog(LogLevel.Info, "Removed trusted device: $clientId")
+    }
+
+    fun onUpgradeRequest(clientId: String, jarBytes: ByteArray, hash: String, isSimulation: Boolean) {
+        val client = _connectedDevices.value.find { it.id == clientId }
+        val clientName = client?.name ?: "Unknown Device"
+
+        _pendingUpdate.value = PendingUpdate(clientId, clientName, jarBytes, hash, isSimulation)
+        layoutViewModel.setShowUpdateConfirmDialog(true)
+        
+        consoleViewModel.addLog(LogLevel.Warn, "Remote update request from $clientName ($clientId). Hash: $hash")
+    }
+
+    fun approveUpdate() {
+        val update = _pendingUpdate.value ?: return
+        _pendingUpdate.value = null
+        layoutViewModel.setShowUpdateConfirmDialog(false)
+
+        viewModelScope.launch(Dispatchers.IO) {
+            val tempFile = File.createTempFile("upgrade", ".jar")
+            tempFile.writeBytes(update.jarBytes)
+
+            if (switchdektoptocompose.logic.ServerUpdater.verifyHash(tempFile, update.hash)) {
+                withContext(Dispatchers.Main) {
+                    consoleViewModel.addLog(LogLevel.Info, "Update hash verified successfully.")
+                }
+                
+                val result = switchdektoptocompose.logic.ServerUpdater.applyUpdate(tempFile, update.isSimulation)
+                
+                withContext(Dispatchers.Main) {
+                    if (result.isSuccess) {
+                        consoleViewModel.addLog(LogLevel.Info, result.getOrThrow())
+                        serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(true, result.getOrThrow()))
+                    } else {
+                        consoleViewModel.addLog(LogLevel.Error, "Update failed: ${result.exceptionOrNull()?.message}")
+                        serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "Update failed: ${result.exceptionOrNull()?.message}"))
+                    }
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    consoleViewModel.addLog(LogLevel.Error, "Update hash verification failed! Expected: ${update.hash}")
+                    serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "Hash mismatch. Update aborted."))
+                }
+            }
+            tempFile.delete()
+        }
+    }
+
+    fun rejectUpdate() {
+        val update = _pendingUpdate.value ?: return
+        _pendingUpdate.value = null
+        layoutViewModel.setShowUpdateConfirmDialog(false)
+        
+        viewModelScope.launch {
+            serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "User rejected update."))
+        }
+        consoleViewModel.addLog(LogLevel.Warn, "Update request from ${update.clientName} was rejected by user.")
     }
 
     fun onDataReceived(clientId: String, dataModel: DataModel) {

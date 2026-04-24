@@ -143,6 +143,10 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         repository.requestMacros()
     }
 
+    fun sendTestUpgrade() {
+        repository.sendTestUpgrade()
+    }
+
     fun updateConnection(status: String, server: String?, reason: String?, code: String?) {
         _uiState.update { it.copy(
             connectionStatus = status,
