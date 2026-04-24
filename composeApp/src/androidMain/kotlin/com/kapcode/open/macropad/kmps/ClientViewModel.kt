@@ -56,6 +56,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         deviceName: String,
         isSecure: Boolean,
         discoveryFingerprint: String?,
+        serverName: String? = null,
         tokenManager: TokenManager,
         settingsViewModel: SettingsViewModel,
         onExecutionFailedToast: (String) -> Unit
@@ -66,6 +67,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             deviceName = deviceName,
             isSecure = isSecure,
             discoveryFingerprint = discoveryFingerprint,
+            serverName = serverName,
             onUpdate = { status, name, reason, code ->
                 updateConnection(status, name, reason, code)
                 if (status == "Connected") {
@@ -115,6 +117,9 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 params["analyticsEnabled"]?.let { settingsViewModel.setAnalyticsEnabled(it.toBoolean()) }
                 params["slamFireEnabled"]?.let { settingsViewModel.setSlamFireEnabled(it.toBoolean()) }
                 params["macroExecutionEnabled"]?.let { setMacroExecutionEnabled(it.toBoolean()) }
+            },
+            onPacksReceived = { packs ->
+                setInstalledPacks(packs)
             },
             onMarketplaceItemsReceived = { items ->
                 setMarketplaceItems(items)
@@ -266,6 +271,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             deviceName = deviceName,
             isSecure = server.isSecure,
             discoveryFingerprint = if (server.serverId.contains(":")) null else server.serverId,
+            serverName = server.displayName,
             tokenManager = tokenManager,
             settingsViewModel = settingsViewModel,
             onExecutionFailedToast = onExecutionFailedToast

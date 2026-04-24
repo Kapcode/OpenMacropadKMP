@@ -6,6 +6,7 @@ import android.content.Context
 import android.util.Log
 import com.kapcode.open.macropad.kmps.ServerStorage
 import com.kapcode.open.macropad.kmps.TokenManager
+import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import io.ktor.client.*
@@ -31,6 +32,7 @@ class ClientRepository(private val context: Context) {
         deviceName: String,
         isSecure: Boolean,
         discoveryFingerprint: String?,
+        serverName: String? = null,
         onUpdate: (status: String, serverName: String?, reason: String?, verificationCode: String?) -> Unit,
         onMacrosReceived: (List<String>) -> Unit,
         onActiveProcessChanged: (String?) -> Unit,
@@ -39,6 +41,7 @@ class ClientRepository(private val context: Context) {
         onExecutionComplete: (String) -> Unit,
         onExecutionFailed: (String, String) -> Unit,
         onSettingsPushed: (Map<String, String>) -> Unit,
+        onPacksReceived: (List<MacroPack>) -> Unit,
         onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit
     ) {
         clientJob?.cancel()
@@ -47,6 +50,7 @@ class ClientRepository(private val context: Context) {
             val maxBackoffMillis = 16000L
             var retryCount = 0
             val maxRetries = 5
+            val initialServerName = serverName
 
             while (isActive) {
                 var tempClient: MacroKtorClient? = null
@@ -70,12 +74,12 @@ class ClientRepository(private val context: Context) {
                     tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
                     this@ClientRepository.client = tempClient
 
-                    onUpdate("Connecting...", ipAddress, null, null)
+                    onUpdate("Connecting...", initialServerName ?: ipAddress, null, null)
                     withContext(Dispatchers.IO) {
                         tempClient.connect(deviceName)
                     }
 
-                    onUpdate("Connected", ipAddress, null, null)
+                    onUpdate("Connected", initialServerName ?: ipAddress, null, null)
                     backoffMillis = 1000L
                     retryCount = 0
                     var lastHeartbeat = System.currentTimeMillis()
@@ -120,26 +124,26 @@ class ClientRepository(private val context: Context) {
                                                 onMacrosReceived(emptyList())
                                                 val code = params["code"]
                                                 currentVerificationCode = code
-                                                onUpdate("Pending Approval", null, null, code)
+                                                onUpdate("Pending Approval", initialServerName, null, code)
                                             }
                                             ControlCommand.PAIRING_CODE_MATCHED -> {
-                                                onUpdate("Code Matched", null, null, currentVerificationCode)
+                                                onUpdate("Code Matched", initialServerName, null, currentVerificationCode)
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
-                                                onUpdate("Connected", ipAddress, null, null)
+                                                onUpdate("Connected", initialServerName ?: ipAddress, null, null)
                                                 launch {
                                                     tempClient.send(textMessage("getMacros").toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
                                                 onMacrosReceived(emptyList())
-                                                onUpdate("Pairing Denied", null, params["reason"] ?: "Server rejected pairing.", null)
+                                                onUpdate("Pairing Denied", initialServerName, params["reason"] ?: "Server rejected pairing.", null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.BANNED -> {
                                                 onMacrosReceived(emptyList())
                                                 val reason = params["reason"] ?: "Device is banned"
-                                                onUpdate("Banned", null, reason, null)
+                                                onUpdate("Banned", initialServerName, reason, null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.PUSH_SETTINGS -> {
@@ -150,7 +154,7 @@ class ClientRepository(private val context: Context) {
                                             }
                                             ControlCommand.DISCONNECT -> {
                                                 onMacrosReceived(emptyList())
-                                                onUpdate("Disconnected", null, params["reason"] ?: "Disconnected by Server.", null)
+                                                onUpdate("Disconnected", initialServerName, params["reason"] ?: "Disconnected by Server.", null)
                                                 this@launch.cancel()
                                             }
                                             ControlCommand.EXECUTION_START -> {
@@ -171,7 +175,7 @@ class ClientRepository(private val context: Context) {
                                         if (text.startsWith("macros:")) {
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                                             onMacrosReceived(macroNames)
-                                            onUpdate("Connected", ipAddress, null, null)
+                                            onUpdate("Connected", initialServerName ?: ipAddress, null, null)
                                             macroFetchJob.cancel()
                                         }
                                     },
@@ -200,6 +204,15 @@ class ClientRepository(private val context: Context) {
                                                     onMarketplaceItemsReceived(items)
                                                 } catch (e: Exception) {
                                                     Log.e("ClientRepository", "Failed to parse marketplace_items", e)
+                                                }
+                                            }
+                                            "installed_packs" -> {
+                                                try {
+                                                    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+                                                    val packs = json.decodeFromString<List<MacroPack>>(value.decodeToString())
+                                                    onPacksReceived(packs)
+                                                } catch (e: Exception) {
+                                                    Log.e("ClientRepository", "Failed to parse installed_packs", e)
                                                 }
                                             }
                                         }

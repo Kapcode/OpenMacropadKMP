@@ -524,5 +524,28 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Smooth Swapping**: Integrated an `IntOffset` for the dragging item and used `graphicsLayer` scaling and elevation to provide depth.
     - **Atomic List Updates**: Created a `moveDashboardMacro` function in `ClientViewModel` that performs a stable list swap, which is then persisted to `SharedPreferences` via `SettingsStorage`.
 
-### Ideas
-- **Cursor Hotbar**: I have a prompt for this, but the general idea is to have a hotbar of cursor locations that you can scroll through, making UI navigation faster. It would be JSON backed, use the Macro Manager UI as well as use the Editor.
+## 39. MacroPack Synchronization Implementation
+
+### Challenge: Missing Widget Collection Sync
+- **Problem**: While `MacroPack` models were defined, the logic to synchronize them from the Desktop server (where packs are installed) to the Android client was missing.
+- **Solution**:
+    - **Desktop Discovery**: Updated `MacroManagerViewModel` to identify files ending in `_pack.json` and decode them as `MacroPack` objects using `kotlinx.serialization`.
+    - **Push Mechanism**: Modified `ClientCommunicationViewModel` to send an `installed_packs` data message immediately after pairing approval or upon request for macros (if trusted).
+    - **Android Reception**: Updated `ClientRepository` to listen for the `installed_packs` key and trigger a callback. The `ClientViewModel` then updates its state, making the widgets available in the "Active Pack" and "My Dashboard" tabs.
+
+## 40. Navigation Lifecycle and Connection Safety
+
+### Challenge: Zombie Connections and Trust Inheritance
+- **Problem**: Navigating back from the client activity didn't explicitly close the WebSocket connection. If a device was approved with "Trust Once," a subsequent connection attempt could "inherit" that trust if the old session hadn't timed out or if it was replaced by a duplicate session.
+- **Solution**:
+    - **Explicit Disconnect**: Implemented explicit `disconnect()` calls in Android's `ClientActivity` and `ClientScreen` `BackHandler`. This ensures the socket is closed the moment the user leaves the pairing or control screens.
+    - **Trust Revocation**: Hardened `MacroKtorServer.kt` to explicitly remove the client ID from `temporaryTrustedDevices` whenever a session is replaced or ends. This guarantees that "Trust Once" is strictly bound to a single, continuous session.
+
+## 41. UI Polish and Persistence
+
+### Challenge: Lost Server Context during Pairing
+- **Problem**: The friendly name of the server was lost when transitioning between discovery and pairing activities, leading to confusing "Connected to: N/A" labels.
+- **Solution**: 
+    - **Intent Propagation**: Added `SERVER_NAME` as an extra when launching `ClientActivity`.
+    - **State Caching**: Updated `ClientRepository` and `ClientViewModel` to cache this initial name and use it in UI updates until the server provides its identity.
+    - **PIN Auto-Submission**: Improved pairing UX by adding a listener to the 6-digit PIN field that automatically triggers submission as soon as the last digit is entered.

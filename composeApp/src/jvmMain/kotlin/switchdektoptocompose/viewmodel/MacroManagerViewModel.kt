@@ -3,9 +3,12 @@ package switchdektoptocompose.viewmodel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.serialization.json.Json
 import org.json.JSONObject
 import switchdektoptocompose.logic.*
 import switchdektoptocompose.model.*
+import com.kapcode.open.macropad.kmps.models.MacroPack
+import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -13,6 +16,7 @@ import java.util.Properties
 
 data class MacroManagerState(
     val macroFiles: List<MacroFileState> = emptyList(),
+    val macroPacks: List<MacroPack> = emptyList(),
     val isSelectionMode: Boolean = false,
     val filePendingDeletion: File? = null,
     val filesPendingDeletion: List<File>? = null,
@@ -56,6 +60,9 @@ class MacroManagerViewModel(
     val macroFiles: StateFlow<List<MacroFileState>> = _uiState.map { it.macroFiles }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, emptyList())
 
+    val macroPacks: StateFlow<List<MacroPack>> = _uiState.map { it.macroPacks }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, emptyList())
+
     val isSelectionMode: StateFlow<Boolean> = _uiState.map { it.isSelectionMode }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, false)
 
@@ -71,6 +78,8 @@ class MacroManagerViewModel(
     private val playbackJob = SupervisorJob()
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
+
+    private val json = Json { ignoreUnknownKeys = true }
 
     private val activeMacrosFile = File(System.getProperty("user.home"), ".open-macropad-active-macros.properties")
     private val activeMacrosProps = Properties()
@@ -96,30 +105,43 @@ class MacroManagerViewModel(
 
     private fun loadMacrosFromDisk(directoryPath: String) {
         val macroDir = File(directoryPath)
-        val fileMacros = if (!macroDir.exists() || !macroDir.isDirectory) {
+        val allFiles = if (!macroDir.exists() || !macroDir.isDirectory) {
             emptyList()
         } else {
-            macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }
-                ?.mapNotNull { file ->
-                    try {
-                        val content = file.readText()
-                        val trigger = JSONObject(content).optJSONObject("trigger")
-                        val allowedClients = trigger?.optString("allowedClients", "") ?: ""
-                        val isActive = activeMacrosProps.getProperty(file.absolutePath, "false").toBoolean()
-                        MacroFileState(
-                            id = file.absolutePath,
-                            file = file,
-                            name = file.nameWithoutExtension,
-                            content = content,
-                            isActive = isActive,
-                            allowedClients = allowedClients
-                        )
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                        null
-                    }
-                }?.sortedBy { it.name } ?: emptyList()
+            macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }?.toList() ?: emptyList()
         }
+
+        val fileMacros = allFiles.filter { !it.name.endsWith("_pack.json", ignoreCase = true) }
+            .mapNotNull { file ->
+                try {
+                    val content = file.readText()
+                    val trigger = JSONObject(content).optJSONObject("trigger")
+                    val allowedClients = trigger?.optString("allowedClients", "") ?: ""
+                    val isActive = activeMacrosProps.getProperty(file.absolutePath, "false").toBoolean()
+                    MacroFileState(
+                        id = file.absolutePath,
+                        file = file,
+                        name = file.nameWithoutExtension,
+                        content = content,
+                        isActive = isActive,
+                        allowedClients = allowedClients
+                    )
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }.sortedBy { it.name }
+
+        val filePacks = allFiles.filter { it.name.endsWith("_pack.json", ignoreCase = true) }
+            .mapNotNull { file ->
+                try {
+                    val content = file.readText()
+                    json.decodeFromString<MacroPack>(content)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                    null
+                }
+            }.sortedBy { it.name }
 
         val sampleTrigger = JSONObject(sampleMacroContent).optJSONObject("trigger")
         val sampleAllowedClients = sampleTrigger?.optString("allowedClients", "") ?: ""
@@ -133,7 +155,7 @@ class MacroManagerViewModel(
             allowedClients = sampleAllowedClients
         )
 
-        _uiState.update { it.copy(macroFiles = listOf(sampleMacro) + fileMacros) }
+        _uiState.update { it.copy(macroFiles = listOf(sampleMacro) + fileMacros, macroPacks = filePacks) }
         onMacrosUpdated()
     }
 

@@ -157,6 +157,7 @@ class ClientActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val serverAddressFull = intent.getStringExtra("SERVER_ADDRESS")
+        val serverName = intent.getStringExtra("SERVER_NAME")
         val deviceName = intent.getStringExtra("DEVICE_NAME") ?: "Android Device"
         val isSecure = intent.getBooleanExtra("IS_SECURE", false)
         val discoveryFingerprint = intent.getStringExtra("SERVER_FINGERPRINT")
@@ -196,6 +197,7 @@ class ClientActivity : ComponentActivity() {
                         deviceName = deviceName,
                         isSecure = isSecure,
                         discoveryFingerprint = discoveryFingerprint,
+                        serverName = serverName,
                         tokenManager = tokenManager,
                         settingsViewModel = settingsViewModel,
                         onExecutionFailedToast = { message ->
@@ -234,7 +236,10 @@ class ClientActivity : ComponentActivity() {
                         }
                     },
                     onPairingCodeEntered = { clientViewModel.submitPairingCode(it) },
-                    onBackToMain = { finish() },
+                    onBackToMain = { 
+                        clientViewModel.disconnect()
+                        finish() 
+                    },
                     onOkayTriggerSet = { trigger -> onOkayPressed = trigger },
                     onCancelTriggerSet = { trigger -> onCancelPressed = trigger },
                     onSlamTriggerSet = { trigger -> onSlamTriggered = trigger },

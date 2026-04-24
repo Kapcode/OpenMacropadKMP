@@ -60,8 +60,9 @@ The client and server communicate using **DataModel** objects serialized as JSON
 - **Common Message Types**:
     - `Text`: Raw string messages (Legacy support).
     - `Command`: Application-specific commands (e.g., `getMacros`, `play:[MacroName]`).
-    - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `AUTH_CHALLENGE`, `AUTH_RESPONSE`, `BANNED`, `DISCONNECT`).
+    - `Control`: Lifecycle and security messages (`PAIRING_REQUEST`, `PAIRING_PENDING`, `PAIRING_RESPONSE`, `PAIRING_CODE_MATCHED`, `PAIRING_APPROVED`, `BANNED`, `DISCONNECT`).
     - `Currency`: Syncs balances and spending metrics (`currency_update`, `currency_spent`).
+    - `Data`: Transmits structured JSON payloads (`installed_packs`, `marketplace_items`).
     - `Response`: Success/Failure acknowledgments with optional data (`String?`).
     - `Heartbeat`: Connection health checks.
 - **Security Handshake**:

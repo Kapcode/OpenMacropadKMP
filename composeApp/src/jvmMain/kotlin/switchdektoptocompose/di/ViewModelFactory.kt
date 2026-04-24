@@ -2,7 +2,10 @@ package switchdektoptocompose.di
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import switchdektoptocompose.viewmodel.*
 
 data class DesktopViewModels(
@@ -74,6 +77,12 @@ object ViewModelFactory {
                 onMacrosUpdated = {
                     val macroNames = macroManagerViewModelRef?.macroFiles?.value?.map { it.name } ?: emptyList()
                     serverViewModel.sendToAll(macroListMessage(macroNames))
+                    
+                    val packs = macroManagerViewModelRef?.macroPacks?.value ?: emptyList()
+                    if (packs.isNotEmpty()) {
+                        val json = Json { ignoreUnknownKeys = true }
+                        serverViewModel.sendToAll(dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
+                    }
                 }
             ).also { macroManagerViewModelRef = it }
         }

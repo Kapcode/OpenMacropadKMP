@@ -166,6 +166,7 @@ class MainActivity : ComponentActivity() {
         )
         val intent = Intent(this@MainActivity, ClientActivity::class.java).apply {
             putExtra("SERVER_ADDRESS", serverInfo.address)
+            putExtra("SERVER_NAME", serverInfo.name)
             putExtra("DEVICE_NAME", deviceName)
             putExtra("IS_SECURE", serverInfo.isSecure)
             putExtra("SERVER_FINGERPRINT", serverInfo.fingerprint)

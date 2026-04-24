@@ -138,8 +138,13 @@ fun ClientScreen(
         onOkayTriggerSet(onOkayAction)
     }
 
-    BackHandler(enabled = showSettings) {
-        showSettings = false
+    BackHandler {
+        if (showSettings) {
+            showSettings = false
+        } else {
+            clientViewModel.disconnect()
+            onBackToMain()
+        }
     }
 
     LaunchedEffect(showQrScanner, isScannerTimedOut, scannerTimeoutHours) {
@@ -724,6 +729,9 @@ fun ClientScreen(
                                                         onValueChange = {
                                                             if (it.length <= 6 && it.all { char -> char.isDigit() }) {
                                                                 enteredCode = it
+                                                                if (it.length == 6) {
+                                                                    onPairingCodeEntered(it)
+                                                                }
                                                             }
                                                         },
                                                         label = { if (!isKeyboardOpen) Text("6-Digit Code") },

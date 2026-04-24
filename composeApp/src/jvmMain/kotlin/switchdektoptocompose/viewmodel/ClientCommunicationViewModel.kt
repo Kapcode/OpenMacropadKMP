@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.encodeToString
 import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.TrustedDeviceManager
@@ -148,6 +150,12 @@ class ClientCommunicationViewModel(
             serverViewModel.server.sendToClient(clientId, pairingApprovedMessage())
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
             serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
+            
+            val packs = macroManagerViewModel.macroPacks.value
+            if (packs.isNotEmpty()) {
+                val json = Json { ignoreUnknownKeys = true }
+                serverViewModel.server.sendToClient(clientId, dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
+            }
         }
         consoleViewModel.addLog(LogLevel.Info, "Approved device: $clientName ($clientId)")
     }
@@ -260,6 +268,12 @@ class ClientCommunicationViewModel(
                         val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
                         viewModelScope.launch {
                             serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
+                            
+                            val packs = macroManagerViewModel.macroPacks.value
+                            if (packs.isNotEmpty()) {
+                                val json = Json { ignoreUnknownKeys = true }
+                                serverViewModel.server.sendToClient(clientId, dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
+                            }
                         }
                         consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
                     } else {
