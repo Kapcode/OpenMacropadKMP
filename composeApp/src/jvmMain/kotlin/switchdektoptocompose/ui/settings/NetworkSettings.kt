@@ -1,11 +1,11 @@
 package switchdektoptocompose.ui.settings
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -43,20 +43,8 @@ fun NetworkSettings(
         }
     )
     Spacer(modifier = Modifier.height(8.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "Sets whether the Android client defaults to QR scanning (On) or PIN entry (Off) when starting a pairing request.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "Sets whether the Android client defaults to QR scanning (On) or PIN entry (Off) when starting a pairing request."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -70,20 +58,8 @@ fun NetworkSettings(
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "When enabled, new devices can find this server and request to pair.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "When enabled, new devices can find this server and request to pair."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -97,20 +73,8 @@ fun NetworkSettings(
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "When enabled, multiple QR codes can be used for pairing.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "When enabled, multiple QR codes can be used for pairing."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -124,20 +88,8 @@ fun NetworkSettings(
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -151,20 +103,8 @@ fun NetworkSettings(
         }
     }
     Spacer(modifier = Modifier.height(12.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -178,20 +118,8 @@ fun NetworkSettings(
         }
     }
     Spacer(modifier = Modifier.height(8.dp))
-    TooltipArea(
-        tooltip = {
-            Surface(
-                modifier = Modifier.padding(4.dp),
-                shape = MaterialTheme.shapes.small,
-                shadowElevation = 4.dp
-            ) {
-                Text(
-                    "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors.",
-                    modifier = Modifier.padding(8.dp),
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
-        }
+    AppTooltipArea(
+        tooltipText = "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,

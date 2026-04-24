@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.model.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -147,15 +148,15 @@ fun NewEventDialog(
                 }
                 
                 Box(modifier = Modifier.fillMaxWidth()) {
-                    TooltipArea(
-                        tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text(if(isValid) "Add Event" else "Fix errors to add", modifier = Modifier.padding(4.dp)) } },
-                        modifier = Modifier.align(Alignment.BottomEnd),
+                    AppTooltipArea(
+                        tooltipText = if(isValid) "Add Event" else "Fix errors to add",
                         delayMillis = 0
                     ) {
                         FloatingActionButton(
                             onClick = { if (isValid) onAddEvent() },
                             containerColor = if (isValid) MaterialTheme.colorScheme.primaryContainer else Color.Gray,
-                            contentColor = if (isValid) MaterialTheme.colorScheme.onPrimaryContainer else Color.DarkGray
+                            contentColor = if (isValid) MaterialTheme.colorScheme.onPrimaryContainer else Color.DarkGray,
+                            modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
                             Icon(Icons.Default.Done, contentDescription = "Add Event")
                         }

@@ -40,7 +40,13 @@ fun main(args: Array<String>) = application {
             macroManagerViewModel.onPlayMacro(macroToPlay)
         }
     }
-    val inspectorManager = remember { InspectorManager(inspectorViewModel, consoleViewModel) }
+    val inspectorManager = remember { 
+        InspectorManager(
+            inspectorViewModel, 
+            consoleViewModel,
+            viewModels.serverViewModel.processWatcher
+        ) 
+    }
 
     var showExitDialog by remember { mutableStateOf(false) }
     var showShortcutsDialog by remember { mutableStateOf(false) }

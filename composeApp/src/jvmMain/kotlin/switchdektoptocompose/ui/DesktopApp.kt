@@ -1,7 +1,6 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -29,8 +28,12 @@ import javax.swing.SwingUtilities
 import javax.swing.UIManager
 import java.io.File
 import androidx.compose.ui.tooling.preview.Preview
+import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.di.DesktopViewModels
 import switchdektoptocompose.viewmodel.*
+import switchdektoptocompose.ui.components.AppTooltipArea
+import switchdektoptocompose.ui.components.LocalTooltipSettings
+import switchdektoptocompose.ui.components.TooltipSettings
 import switchdektoptocompose.viewmodel.SettingsViewModel as DesktopSettingsViewModel
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 import switchdektoptocompose.di.ViewModelFactory
@@ -40,12 +43,15 @@ import switchdektoptocompose.di.ViewModelFactory
 fun DesktopAppPreview() {
     val settingsViewModel = remember { DesktopSettingsViewModel() }
     val consoleViewModel = remember { ConsoleViewModel() }
-    val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
+    val scope = rememberCoroutineScope()
+    val processWatcher = remember { ProcessWatcher(scope) }
+    val inspectorViewModel = remember { InspectorViewModel(consoleViewModel, processWatcher) }
     val clientCommunicationViewModel = remember { ClientCommunicationViewModel(settingsViewModel, consoleViewModel) }
     val serverViewModel = remember {
         ServerViewModel(
             settingsViewModel = settingsViewModel,
             consoleViewModel = consoleViewModel,
+            processWatcher = processWatcher,
             onMessageReceived = { clientId, dataModel -> clientCommunicationViewModel.onDataReceived(clientId, dataModel) },
             onClientConnected = { clientId, name -> clientCommunicationViewModel.onClientConnected(clientId, name) },
             onClientDisconnected = { clientId -> clientCommunicationViewModel.onClientDisconnected(clientId) },
@@ -184,6 +190,9 @@ fun DesktopApp(
     val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
     val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
+    
+    val tooltipXOffset by settingsViewModel.tooltipXOffset.collectAsState()
+    val tooltipYOffset by settingsViewModel.tooltipYOffset.collectAsState()
 
     val showNewEventDialog by layoutViewModel.showNewEventDialog.collectAsState()
     val showRecordDialog by layoutViewModel.showRecordDialog.collectAsState()
@@ -332,10 +341,13 @@ fun DesktopApp(
 
 
     AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-        Scaffold(
-            snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
-            modifier = Modifier.fillMaxSize()
-        ) { paddingValues ->
+        CompositionLocalProvider(
+            LocalTooltipSettings provides TooltipSettings(xOffset = tooltipXOffset, yOffset = tooltipYOffset)
+        ) {
+            Scaffold(
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
+                modifier = Modifier.fillMaxSize()
+            ) { paddingValues ->
             Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
                 val rootVerticalSplitter = rememberSplitPaneState(
                     initialPositionPercentage = layoutViewModel.getSplitterPosition("Root Layout", 0.0254f)
@@ -475,4 +487,5 @@ fun DesktopApp(
             }
         }
     }
+}
 }

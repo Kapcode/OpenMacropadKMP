@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -116,7 +117,7 @@ fun ConnectedDevicesScreen(
                                 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     if (device.isTrusted) {
-                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("Trusted Device", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                        AppTooltipArea(tooltipText = "Trusted Device") {
                                             Icon(
                                                 Icons.Default.VerifiedUser,
                                                 contentDescription = "Trusted",
@@ -125,13 +126,13 @@ fun ConnectedDevicesScreen(
                                             )
                                         }
                                         
-                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("Revoke Trust", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                        AppTooltipArea(tooltipText = "Revoke Trust") {
                                             IconButton(onClick = { onUnpair(device.id) }, modifier = Modifier.size(32.dp)) {
                                                 Icon(Icons.Outlined.LinkOff, "Revoke Trust", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(18.dp))
                                             }
                                         }
                                     } else {
-                                        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.extraSmall, tonalElevation = 4.dp) { Text("One-Time Session", modifier = Modifier.padding(4.dp), style = MaterialTheme.typography.labelSmall) } }) {
+                                        AppTooltipArea(tooltipText = "One-Time Session") {
                                             Icon(
                                                 Icons.Default.Timer,
                                                 contentDescription = "Temporary",

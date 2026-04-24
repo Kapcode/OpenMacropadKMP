@@ -21,6 +21,7 @@ import java.net.NetworkInterface
 class ServerViewModel(
     private val settingsViewModel: SettingsViewModel,
     private val consoleViewModel: ConsoleViewModel,
+    val processWatcher: ProcessWatcher,
     private val onMessageReceived: (String, DataModel) -> Unit,
     private val onClientConnected: (String, String) -> Unit,
     private val onClientDisconnected: (String) -> Unit,
@@ -50,7 +51,6 @@ class ServerViewModel(
     )
 
     private val discoveryAnnouncer = ServerDiscoveryAnnouncer()
-    private val processWatcher = ProcessWatcher(viewModelScope)
 
     init {
         findLocalIpAddresses()

@@ -3,12 +3,18 @@ package switchdektoptocompose.viewmodel
 import switchdektoptocompose.model.LogLevel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import switchdektoptocompose.logic.ProcessWatcher
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 class InspectorViewModel(
-    private val consoleViewModel: ConsoleViewModel
+    private val consoleViewModel: ConsoleViewModel,
+    private val processWatcher: ProcessWatcher
 ) {
     private val _selectedFKey = MutableStateFlow("F1")
     val selectedFKey = _selectedFKey.asStateFlow()
+    
+    val focusHistory = processWatcher.focusHistory
 
     private val _screenshotOnPress = MutableStateFlow(false)
     val screenshotOnPress = _screenshotOnPress.asStateFlow()
@@ -78,5 +84,15 @@ class InspectorViewModel(
         _screenshotOnPress.value = !_screenshotOnPress.value
         val status = if (_screenshotOnPress.value) "ENABLED" else "DISABLED"
         consoleViewModel.addLog(LogLevel.Info, "Global Key Inspector $status via shortcut.")
+    }
+
+    fun copyToClipboard(text: String) {
+        try {
+            val selection = StringSelection(text)
+            Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+            consoleViewModel.addLog(LogLevel.Info, "Copied to clipboard: $text")
+        } catch (e: Exception) {
+            consoleViewModel.addLog(LogLevel.Error, "Failed to copy to clipboard: ${e.message}")
+        }
     }
 }

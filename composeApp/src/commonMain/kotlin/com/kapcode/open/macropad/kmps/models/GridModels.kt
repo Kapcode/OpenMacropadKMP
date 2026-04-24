@@ -34,6 +34,7 @@ data class MacroPack(
     val author: String,
     val version: String,
     val targetProcess: String? = null, // e.g., "photoshop.exe"
+    val isActive: Boolean = false,
     val widgets: List<GridWidget> = emptyList()
 )
 

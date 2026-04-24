@@ -13,6 +13,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
+import java.util.UUID
 
 data class MacroManagerState(
     val macroFiles: List<MacroFileState> = emptyList(),
@@ -20,7 +21,8 @@ data class MacroManagerState(
     val isSelectionMode: Boolean = false,
     val filePendingDeletion: File? = null,
     val filesPendingDeletion: List<File>? = null,
-    val macroBeingRenamed: MacroFileState? = null
+    val macroBeingRenamed: MacroFileState? = null,
+    val packBeingEdited: MacroPack? = null
 )
 
 class MacroManagerViewModel(
@@ -73,6 +75,9 @@ class MacroManagerViewModel(
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
     val macroBeingRenamed: StateFlow<MacroFileState?> = _uiState.map { it.macroBeingRenamed }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
+
+    val packBeingEdited: StateFlow<MacroPack?> = _uiState.map { it.packBeingEdited }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
     private val playbackJob = SupervisorJob()
@@ -378,5 +383,69 @@ class MacroManagerViewModel(
         }
         activeMacrosProps.setProperty(macroId, isActive.toString())
         saveActiveMacros()
+    }
+
+    fun onCreatePack() {
+        val newPack = MacroPack(
+            id = UUID.randomUUID().toString(),
+            name = "New Pack",
+            author = "Unknown",
+            version = "1.0.0",
+            isActive = false
+        )
+        _uiState.update { it.copy(packBeingEdited = newPack) }
+    }
+
+    fun onEditPack(pack: MacroPack) {
+        _uiState.update { it.copy(packBeingEdited = pack) }
+    }
+
+    fun onCancelPackEdit() {
+        _uiState.update { it.copy(packBeingEdited = null) }
+    }
+
+    fun onSavePack(pack: MacroPack) {
+        val filename = pack.name.replace(Regex("[^a-zA-Z0-9_]"), "") + "_pack.json"
+        val file = File(settingsViewModel.macroDirectory.value, filename)
+        try {
+            val content = json.encodeToString(MacroPack.serializer(), pack)
+            file.writeText(content)
+            _uiState.update { it.copy(packBeingEdited = null) }
+            refresh()
+            consoleViewModel.addLog(LogLevel.Info, "Pack '${pack.name}' saved to $filename")
+        } catch (e: Exception) {
+            consoleViewModel.addLog(LogLevel.Error, "Failed to save pack: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
+    fun onDeletePack(pack: MacroPack) {
+        // For now, let's reuse the file deletion logic if we can find the file
+        val filename = pack.name.replace(Regex("[^a-zA-Z0-9_]"), "") + "_pack.json"
+        val file = File(settingsViewModel.macroDirectory.value, filename)
+        if (file.exists()) {
+            _uiState.update { it.copy(filePendingDeletion = file) }
+        } else {
+            // If the file name doesn't match the standard naming (e.g. manually renamed),
+            // we might need to find it by content or keep track of the file in MacroPack
+            // For now, let's just log it.
+            consoleViewModel.addLog(LogLevel.Error, "Could not find file for pack '${pack.name}' to delete.")
+        }
+    }
+
+    fun onOpenPackInJsonEditor(pack: MacroPack) {
+        val filename = pack.name.replace(Regex("[^a-zA-Z0-9_]"), "") + "_pack.json"
+        val file = File(settingsViewModel.macroDirectory.value, filename)
+        if (file.exists()) {
+            val macroState = MacroFileState(
+                id = file.absolutePath,
+                file = file,
+                name = pack.name,
+                content = file.readText(),
+                isActive = true
+            )
+            onEditMacroRequested(macroState)
+            _uiState.update { it.copy(packBeingEdited = null) }
+        }
     }
 }

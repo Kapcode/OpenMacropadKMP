@@ -43,6 +43,8 @@ fun SettingsDialog(
     val enableWebsocketPings by settingsViewModel.enableWebsocketPings.collectAsState()
     val multiQrEnabled by sharedSettingsViewModel.multiQrEnabled.collectAsState()
     val defaultPairingModeQr by settingsViewModel.defaultPairingModeQr.collectAsState()
+    val tooltipXOffset by settingsViewModel.tooltipXOffset.collectAsState()
+    val tooltipYOffset by settingsViewModel.tooltipYOffset.collectAsState()
 
     // Connected Clients Settings
     val clientTheme by settingsViewModel.clientTheme.collectAsState()
@@ -78,6 +80,8 @@ fun SettingsDialog(
                 ThemeSettings(selectedTheme, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 BehaviorSettings(exitBehavior, clickTrayToToggle, settingsViewModel, onShowShortcutsRequest)
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                UISettings(tooltipXOffset, tooltipYOffset, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel, onShowPushSettingsRequest)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

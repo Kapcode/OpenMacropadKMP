@@ -42,6 +42,9 @@ object AppSettings {
     private const val SPLITTER_POS_PREFIX = "splitter_pos_"
     private const val SPLITTER_SWAPPED_PREFIX = "splitter_swapped_"
 
+    private const val TOOLTIP_X_OFFSET_KEY = "tooltipXOffset"
+    private const val TOOLTIP_Y_OFFSET_KEY = "tooltipYOffset"
+
     init {
         if (!configDir.exists()) {
             configDir.mkdirs()
@@ -229,6 +232,20 @@ object AppSettings {
         get() = properties.getProperty(SPLITTER_INFO_MODIFIER_KEY, "Ctrl")
         set(value) {
             properties.setProperty(SPLITTER_INFO_MODIFIER_KEY, value)
+            save()
+        }
+
+    var tooltipXOffset: Int
+        get() = properties.getProperty(TOOLTIP_X_OFFSET_KEY, "0").toIntOrNull() ?: 0
+        set(value) {
+            properties.setProperty(TOOLTIP_X_OFFSET_KEY, value.toString())
+            save()
+        }
+
+    var tooltipYOffset: Int
+        get() = properties.getProperty(TOOLTIP_Y_OFFSET_KEY, "-24").toIntOrNull() ?: -24
+        set(value) {
+            properties.setProperty(TOOLTIP_Y_OFFSET_KEY, value.toString())
             save()
         }
 

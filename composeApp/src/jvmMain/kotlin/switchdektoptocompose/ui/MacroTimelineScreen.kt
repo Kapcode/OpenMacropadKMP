@@ -1,7 +1,6 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,6 +12,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.model.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -39,12 +39,8 @@ fun MacroTimelineScreen(
         TopAppBar(
             title = { Text("Timeline") },
             actions = {
-                TooltipArea(
-                    tooltip = {
-                        Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp) {
-                            Text("Add Event", modifier = Modifier.padding(4.dp))
-                        }
-                    },
+                AppTooltipArea(
+                    tooltipText = "Add Event",
                     delayMillis = 0
                 ) {
                     IconButton(onClick = onAddEventClicked) {
@@ -52,12 +48,8 @@ fun MacroTimelineScreen(
                     }
                 }
 
-                TooltipArea(
-                    tooltip = {
-                        Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp) {
-                            Text("Record Macro", modifier = Modifier.padding(4.dp))
-                        }
-                    },
+                AppTooltipArea(
+                    tooltipText = "Record Macro",
                     delayMillis = 0
                 ) {
                     IconButton(onClick = onRecordMacroClicked) {

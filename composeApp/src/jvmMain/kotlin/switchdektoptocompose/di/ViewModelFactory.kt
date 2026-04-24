@@ -6,6 +6,9 @@ import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.viewmodel.*
 
 data class DesktopViewModels(
@@ -33,7 +36,9 @@ object ViewModelFactory {
         val sharedSettingsViewModel = remember { com.kapcode.open.macropad.kmps.settings.SettingsViewModel() }
         val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
-        val inspectorViewModel = remember { InspectorViewModel(consoleViewModel) }
+        
+        val processWatcher = remember { ProcessWatcher(CoroutineScope(Dispatchers.Main)) }
+        val inspectorViewModel = remember { InspectorViewModel(consoleViewModel, processWatcher) }
         
         val clientCommunicationViewModel = remember { 
             ClientCommunicationViewModel(settingsViewModel, consoleViewModel) 
@@ -43,6 +48,7 @@ object ViewModelFactory {
             ServerViewModel(
                 settingsViewModel = settingsViewModel,
                 consoleViewModel = consoleViewModel,
+                processWatcher = processWatcher,
                 onMessageReceived = { clientId, dataModel -> 
                     clientCommunicationViewModel.onDataReceived(clientId, dataModel) 
                 },

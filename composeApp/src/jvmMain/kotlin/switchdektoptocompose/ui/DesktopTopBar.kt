@@ -1,7 +1,6 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -12,6 +11,7 @@ import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,7 +54,7 @@ fun DesktopTopBar(
         verticalAlignment = Alignment.CenterVertically
     ) {
         var menuExpanded by remember { mutableStateOf(false) }
-        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Menu", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+        AppTooltipArea(tooltipText = "Menu", delayMillis = 0) {
             IconButton(onClick = { menuExpanded = true }) {
                 Icon(Icons.Default.Menu, contentDescription = "Menu")
             }
@@ -126,16 +126,8 @@ fun DesktopTopBar(
                 
                 Spacer(modifier = Modifier.height(2.dp))
                 
-                TooltipArea(
-                    tooltip = {
-                        Surface(
-                            modifier = Modifier.padding(4.dp),
-                            shape = MaterialTheme.shapes.small,
-                            shadowElevation = 4.dp
-                        ) {
-                            Text("Security Status (Click to edit)", modifier = Modifier.padding(4.dp))
-                        }
-                    },
+                AppTooltipArea(
+                    tooltipText = "Security Status (Click to edit)",
                     delayMillis = 500
                 ) {
                     Row(
@@ -176,7 +168,7 @@ fun DesktopTopBar(
             }
         }
         
-        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Emergency Stop Key", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+        AppTooltipArea(tooltipText = "Emergency Stop Key", delayMillis = 0) {
             var eStopMenuExpanded by remember { mutableStateOf(false) }
             Box {
                 OutlinedButton(
@@ -211,7 +203,7 @@ fun DesktopTopBar(
 
         Spacer(Modifier.width(16.dp))
 
-        TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Toggle Macro Execution", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+        AppTooltipArea(tooltipText = "Toggle Macro Execution", delayMillis = 0) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Power, contentDescription = "Macros Enabled", modifier = Modifier.size(20.dp))
                 Switch(

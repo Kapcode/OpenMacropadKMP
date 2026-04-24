@@ -17,7 +17,8 @@ import javax.swing.SwingUtilities
 
 class InspectorManager(
     private val viewModel: InspectorViewModel,
-    private val consoleViewModel: ConsoleViewModel
+    private val consoleViewModel: ConsoleViewModel,
+    private val processWatcher: ProcessWatcher
 ) : NativeKeyListener {
 
     private val robot = Robot()
@@ -55,6 +56,15 @@ class InspectorManager(
         consoleViewModel.addLog(LogLevel.Info, "Mouse Position: X=${mousePos.x}, Y=${mousePos.y}")
         consoleViewModel.addLog(LogLevel.Info, "Pixel Color (Hex): $hexColor")
         consoleViewModel.addLog(LogLevel.Info, "Pixel Color (ARGB): $argbColor")
+        
+        // Grab current process info
+        val processInfo = processWatcher.getActiveProcessInfo()
+        processInfo?.let {
+            consoleViewModel.addLog(LogLevel.Info, "Active Window: ${it.name}")
+            consoleViewModel.addLog(LogLevel.Info, "Window Title: ${it.windowTitle}")
+            consoleViewModel.addLog(LogLevel.Info, "PID: ${it.pid} • Window ID: ${it.windowId}")
+            consoleViewModel.addLog(LogLevel.Info, "Command: ${it.command}")
+        }
 
         if (viewModel.screenshotOnPress.value) {
             if (viewModel.canTakeScreenshot()) {

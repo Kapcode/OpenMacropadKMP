@@ -82,6 +82,12 @@ class SettingsViewModel {
     private val _splitterInfoModifier = MutableStateFlow(AppSettings.splitterInfoModifier)
     val splitterInfoModifier = _splitterInfoModifier.asStateFlow()
 
+    private val _tooltipXOffset = MutableStateFlow(AppSettings.tooltipXOffset)
+    val tooltipXOffset = _tooltipXOffset.asStateFlow()
+
+    private val _tooltipYOffset = MutableStateFlow(AppSettings.tooltipYOffset)
+    val tooltipYOffset = _tooltipYOffset.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -238,6 +244,16 @@ class SettingsViewModel {
     fun setSplitterInfoModifier(modifier: String) {
         _splitterInfoModifier.value = modifier
         AppSettings.splitterInfoModifier = modifier
+    }
+
+    fun setTooltipXOffset(offset: Int) {
+        _tooltipXOffset.value = offset
+        AppSettings.tooltipXOffset = offset
+    }
+
+    fun setTooltipYOffset(offset: Int) {
+        _tooltipYOffset.value = offset
+        AppSettings.tooltipYOffset = offset
     }
 
     fun getSplitterPosition(name: String, default: Float): Float {

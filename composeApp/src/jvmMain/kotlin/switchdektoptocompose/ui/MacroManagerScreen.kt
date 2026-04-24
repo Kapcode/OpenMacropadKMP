@@ -1,16 +1,18 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.model.*
+import com.kapcode.open.macropad.kmps.models.MacroPack
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,8 +30,10 @@ fun MacroManagerScreen(
     onMarketplaceClicked: () -> Unit
 ) {
     val macroFiles by viewModel.macroFiles.collectAsState()
+    val macroPacks by viewModel.macroPacks.collectAsState()
     val isSelectionMode by viewModel.isSelectionMode.collectAsState()
     val macroBeingRenamed by viewModel.macroBeingRenamed.collectAsState()
+    val packBeingEdited by viewModel.packBeingEdited.collectAsState()
 
     macroBeingRenamed?.let { macro ->
         RenameMacroDialog(
@@ -41,21 +45,36 @@ fun MacroManagerScreen(
         )
     }
 
+    packBeingEdited?.let { pack ->
+        PackEditorDialog(
+            pack = pack,
+            availableMacros = macroFiles,
+            onDismissRequest = { viewModel.onCancelPackEdit() },
+            onSave = { updatedPack -> viewModel.onSavePack(updatedPack) },
+            onOpenInJsonEditor = { packToOpen -> viewModel.onOpenPackInJsonEditor(packToOpen) }
+        )
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopAppBar(
             title = { Text("Macro Manager") },
             actions = {
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Marketplace", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Marketplace", delayMillis = 0) {
                     IconButton(onClick = onMarketplaceClicked) {
                         Icon(Icons.Default.ShoppingBag, contentDescription = "Marketplace")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "New Pack", delayMillis = 0) {
+                    IconButton(onClick = { viewModel.onCreatePack() }) {
+                        Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "New Pack")
+                    }
+                }
+                AppTooltipArea(tooltipText = "New Macro", delayMillis = 0) {
                     IconButton(onClick = onNewMacroClicked) {
                         Icon(Icons.Default.Add, contentDescription = "New Macro")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text(if (isSelectionMode) "Cancel Selection" else "Select Macros", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = if (isSelectionMode) "Cancel Selection" else "Select Macros", delayMillis = 0) {
                     IconButton(onClick = { viewModel.toggleSelectionMode() }) {
                         if (isSelectionMode) {
                             Icon(Icons.Default.Cancel, contentDescription = "Cancel Selection")
@@ -65,7 +84,7 @@ fun MacroManagerScreen(
                     }
                 }
                 if (isSelectionMode) {
-                    TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Selected", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                    AppTooltipArea(tooltipText = "Delete Selected", delayMillis = 0) {
                         IconButton(
                             onClick = { viewModel.deleteSelectedMacros() }
                         ) {
@@ -77,6 +96,21 @@ fun MacroManagerScreen(
         )
 
         LazyColumn(modifier = Modifier.weight(1f)) {
+            item {
+                Text("Macro Packs", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(8.dp))
+            }
+            items(macroPacks, key = { "pack_${it.id}" }) { pack ->
+                PackItem(
+                    pack = pack,
+                    onEdit = { viewModel.onEditPack(pack) },
+                    onDelete = { viewModel.onDeletePack(pack) }
+                )
+                HorizontalDivider()
+            }
+            
+            item {
+                Text("Macros", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(8.dp))
+            }
             items(macroFiles, key = { it.id }) { macroState ->
                 MacroItem(
                     state = macroState,
@@ -92,6 +126,43 @@ fun MacroManagerScreen(
             }
         }
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PackItem(
+    pack: MacroPack,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    ListItem(
+        headlineContent = {
+            Text(pack.name, maxLines = 1)
+        },
+        supportingContent = {
+            Text("${pack.widgets.size} Widgets${if (pack.isActive) " • Active" else ""}", maxLines = 1)
+        },
+        leadingContent = {
+            Icon(Icons.AutoMirrored.Filled.LibraryBooks, contentDescription = "Pack")
+        },
+        trailingContent = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                AppTooltipArea(tooltipText = "Edit Pack", delayMillis = 0) {
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Edit Pack")
+                    }
+                }
+                AppTooltipArea(tooltipText = "Delete Pack", delayMillis = 0) {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Delete Pack", tint = MaterialTheme.colorScheme.error)
+                    }
+                }
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -130,22 +201,22 @@ private fun MacroItem(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Play Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Play Macro", delayMillis = 0) {
                     IconButton(onClick = onPlay) {
                         Icon(Icons.Default.PlayArrow, contentDescription = "Play Macro")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Edit Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Edit Macro", delayMillis = 0) {
                     IconButton(onClick = onEdit) {
                         Icon(Icons.Default.Edit, contentDescription = "Edit Macro")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Rename Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Rename Macro", delayMillis = 0) {
                     IconButton(onClick = onRename, enabled = state.file != null) {
                         Icon(Icons.Default.DriveFileRenameOutline, contentDescription = "Rename Macro")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Delete Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Delete Macro", delayMillis = 0) {
                     IconButton(onClick = onDelete, enabled = state.file != null) {
                         Icon(Icons.Default.Delete, contentDescription = "Delete Macro", tint = if (state.file != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f))
                     }

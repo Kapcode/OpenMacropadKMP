@@ -1,7 +1,6 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -10,6 +9,7 @@ import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.SaveAs
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -31,17 +31,17 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
             title = { Text("Editor") },
             actions = {
                 val isTabOpen = tabs.isNotEmpty()
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Save", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Save", delayMillis = 0) {
                     IconButton(onClick = { viewModel.saveSelectedTab() }, enabled = isTabOpen) {
                         Icon(Icons.Default.Save, contentDescription = "Save")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("Save As...", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "Save As...", delayMillis = 0) {
                     IconButton(onClick = { viewModel.saveSelectedTabAs() }, enabled = isTabOpen) {
                         Icon(Icons.Default.SaveAs, contentDescription = "Save As")
                     }
                 }
-                TooltipArea(tooltip = { Surface(shape = MaterialTheme.shapes.small, shadowElevation = 4.dp){ Text("New Macro", modifier = Modifier.padding(4.dp)) } }, delayMillis = 0) {
+                AppTooltipArea(tooltipText = "New Macro", delayMillis = 0) {
                     IconButton(onClick = { viewModel.addNewTab() }) {
                         Icon(Icons.Default.Add, contentDescription = "New Macro")
                     }

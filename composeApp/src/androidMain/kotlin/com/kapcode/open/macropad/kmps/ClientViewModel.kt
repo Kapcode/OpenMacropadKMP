@@ -230,7 +230,9 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setActiveProcess(process: String?) {
         _uiState.update { state ->
-            val matchingPack = state.installedPacks.find { it.targetProcess?.equals(process, ignoreCase = true) == true }
+            val matchingPack = state.installedPacks.find { 
+                it.isActive && it.targetProcess?.equals(process, ignoreCase = true) == true 
+            }
             state.copy(
                 activeProcess = process,
                 activePack = matchingPack ?: state.activePack
