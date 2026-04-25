@@ -1,5 +1,6 @@
 package com.kapcode.open.macropad.kmps.network.sockets.model
 
+import com.kapcode.open.macropad.kmps.models.AutomationRoutine
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 import java.util.*
@@ -21,6 +22,18 @@ sealed class MessageType {
     @Serializable
     @SerialName("command")
     data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType()
+
+    @Serializable
+    @SerialName("automation_routine")
+    data class AutomationRoutineMsg(val routine: AutomationRoutine) : MessageType()
+
+    @Serializable
+    @SerialName("layer_update")
+    data class LayerUpdate(val activeLayerId: String) : MessageType()
+
+    @Serializable
+    @SerialName("system_query")
+    data class SystemQuery(val query: String) : MessageType()
     
     @Serializable
     @SerialName("data")

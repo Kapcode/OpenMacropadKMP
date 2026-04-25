@@ -24,7 +24,11 @@ class TriggerListener(
     private val onTrigger: (MacroFileState) -> Unit
 ) : NativeKeyListener {
 
-    private val activeTriggers = ConcurrentHashMap<Int, MutableList<ActiveTrigger>>()
+    private val evaluator = SequenceEvaluator(
+        viewModel,
+        onTriggerRoutine = { routine -> viewModel.macroManagerViewModel.onTriggerRoutine(routine) },
+        onTriggerMacro = { macro -> onTrigger(macro) }
+    )
     private var eStopKeyCode: Int? = null
     private var copyConsoleShortcut: String? = null
     private var stopKeyShortcut: String? = null
@@ -32,8 +36,8 @@ class TriggerListener(
     private val listenerScope = CoroutineScope(Dispatchers.Default)
 
     init {
-        val logger = Logger.getLogger(GlobalScreen::class.java.getPackage().name)
-        logger.level = Level.WARNING // Reduce logging level to avoid spam
+        val logger = java.util.logging.Logger.getLogger(GlobalScreen::class.java.getPackage().name)
+        logger.level = java.util.logging.Level.WARNING // Reduce logging level to avoid spam
         logger.useParentHandlers = false
 
         // Ensure cleanup on JVM shutdown
@@ -53,9 +57,10 @@ class TriggerListener(
         eStopKeyName: String = "F12",
         copyConsoleShortcut: String? = null,
         stopKeyShortcut: String? = null,
-        inspectKeyShortcut: String? = null
+        inspectKeyShortcut: String? = null,
+        routines: List<com.kapcode.open.macropad.kmps.models.AutomationRoutine> = emptyList()
     ) {
-        activeTriggers.clear()
+        val unifiedTriggers = mutableListOf<UnifiedTrigger>()
         
         eStopKeyCode = KeyParser.parseNativeHookKeys(eStopKeyName).firstOrNull()
         this.copyConsoleShortcut = copyConsoleShortcut
@@ -63,19 +68,61 @@ class TriggerListener(
         this.inspectKeyShortcut = inspectKeyShortcut
         println("Trigger Listener: E-Stop key set to $eStopKeyName (${eStopKeyCode})")
 
+        // Parse advanced routines
+        routines.forEach { routine ->
+            val keyCodes = when (val t = routine.trigger) {
+                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> KeyParser.parseNativeHookKeys(t.keyName)
+                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> KeyParser.parseNativeHookKeys(t.keyName)
+                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> KeyParser.parseNativeHookKeys(t.keys.joinToString(","))
+            }
+            
+            if (keyCodes.isNotEmpty()) {
+                val triggerType = when (routine.trigger) {
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> TriggerType.HOLD
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> TriggerType.MULTI_TAP
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> TriggerType.SEQUENCE
+                }
+                
+                unifiedTriggers.add(UnifiedTrigger(
+                    id = routine.id,
+                    keyCodes = keyCodes,
+                    triggerType = triggerType,
+                    durationMs = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold)?.durationMs ?: 0L,
+                    tapCount = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.tapCount ?: 0,
+                    windowMs = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.windowMs 
+                        ?: (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence)?.windowMs ?: 0L,
+                    confirmationRequired = false, // Routines handle confirmation internally if needed
+                    routine = routine
+                ))
+            }
+        }
+
+        // Parse standalone macros
         macros.filter { it.isActive }.forEach { macroState ->
             try {
                 val content = macroState.file?.readText() ?: macroState.content
                 if (content.isBlank()) return@forEach
 
-                val triggerJson = JSONObject(content).optJSONObject("trigger")
+                val triggerJson = org.json.JSONObject(content).optJSONObject("trigger")
                 if (triggerJson != null) {
                     val keyName = triggerJson.getString("keyName")
-                    val allowedClients = triggerJson.optString("allowedClients", "")
-                    KeyParser.parseNativeHookKeys(keyName).firstOrNull()?.let { keyCode ->
-                        activeTriggers.computeIfAbsent(keyCode) { mutableListOf() }
-                            .add(ActiveTrigger(keyCode, macroState, allowedClients))
-                        println("Trigger registered: ${NativeKeyEvent.getKeyText(keyCode)} for ${macroState.name}")
+                    val actionStr = triggerJson.optString("action", "RELEASE")
+                    val keyCodes = KeyParser.parseNativeHookKeys(keyName)
+                    
+                    if (keyCodes.isNotEmpty()) {
+                        val triggerType = try { TriggerType.valueOf(actionStr) } catch(e: Exception) { TriggerType.RELEASE }
+                        
+                        unifiedTriggers.add(UnifiedTrigger(
+                            id = macroState.id,
+                            keyCodes = keyCodes,
+                            triggerType = triggerType,
+                            durationMs = triggerJson.optLong("durationMs", 500L),
+                            tapCount = triggerJson.optInt("tapCount", 2),
+                            windowMs = triggerJson.optLong("windowMs", 300L),
+                            confirmationRequired = triggerJson.optBoolean("confirmationRequired", false),
+                            macro = macroState
+                        ))
+                        println("Trigger registered: $keyName ($triggerType) for ${macroState.name}")
                     }
                 }
             } catch (e: Exception) {
@@ -83,18 +130,8 @@ class TriggerListener(
             }
         }
 
-        // Check for collisions
-        activeTriggers.forEach { (keyCode, triggers) ->
-            if (triggers.size > 1) {
-                val macroNames = triggers.joinToString(", ") { it.macro.name }
-                val keyName = NativeKeyEvent.getKeyText(keyCode)
-                val warningMsg = "Warning: Multiple macros bound to '$keyName': $macroNames"
-                println(warningMsg)
-                viewModel.consoleViewModel.addLog(LogLevel.Warn, warningMsg)
-            }
-        }
-
-        println("Active triggers updated. Total keys monitored: ${activeTriggers.size}")
+        evaluator.updateTriggers(unifiedTriggers)
+        println("Active triggers updated. Total unified triggers: ${unifiedTriggers.size}")
     }
 
     fun startListening() {
@@ -122,11 +159,9 @@ class TriggerListener(
         }
     }
 
-    override fun nativeKeyReleased(e: NativeKeyEvent) {
-        val keyText = NativeKeyEvent.getKeyText(e.keyCode)
-        val modifiers = NativeKeyEvent.getModifiersText(e.modifiers)
-        val fullShortcut = if (modifiers.isNotEmpty()) "$modifiers+$keyText".replace(" ", "") else keyText
-
+    override fun nativeKeyPressed(e: NativeKeyEvent) {
+        evaluator.onKeyPressed(e.keyCode)
+        
         // Check for E-Stop first
         if (e.keyCode == eStopKeyCode) {
             val msg = "E-STOP ACTIVATED via keyboard shortcut!"
@@ -135,6 +170,14 @@ class TriggerListener(
             viewModel.stopAllMacros()
             return
         }
+    }
+
+    override fun nativeKeyReleased(e: NativeKeyEvent) {
+        evaluator.onKeyReleased(e.keyCode)
+        
+        val keyText = NativeKeyEvent.getKeyText(e.keyCode)
+        val modifiers = NativeKeyEvent.getModifiersText(e.modifiers)
+        val fullShortcut = if (modifiers.isNotEmpty()) "$modifiers+$keyText".replace(" ", "") else keyText
 
         // Check for Copy Console Shortcut
         if (copyConsoleShortcut != null && fullShortcut == copyConsoleShortcut) {
@@ -162,21 +205,9 @@ class TriggerListener(
         }
 
         if (viewModel.uiState.value.isMacroExecutionEnabled) {
-            val triggers = activeTriggers[e.keyCode]
-            if (triggers != null) {
-                // Offload the processing to a coroutine to return from the native callback ASAP
-                listenerScope.launch {
-                    triggers.forEach { trigger ->
-                        if (trigger.macro.isActive) {
-                            viewModel.consoleViewModel.addLog(LogLevel.Info, "Macro triggered via shortcut: ${trigger.macro.name}")
-                            onTrigger(trigger.macro)
-                        }
-                    }
-                }
-            }
+            // Triggering is now handled entirely by the SequenceEvaluator state machine
         }
     }
     
-    override fun nativeKeyPressed(e: NativeKeyEvent) {}
     override fun nativeKeyTyped(e: NativeKeyEvent) {}
 }

@@ -4,4 +4,5 @@ expect object DeviceInfo {
     val name: String
     val uniqueId: String
     val hardwareMetadata: String
+    val capabilities: List<String>
 }

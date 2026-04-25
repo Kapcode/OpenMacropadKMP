@@ -36,6 +36,7 @@ barcode-scanning = "17.3.0"
 camera-lifecycle = "1.4.1"
 camera-view = "1.4.1"
 camera-camera2 = "1.4.1"
+graalvm = "25.0.3"
 
 [libraries]
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
@@ -81,6 +82,8 @@ svg-salamander = { module = "com.kitfox.svg:svg-salamander", version.ref = "svg-
 json = { module = "org.json:json", version.ref = "json" }
 slf4j-simple = { module = "org.slf4j:slf4j-simple", version.ref = "slf4j" }
 java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "java-keyring" }
+graalvm-sdk = { module = "org.graalvm.sdk:graal-sdk", version.ref = "graalvm" }
+graalvm-js = { module = "org.graalvm.js:js", version.ref = "graalvm" }
 
 [plugins]
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }

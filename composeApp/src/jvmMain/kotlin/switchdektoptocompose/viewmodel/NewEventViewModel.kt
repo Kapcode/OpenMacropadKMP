@@ -5,14 +5,31 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.kapcode.open.macropad.kmps.models.AutomationTrigger
 
 enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE, TYPE }
 
-class NewEventViewModel {
+class NewEventViewModel(
+    private val clientCommunicationViewModel: ClientCommunicationViewModel? = null
+) {
     private val viewModelScope = CoroutineScope(Dispatchers.Default)
 
     val isTriggerEvent = MutableStateFlow(false)
+    val triggerKeysText = MutableStateFlow("ESCAPE")
     val allowedClientsText = MutableStateFlow("")
+    val selectedClients = MutableStateFlow<Set<String>>(emptySet())
+    val isAllTrustedSelected = MutableStateFlow(false)
+    val trustedDevices = clientCommunicationViewModel?.trustedDevices ?: MutableStateFlow<Map<String, String>>(emptyMap())
+
+    val triggerType = MutableStateFlow(TriggerType.RELEASE)
+    val holdDurationMs = MutableStateFlow("500")
+    val multiTapCount = MutableStateFlow("2")
+    val tapWindowMs = MutableStateFlow("300")
+    val sequenceWindowMs = MutableStateFlow("1000")
+    val confirmationRequired = MutableStateFlow(false)
+
+    val isEditMode = MutableStateFlow(false)
+    val editingIndex = MutableStateFlow(-1)
 
     val selectedAction = MutableStateFlow(MacroAction.PRESS)
     val actionOptions = MacroAction.values().toList()
@@ -34,7 +51,15 @@ class NewEventViewModel {
 
     val validationState: StateFlow<Pair<Boolean, String>> = combine(
         isTriggerEvent,
+        triggerKeysText,
         allowedClientsText,
+        selectedClients,
+        isAllTrustedSelected,
+        triggerType,
+        holdDurationMs,
+        multiTapCount,
+        tapWindowMs,
+        sequenceWindowMs,
         useKeys,
         keysText,
         useMouseButtons,
@@ -71,10 +96,21 @@ class NewEventViewModel {
 
     private fun validate(): Pair<Boolean, String> {
         if (isTriggerEvent.value) {
-             // Trigger event is handled by TimelineViewModel directly, but if we were creating it here...
-             // Actually, the dialog calls addOrUpdateTrigger if isTrigger is true.
-             // We should validate trigger fields if isTrigger is true.
-             if (keysText.value.isBlank()) return false to "Trigger key cannot be empty."
+             if (triggerKeysText.value.isBlank()) return false to "Trigger key(s) cannot be empty."
+             
+             when (triggerType.value) {
+                 TriggerType.HOLD -> {
+                     if (holdDurationMs.value.toLongOrNull() == null) return false to "Hold duration must be a number."
+                 }
+                 TriggerType.MULTI_TAP -> {
+                     if (multiTapCount.value.toIntOrNull() == null) return false to "Tap count must be a number."
+                     if (tapWindowMs.value.toLongOrNull() == null) return false to "Tap window must be a number."
+                 }
+                 TriggerType.SEQUENCE -> {
+                     if (sequenceWindowMs.value.toLongOrNull() == null) return false to "Sequence window must be a number."
+                 }
+                 else -> {}
+             }
              return true to ""
         }
 
@@ -125,7 +161,16 @@ class NewEventViewModel {
 
     fun reset() {
         isTriggerEvent.value = false
+        triggerKeysText.value = "ESCAPE"
         allowedClientsText.value = ""
+        selectedClients.value = emptySet()
+        isAllTrustedSelected.value = false
+        triggerType.value = TriggerType.RELEASE
+        holdDurationMs.value = "500"
+        multiTapCount.value = "2"
+        tapWindowMs.value = "300"
+        sequenceWindowMs.value = "1000"
+        confirmationRequired.value = false
         selectedAction.value = MacroAction.PRESS
         useKeys.value = true
         keysText.value = ""
@@ -142,6 +187,75 @@ class NewEventViewModel {
         // Removed: delayBetweenActions.value = false
         useAutoDelay.value = false
         autoDelayText.value = "50"
+        isEditMode.value = false
+        editingIndex.value = -1
+    }
+
+    fun loadFromTrigger(trigger: TriggerState) {
+        reset()
+        isEditMode.value = true
+        isTriggerEvent.value = true
+        triggerKeysText.value = trigger.keyName
+        triggerType.value = trigger.triggerType
+        holdDurationMs.value = trigger.holdDurationMs.toString()
+        multiTapCount.value = trigger.multiTapCount.toString()
+        tapWindowMs.value = trigger.tapWindowMs.toString()
+        sequenceWindowMs.value = trigger.sequenceWindowMs.toString()
+        confirmationRequired.value = trigger.confirmationRequired
+        
+        if (trigger.allowedClients == "ALL_TRUSTED") {
+            isAllTrustedSelected.value = true
+        } else {
+            selectedClients.value = trigger.allowedClients.split(",").filter { it.isNotBlank() }.toSet()
+        }
+    }
+
+    fun loadFromEvent(event: MacroEventState, index: Int) {
+        reset()
+        isEditMode.value = true
+        editingIndex.value = index
+        isTriggerEvent.value = false
+
+        when (event) {
+            is MacroEventState.KeyEvent -> {
+                useKeys.value = true
+                keysText.value = event.keyName
+                selectedAction.value = when (event.action) {
+                    KeyAction.PRESS -> MacroAction.PRESS
+                    KeyAction.RELEASE -> MacroAction.RELEASE
+                }
+            }
+            is MacroEventState.MouseEvent -> {
+                useMouseLocation.value = true
+                mouseX.value = event.x.toString()
+                mouseY.value = event.y.toString()
+                animateMouseMovement.value = event.isAnimated
+                selectedAction.value = when (event.action) {
+                    MouseAction.MOVE -> MacroAction.`ON-PRESS` // MOVE maps to something, placeholder
+                    MouseAction.CLICK -> MacroAction.TYPE // CLICK maps to something, placeholder
+                }
+            }
+            is MacroEventState.MouseButtonEvent -> {
+                useMouseButtons.value = true
+                mouseButtonsText.value = event.buttonNumber.toString()
+                selectedAction.value = when (event.action) {
+                    KeyAction.PRESS -> MacroAction.PRESS
+                    KeyAction.RELEASE -> MacroAction.RELEASE
+                }
+            }
+            is MacroEventState.ScrollEvent -> {
+                useMouseScroll.value = true
+                mouseScrollText.value = event.scrollAmount.toString()
+            }
+            is MacroEventState.DelayEvent -> {
+                useDelay.value = true
+                delayText.value = event.durationMs.toString()
+            }
+            is MacroEventState.SetAutoWaitEvent -> {
+                useAutoDelay.value = true
+                autoDelayText.value = event.delayMs.toString()
+            }
+        }
     }
 
     fun createEvents(): List<MacroEventState> {

@@ -160,7 +160,10 @@ inline fun DataModel.handle(
     onData: (String, ByteArray) -> Unit = { _, _ -> },
     onResponse: (Boolean, String, String?) -> Unit = { _, _, _ -> },
     onControl: (ControlCommand, Map<String, String>) -> Unit = { _, _ -> },
-    onHeartbeat: (Long) -> Unit = {}
+    onHeartbeat: (Long) -> Unit = {},
+    onAutomationRoutine: (com.kapcode.open.macropad.kmps.models.AutomationRoutine) -> Unit = {},
+    onLayerUpdate: (String) -> Unit = {},
+    onSystemQuery: (String) -> Unit = {}
 ) {
     when (val msg = this.messageType) {
         is MessageType.Text -> onText(msg.content)
@@ -169,6 +172,9 @@ inline fun DataModel.handle(
         is MessageType.Response -> onResponse(msg.success, msg.message, msg.data)
         is MessageType.Control -> onControl(msg.command, msg.parameters)
         is MessageType.Heartbeat -> onHeartbeat(msg.timestamp)
+        is MessageType.AutomationRoutineMsg -> onAutomationRoutine(msg.routine)
+        is MessageType.LayerUpdate -> onLayerUpdate(msg.activeLayerId)
+        is MessageType.SystemQuery -> onSystemQuery(msg.query)
     }
 }
 
@@ -181,7 +187,10 @@ inline fun DataModel.process(
     onData: (String, ByteArray, DataModel) -> Unit = { _, _, _ -> },
     onResponse: (Boolean, String, String?, DataModel) -> Unit = { _, _, _, _ -> },
     onControl: (ControlCommand, Map<String, String>, DataModel) -> Unit = { _, _, _ -> },
-    onHeartbeat: (Long, DataModel) -> Unit = { _, _ -> }
+    onHeartbeat: (Long, DataModel) -> Unit = { _, _ -> },
+    onAutomationRoutine: (com.kapcode.open.macropad.kmps.models.AutomationRoutine, DataModel) -> Unit = { _, _ -> },
+    onLayerUpdate: (String, DataModel) -> Unit = { _, _ -> },
+    onSystemQuery: (String, DataModel) -> Unit = { _, _ -> }
 ) {
     when (val msg = this.messageType) {
         is MessageType.Text -> onText(msg.content, this)
@@ -190,5 +199,8 @@ inline fun DataModel.process(
         is MessageType.Response -> onResponse(msg.success, msg.message, msg.data, this)
         is MessageType.Control -> onControl(msg.command, msg.parameters, this)
         is MessageType.Heartbeat -> onHeartbeat(msg.timestamp, this)
+        is MessageType.AutomationRoutineMsg -> onAutomationRoutine(msg.routine, this)
+        is MessageType.LayerUpdate -> onLayerUpdate(msg.activeLayerId, this)
+        is MessageType.SystemQuery -> onSystemQuery(msg.query, this)
     }
 }

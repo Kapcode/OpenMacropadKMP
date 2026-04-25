@@ -334,8 +334,10 @@ class ClientCommunicationViewModel(
             onText = { message ->
                 consoleViewModel.addLog(LogLevel.Debug, "Text received from $clientId: $message")
                 if (message == "getMacros") {
-                    if (serverViewModel.server.isDeviceTrusted(clientId)) {
-                        val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
+                    val isTrusted = serverViewModel.server.isDeviceTrusted(clientId)
+                    if (isTrusted) {
+                        val client = _connectedDevices.value.find { it.id == clientId }
+                        val macroNames = macroManagerViewModel.getActiveMacrosForClient(client?.name ?: clientId, isTrusted).map { it.name }
                         viewModelScope.launch {
                             serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
                             
@@ -356,7 +358,11 @@ class ClientCommunicationViewModel(
                 if (cmd.startsWith("play:")) {
                     if (isMacroExecutionEnabled.value) {
                         val macroName = cmd.substringAfter("play:")
-                        val macroToPlay = macroManagerViewModel.macroFiles.value.find { it.name.equals(macroName, ignoreCase = true) }
+                        val isTrusted = serverViewModel.server.isDeviceTrusted(clientId)
+                        val client = _connectedDevices.value.find { it.id == clientId }
+                        val macroToPlay = macroManagerViewModel.getActiveMacrosForClient(client?.name ?: clientId, isTrusted)
+                            .find { it.name.equals(macroName, ignoreCase = true) }
+
                         if (macroToPlay != null) {
                             macroManagerViewModel.onPlayMacro(
                                 macro = macroToPlay,

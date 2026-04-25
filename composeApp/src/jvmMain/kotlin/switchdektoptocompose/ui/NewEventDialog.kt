@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.model.*
 import switchdektoptocompose.ui.components.AppTooltipArea
+import switchdektoptocompose.ui.components.TriggerTypeDropdown
+import switchdektoptocompose.ui.components.ClientMultiSelect
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,7 +38,18 @@ fun NewEventDialog(
         consoleViewModel = consoleViewModel
     ) {
         val isTrigger by viewModel.isTriggerEvent.collectAsState()
+        val triggerKeysText by viewModel.triggerKeysText.collectAsState()
         val allowedClients by viewModel.allowedClientsText.collectAsState()
+        val selectedClients by viewModel.selectedClients.collectAsState()
+        val isAllTrusted by viewModel.isAllTrustedSelected.collectAsState()
+        val trustedDevices by viewModel.trustedDevices.collectAsState()
+        val triggerType by viewModel.triggerType.collectAsState()
+        val holdDurationMs by viewModel.holdDurationMs.collectAsState()
+        val multiTapCount by viewModel.multiTapCount.collectAsState()
+        val tapWindowMs by viewModel.tapWindowMs.collectAsState()
+        val sequenceWindowMs by viewModel.sequenceWindowMs.collectAsState()
+        val confirmationRequired by viewModel.confirmationRequired.collectAsState()
+
         val selectedAction by viewModel.selectedAction.collectAsState()
         val useKeys by viewModel.useKeys.collectAsState()
         val keysText by viewModel.keysText.collectAsState()
@@ -52,6 +65,7 @@ fun NewEventDialog(
         val delayText by viewModel.delayText.collectAsState()
         val useAutoDelay by viewModel.useAutoDelay.collectAsState()
         val autoDelayText by viewModel.autoDelayText.collectAsState()
+        val isEditMode by viewModel.isEditMode.collectAsState()
 
         val validationState by viewModel.validationState.collectAsState()
         val isValid = validationState.first
@@ -72,55 +86,137 @@ fun NewEventDialog(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Checkbox(checked = isTrigger, onCheckedChange = { viewModel.isTriggerEvent.value = it })
-                        Text("Is Trigger Event")
-                        OutlinedTextField(
-                            value = allowedClients,
-                            onValueChange = { viewModel.allowedClientsText.value = it },
-                            label = { Text("Allowed Clients") },
-                            modifier = Modifier.weight(1f),
-                            enabled = isTrigger
-                        )
-                    }
-                    HorizontalDivider()
-                    
-                    ActionDropdown(selectedAction, viewModel)
-                    
-                    CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
-                    CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
-                    CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
-                    
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
-                        Text("Mouse Location")
-                        Spacer(Modifier.weight(1f))
-                        Text("Animate")
-                        Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
-                        OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
-                        OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                        Text("This event defines the Global Trigger for the macro", style = MaterialTheme.typography.titleMedium)
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
-                        OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
-                        Spacer(Modifier.width(8.dp))
-                        Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
-                    }
-                    
-                    HorizontalDivider()
-                    
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
-                            Text("Auto Delay Declaration")
-                        }
-                        OutlinedTextField(
-                            value = autoDelayText,
-                            onValueChange = { viewModel.autoDelayText.value = it },
-                            label = { Text("Auto Delay Value (ms)") },
+                    if (isTrigger) {
+                        Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            enabled = useAutoDelay
-                        )
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("Trigger Configuration", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.primary)
+                                
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = confirmationRequired, onCheckedChange = { viewModel.confirmationRequired.value = it })
+                                    Text("Require GUI Confirmation before executing", style = MaterialTheme.typography.labelLarge)
+                                }
+
+                                OutlinedTextField(
+                                    value = triggerKeysText,
+                                    onValueChange = { viewModel.triggerKeysText.value = it },
+                                    label = { Text("Trigger Key(s)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("e.g. ESCAPE or T, E, S") }
+                                )
+
+                                TriggerTypeDropdown(triggerType) { viewModel.triggerType.value = it }
+                                
+                                when (triggerType) {
+                                    TriggerType.HOLD -> {
+                                        OutlinedTextField(
+                                            value = holdDurationMs,
+                                            onValueChange = { viewModel.holdDurationMs.value = it },
+                                            label = { Text("Hold Duration (ms)") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    TriggerType.MULTI_TAP -> {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            OutlinedTextField(
+                                                value = multiTapCount,
+                                                onValueChange = { viewModel.multiTapCount.value = it },
+                                                label = { Text("Tap Count") },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            OutlinedTextField(
+                                                value = tapWindowMs,
+                                                onValueChange = { viewModel.tapWindowMs.value = it },
+                                                label = { Text("Tap Window (ms)") },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+                                    }
+                                    TriggerType.SEQUENCE -> {
+                                        OutlinedTextField(
+                                            value = sequenceWindowMs,
+                                            onValueChange = { viewModel.sequenceWindowMs.value = it },
+                                            label = { Text("Sequence Window (ms)") },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    else -> {}
+                                }
+
+                                ClientMultiSelect(
+                                    selectedClients = selectedClients,
+                                    isAllTrusted = isAllTrusted,
+                                    trustedDevices = trustedDevices,
+                                    onClientsChanged = { viewModel.selectedClients.value = it },
+                                    onAllTrustedChanged = { viewModel.isAllTrustedSelected.value = it }
+                                )
+
+                                OutlinedTextField(
+                                    value = allowedClients,
+                                    onValueChange = { viewModel.allowedClientsText.value = it },
+                                    label = { Text("Allowed Clients (Manual Override)") },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    placeholder = { Text("Comma separated names/IDs") }
+                                )
+                            }
+                        }
+                    } else {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f),
+                            shape = MaterialTheme.shapes.medium
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Text("Action Step Configuration", style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.secondary)
+
+                                ActionDropdown(selectedAction, viewModel)
+                                
+                                CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
+                                CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
+                                CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
+                                
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
+                                    Text("Mouse Location")
+                                    Spacer(Modifier.weight(1f))
+                                    Text("Animate")
+                                    Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
+                                    OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                                    OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
+                                    OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
+                                }
+                                
+                                HorizontalDivider()
+                                
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
+                                        Text("Auto Delay Declaration")
+                                    }
+                                    OutlinedTextField(
+                                        value = autoDelayText,
+                                        onValueChange = { viewModel.autoDelayText.value = it },
+                                        label = { Text("Auto Delay Value (ms)") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        enabled = useAutoDelay
+                                    )
+                                }
+                            }
+                        }
                     }
+                    HorizontalDivider()
                 }
 
                 VerticalScrollbar(
@@ -149,7 +245,7 @@ fun NewEventDialog(
                 
                 Box(modifier = Modifier.fillMaxWidth()) {
                     AppTooltipArea(
-                        tooltipText = if(isValid) "Add Event" else "Fix errors to add",
+                        tooltipText = if(isValid) (if (isEditMode) "Update Event" else "Add Event") else "Fix errors to add",
                         delayMillis = 0
                     ) {
                         FloatingActionButton(
@@ -158,7 +254,7 @@ fun NewEventDialog(
                             contentColor = if (isValid) MaterialTheme.colorScheme.onPrimaryContainer else Color.DarkGray,
                             modifier = Modifier.align(Alignment.BottomEnd)
                         ) {
-                            Icon(Icons.Default.Done, contentDescription = "Add Event")
+                            Icon(Icons.Default.Done, contentDescription = if (isEditMode) "Update Event" else "Add Event")
                         }
                     }
                 }

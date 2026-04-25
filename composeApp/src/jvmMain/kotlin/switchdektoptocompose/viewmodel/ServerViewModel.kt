@@ -28,6 +28,7 @@ class ServerViewModel(
     private val onPairingRequest: (String, String) -> Unit,
     private val onUpgradeRequest: (String, ByteArray, String, Boolean) -> Unit
 ) {
+    var triggerListener: switchdektoptocompose.logic.TriggerListener? = null
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
     
     private val _isServerRunning = MutableStateFlow(false)

@@ -37,8 +37,42 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         }
     }
     
-    fun addOrUpdateTrigger(keyName: String, allowedClients: String) {
-        _uiState.update { it.copy(triggerEvent = TriggerState(keyName, allowedClients)) }
+    fun addOrUpdateTrigger(
+        keyName: String, 
+        allowedClients: String,
+        triggerType: TriggerType = TriggerType.RELEASE,
+        holdDurationMs: Long = 500,
+        multiTapCount: Int = 2,
+        tapWindowMs: Long = 300,
+        sequenceWindowMs: Long = 1000,
+        confirmationRequired: Boolean = false
+    ) {
+        _uiState.update { it.copy(triggerEvent = TriggerState(
+            keyName, 
+            allowedClients,
+            triggerType,
+            holdDurationMs,
+            multiTapCount,
+            tapWindowMs,
+            sequenceWindowMs,
+            confirmationRequired
+        )) }
+        updateEditorText()
+    }
+
+    fun deleteTrigger() {
+        _uiState.update { it.copy(triggerEvent = null) }
+        updateEditorText()
+    }
+
+    fun updateEvent(index: Int, newEvent: MacroEventState) {
+        _uiState.update { state ->
+            val newList = state.events.toMutableList()
+            if (index in newList.indices) {
+                newList[index] = newEvent
+            }
+            state.copy(events = newList)
+        }
         updateEditorText()
     }
 
@@ -81,9 +115,21 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
         state.triggerEvent?.let { trigger ->
             val triggerJson = JSONObject()
             triggerJson.put("type", "key")
-            triggerJson.put("action", "RELEASE")
+            triggerJson.put("action", trigger.triggerType.name)
             triggerJson.put("keyName", trigger.keyName)
             triggerJson.put("allowedClients", trigger.allowedClients)
+            triggerJson.put("confirmationRequired", trigger.confirmationRequired)
+            
+            when (trigger.triggerType) {
+                TriggerType.HOLD -> triggerJson.put("durationMs", trigger.holdDurationMs)
+                TriggerType.MULTI_TAP -> {
+                    triggerJson.put("tapCount", trigger.multiTapCount)
+                    triggerJson.put("windowMs", trigger.tapWindowMs)
+                }
+                TriggerType.SEQUENCE -> triggerJson.put("windowMs", trigger.sequenceWindowMs)
+                else -> {}
+            }
+            
             rootJson.put("trigger", triggerJson)
         }
 
@@ -134,8 +180,14 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
             
             val trigger = json.optJSONObject("trigger")?.let {
                 TriggerState(
-                    keyName = it.getString("keyName"),
-                    allowedClients = it.optString("allowedClients", "")
+                    keyName = it.optString("keyName", "ESCAPE"),
+                    allowedClients = it.optString("allowedClients", ""),
+                    triggerType = try { TriggerType.valueOf(it.optString("action", "RELEASE")) } catch(e: Exception) { TriggerType.RELEASE },
+                    holdDurationMs = it.optLong("durationMs", 500),
+                    multiTapCount = it.optInt("tapCount", 2),
+                    tapWindowMs = it.optLong("windowMs", 300),
+                    sequenceWindowMs = it.optLong("windowMs", 1000), // Note: sequence uses same key windowMs if saved that way
+                    confirmationRequired = it.optBoolean("confirmationRequired", false)
                 )
             }
             

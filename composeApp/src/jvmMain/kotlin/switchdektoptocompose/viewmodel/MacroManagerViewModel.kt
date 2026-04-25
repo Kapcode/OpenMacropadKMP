@@ -33,6 +33,7 @@ data class MacroManagerState(
     val filesPendingDeletion: List<File>? = null,
     val macroBeingRenamed: MacroFileState? = null,
     val packBeingEdited: MacroPack? = null,
+    val triggerPendingConfirmation: switchdektoptocompose.logic.UnifiedTrigger? = null,
     val activeToast: String? = null
 )
 
@@ -120,9 +121,14 @@ class MacroManagerViewModel(
     val activeToast: StateFlow<String?> = _uiState.map { it.activeToast }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
+    val triggerPendingConfirmation: StateFlow<switchdektoptocompose.logic.UnifiedTrigger?> = _uiState.map { it.triggerPendingConfirmation }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
+
     private val playbackJob = SupervisorJob()
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
+
+    private val macroPlayer = MacroPlayer()
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -206,14 +212,58 @@ class MacroManagerViewModel(
     }
 
 
-    fun getActiveMacrosForClient(clientName: String): List<MacroFileState> {
+    fun getActiveMacrosForClient(clientName: String, isTrusted: Boolean = true): List<MacroFileState> {
         return _uiState.value.macroFiles.filter { macro ->
             macro.isActive && (
                 macro.allowedClients.isBlank() ||
+                (isTrusted && macro.allowedClients == "ALL_TRUSTED") ||
                 macro.allowedClients.split(',')
                     .map { it.trim() }
                     .any { it.equals(clientName, ignoreCase = true) }
             )
+        }
+    }
+
+    fun onTriggerRoutine(routine: com.kapcode.open.macropad.kmps.models.AutomationRoutine) {
+        viewModelScope.launch {
+            if (executionMutex.tryLock()) {
+                try {
+                    consoleViewModel.addLog(LogLevel.Info, "Routine triggered: ${routine.name}")
+                    routine.logicBlocks.forEach { block ->
+                        if (evaluateCondition(block.condition)) {
+                            executeActions(block.actions)
+                        }
+                    }
+                } finally {
+                    executionMutex.unlock()
+                }
+            }
+        }
+    }
+
+    private fun evaluateCondition(condition: com.kapcode.open.macropad.kmps.models.AutomationCondition?): Boolean {
+        if (condition == null) return true
+        return when (condition) {
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.ActiveWindowIs -> {
+                _uiState.value.currentActiveProcess?.equals(condition.processName, ignoreCase = true) == true
+            }
+            else -> false // Handle other conditions as needed
+        }
+    }
+
+    private suspend fun executeActions(actions: List<com.kapcode.open.macropad.kmps.models.AutomationAction>) {
+        actions.forEach { action ->
+            when (action) {
+                is com.kapcode.open.macropad.kmps.models.AutomationAction.ScriptAction -> {
+                    macroPlayer.executeScript(action.script)
+                }
+                is com.kapcode.open.macropad.kmps.models.AutomationAction.MacroAction -> {
+                    _uiState.value.macroFiles.find { it.id == action.macroId }?.let {
+                        onPlayMacro(it)
+                    }
+                }
+                else -> { /* Handle others */ }
+            }
         }
     }
 
@@ -611,5 +661,19 @@ class MacroManagerViewModel(
             onEditMacroRequested(macroState)
             _uiState.update { it.copy(packBeingEdited = null) }
         }
+    }
+
+    fun showTriggerConfirmation(trigger: switchdektoptocompose.logic.UnifiedTrigger) {
+        _uiState.update { it.copy(triggerPendingConfirmation = trigger) }
+    }
+
+    fun confirmTrigger() {
+        val trigger = _uiState.value.triggerPendingConfirmation ?: return
+        _uiState.update { it.copy(triggerPendingConfirmation = null) }
+        serverViewModel?.triggerListener?.evaluator?.execute(trigger)
+    }
+
+    fun cancelTrigger() {
+        _uiState.update { it.copy(triggerPendingConfirmation = null) }
     }
 }

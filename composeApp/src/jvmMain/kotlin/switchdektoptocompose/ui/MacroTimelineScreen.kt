@@ -8,12 +8,15 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.model.*
 import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +31,8 @@ fun MacroTimelineScreen(
     viewModel: MacroTimelineViewModel,
     onAddEventClicked: () -> Unit,
     onRecordMacroClicked: () -> Unit,
+    onEditEventClicked: (MacroEventState, Int) -> Unit,
+    onEditTriggerClicked: (TriggerState) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val triggerEvent by viewModel.triggerEvent.collectAsState()
@@ -68,19 +73,56 @@ fun MacroTimelineScreen(
                 tonalElevation = 4.dp
             ) {
                 Column(Modifier.padding(12.dp)) {
-                    Text(
-                        "TRIGGER",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "TRIGGER",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            IconButton(onClick = { onEditTriggerClicked(trigger) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Trigger", modifier = Modifier.size(16.dp))
+                            }
+                            IconButton(onClick = { viewModel.deleteTrigger() }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Delete, contentDescription = "Delete Trigger", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
-                    // Convert the TriggerState to a displayable KeyEvent
-                    val displayEvent = MacroEventState.KeyEvent(
-                        keyName = trigger.keyName,
-                        action = KeyAction.RELEASE // Triggers are always RELEASE actions
-                    )
-                    MacroTimelineItem(event = displayEvent, isDragging = false)
+                    // Display the trigger details using specialized text instead of a generic KeyEvent
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(Modifier.padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(trigger.triggerType.name, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(8.dp))
+                                Text(trigger.keyName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                            }
+                            
+                            val details = when(trigger.triggerType) {
+                                TriggerType.HOLD -> "${trigger.holdDurationMs}ms Hold"
+                                TriggerType.MULTI_TAP -> "${trigger.multiTapCount}x Tap (${trigger.tapWindowMs}ms window)"
+                                TriggerType.SEQUENCE -> "Sequence (${trigger.sequenceWindowMs}ms window)"
+                                else -> "On Release"
+                            }
+                            Text(details, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                            
+                            if (trigger.allowedClients.isNotBlank()) {
+                                Text(
+                                    "Clients: ${trigger.allowedClients.replace("_", " ")}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.secondary
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -109,7 +151,9 @@ fun MacroTimelineScreen(
                         MacroTimelineItem(
                             event = event,
                             isDragging = isDragging,
-                            modifier = Modifier.graphicsLayer { alpha = if (isDragging) 0f else 1f }
+                            modifier = Modifier.graphicsLayer { alpha = if (isDragging) 0f else 1f },
+                            onEdit = { onEditEventClicked(event, index) },
+                            onDelete = { viewModel.deleteEvent(index) }
                         )
                     }
                 }

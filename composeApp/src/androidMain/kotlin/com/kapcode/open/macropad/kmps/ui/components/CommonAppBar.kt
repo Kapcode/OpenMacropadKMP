@@ -16,7 +16,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Adjust
 import androidx.compose.material.icons.filled.AutoMode
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CurrencyExchange
 import androidx.compose.material.icons.filled.FlashOff
@@ -64,6 +66,8 @@ fun CommonAppBar(
     onAutoZoomToggle: (Boolean) -> Unit = {},
     isAutoFocusEnabled: Boolean = false,
     onAutoFocusToggle: (Boolean) -> Unit = {},
+    isCoordinateCaptureActive: Boolean = false,
+    onCoordinateCaptureToggle: (Boolean) -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -226,8 +230,13 @@ fun CommonAppBar(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                // Wrap actions in a Box with weight or limited width if needed, but for now just put them after
-                actions()
+                IconButton(onClick = { onCoordinateCaptureToggle(!isCoordinateCaptureActive) }) {
+                    Icon(
+                        imageVector = if (isCoordinateCaptureActive) Icons.Default.Adjust else Icons.Default.Add,
+                        contentDescription = "Capture Coordinates",
+                        tint = if (isCoordinateCaptureActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,

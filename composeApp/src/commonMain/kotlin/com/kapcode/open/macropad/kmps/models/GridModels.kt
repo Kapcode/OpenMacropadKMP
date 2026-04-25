@@ -1,6 +1,7 @@
 package com.kapcode.open.macropad.kmps.models
 
 import kotlinx.serialization.Serializable
+import com.kapcode.open.macropad.kmps.models.AutomationRoutine
 
 @Serializable
 enum class WidgetType { BUTTON, TOGGLE, SLIDER_HORIZONTAL, SLIDER_VERTICAL }
@@ -35,7 +36,8 @@ data class MacroPack(
     val version: String,
     val targetProcess: String? = null, // e.g., "photoshop.exe"
     val isActive: Boolean = false,
-    val widgets: List<GridWidget> = emptyList()
+    val widgets: List<GridWidget> = emptyList(),
+    val routines: List<AutomationRoutine> = emptyList()
 )
 
 @Serializable

@@ -98,6 +98,9 @@ kotlin {
 
             implementation(libs.zxing.core)
             implementation(libs.zxing.javase)
+
+            implementation(libs.graalvm.sdk)
+            implementation(libs.graalvm.js)
         }
     }
 }

@@ -53,6 +53,32 @@ class MacroRecorder(
         
         // Finalize JSON
         val root = JSONObject()
+        
+        // Add Trigger Settings from options
+        val triggerJson = JSONObject()
+        triggerJson.put("type", "key")
+        triggerJson.put("action", options.triggerType.value.name)
+        triggerJson.put("keyName", "ESCAPE") // Default for recorded macro, can be edited
+        
+        val allowedClients = if (options.isAllTrustedSelected.value) {
+            "ALL_TRUSTED"
+        } else {
+            options.selectedClients.value.joinToString(",")
+        }
+        triggerJson.put("allowedClients", allowedClients)
+        
+        when (options.triggerType.value) {
+            switchdektoptocompose.model.TriggerType.HOLD -> triggerJson.put("durationMs", options.holdDurationMs.value.toLongOrNull() ?: 500)
+            switchdektoptocompose.model.TriggerType.MULTI_TAP -> {
+                triggerJson.put("tapCount", options.multiTapCount.value.toIntOrNull() ?: 2)
+                triggerJson.put("windowMs", options.tapWindowMs.value.toLongOrNull() ?: 300)
+            }
+            switchdektoptocompose.model.TriggerType.SEQUENCE -> triggerJson.put("windowMs", options.sequenceWindowMs.value.toLongOrNull() ?: 1000)
+            else -> {}
+        }
+        triggerJson.put("confirmationRequired", options.confirmationRequired.value)
+        root.put("trigger", triggerJson)
+
         root.put("events", JSONArray(events))
         
         onRecordingFinished(root.toString(4))

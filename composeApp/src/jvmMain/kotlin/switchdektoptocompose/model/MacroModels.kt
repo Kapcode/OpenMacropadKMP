@@ -5,6 +5,12 @@ import java.util.*
 data class TriggerState(
     val keyName: String,
     val allowedClients: String,
+    val triggerType: TriggerType = TriggerType.RELEASE,
+    val holdDurationMs: Long = 500,
+    val multiTapCount: Int = 2,
+    val tapWindowMs: Long = 300,
+    val sequenceWindowMs: Long = 1000,
+    val confirmationRequired: Boolean = false
 )
 
 sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
@@ -18,3 +24,5 @@ sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
 
 enum class KeyAction { PRESS, RELEASE }
 enum class MouseAction { MOVE, CLICK }
+
+enum class TriggerType { RELEASE, HOLD, MULTI_TAP, SEQUENCE }

@@ -2,10 +2,10 @@ package switchdektoptocompose.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import switchdektoptocompose.model.*
 import androidx.compose.ui.Alignment
@@ -19,7 +19,9 @@ import androidx.compose.ui.unit.sp
 fun MacroTimelineItem(
     event: MacroEventState,
     isDragging: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -28,13 +30,38 @@ fun MacroTimelineItem(
         ),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
-        when (event) {
-            is MacroEventState.KeyEvent -> KeyItem(event)
-            is MacroEventState.MouseEvent -> MouseItem(event)
-            is MacroEventState.MouseButtonEvent -> MouseButtonItem(event)
-            is MacroEventState.ScrollEvent -> ScrollItem(event)
-            is MacroEventState.DelayEvent -> DelayItem(event)
-            is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.weight(1f)) {
+                when (event) {
+                    is MacroEventState.KeyEvent -> KeyItem(event)
+                    is MacroEventState.MouseEvent -> MouseItem(event)
+                    is MacroEventState.MouseButtonEvent -> MouseButtonItem(event)
+                    is MacroEventState.ScrollEvent -> ScrollItem(event)
+                    is MacroEventState.DelayEvent -> DelayItem(event)
+                    is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event)
+                }
+            }
+            
+            if (onEdit != null || onDelete != null) {
+                Row(
+                    modifier = Modifier.padding(end = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    onEdit?.let {
+                        IconButton(onClick = it, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
+                        }
+                    }
+                    onDelete?.let {
+                        IconButton(onClick = it, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
         }
     }
 }

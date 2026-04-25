@@ -1,7 +1,12 @@
 package switchdektoptocompose.logic
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
+import org.graalvm.polyglot.Context
+import org.graalvm.polyglot.HostAccess
+import org.graalvm.polyglot.Value
 import switchdektoptocompose.model.*
 import java.awt.MouseInfo
 import java.awt.Robot
@@ -15,6 +20,43 @@ class MacroPlayer {
     }
     
     private var currentAutoDelay = 50L // Default manual delay
+
+    private val jsContext: Context by lazy {
+        Context.newBuilder("js")
+            .allowHostAccess(HostAccess.ALL)
+            .allowHostClassLookup { false } // Restrict access to Java classes
+            .build().apply {
+                getBindings("js").putMember("kap", KapHostApi())
+            }
+    }
+
+    inner class KapHostApi {
+        fun pressKey(keyName: String) {
+            val keyCodes = KeyParser.parseAwtKeys(keyName)
+            keyCodes.forEach { robot.keyPress(it) }
+        }
+        fun releaseKey(keyName: String) {
+            val keyCodes = KeyParser.parseAwtKeys(keyName)
+            keyCodes.forEach { robot.keyRelease(it) }
+        }
+        fun moveMouse(x: Int, y: Int) {
+            robot.mouseMove(x, y)
+        }
+        fun clickMouse(button: Int) {
+            val mask = InputEvent.getMaskForButton(button)
+            robot.mousePress(mask)
+            robot.mouseRelease(mask)
+        }
+        fun delay(ms: Long) {
+            Thread.sleep(ms)
+        }
+    }
+
+    suspend fun executeScript(script: String) {
+        withContext(Dispatchers.Default) {
+            jsContext.eval("js", script)
+        }
+    }
 
     suspend fun play(events: List<MacroEventState>) {
         val initialAutoDelay = robot.autoDelay

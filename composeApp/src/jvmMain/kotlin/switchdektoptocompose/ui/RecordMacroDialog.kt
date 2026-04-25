@@ -4,9 +4,13 @@ import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
+import switchdektoptocompose.model.*
+import switchdektoptocompose.ui.components.TriggerTypeDropdown
+import switchdektoptocompose.ui.components.ClientMultiSelect
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
@@ -40,6 +44,17 @@ fun RecordMacroDialog(
         val useRecordingDuration by viewModel.useRecordingDuration.collectAsState()
         val recordingDurationMs by viewModel.recordingDurationMs.collectAsState()
         val selectedStopKey by viewModel.selectedStopKey.collectAsState()
+
+        val triggerType by viewModel.triggerType.collectAsState()
+        val holdDurationMs by viewModel.holdDurationMs.collectAsState()
+        val multiTapCount by viewModel.multiTapCount.collectAsState()
+        val tapWindowMs by viewModel.tapWindowMs.collectAsState()
+        val sequenceWindowMs by viewModel.sequenceWindowMs.collectAsState()
+        val triggerKeysText by viewModel.triggerKeysText.collectAsState()
+        val confirmationRequired by viewModel.confirmationRequired.collectAsState()
+        val selectedClients by viewModel.selectedClients.collectAsState()
+        val isAllTrusted by viewModel.isAllTrustedSelected.collectAsState()
+        val trustedDevices by viewModel.trustedDevices.collectAsState()
         
         val validationState by viewModel.validationState.collectAsState()
         val isValid = validationState.first
@@ -83,6 +98,68 @@ fun RecordMacroDialog(
 
                         HorizontalDivider()
                         
+                        Text("Trigger Settings", style = MaterialTheme.typography.titleMedium)
+                        
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = confirmationRequired, onCheckedChange = { viewModel.confirmationRequired.value = it })
+                            Text("Require GUI Confirmation", style = MaterialTheme.typography.labelLarge)
+                        }
+
+                        OutlinedTextField(
+                            value = triggerKeysText,
+                            onValueChange = { viewModel.triggerKeysText.value = it },
+                            label = { Text("Trigger Key(s)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        TriggerTypeDropdown(triggerType) { viewModel.triggerType.value = it }
+                        
+                        when (triggerType) {
+                            TriggerType.HOLD -> {
+                                OutlinedTextField(
+                                    value = holdDurationMs,
+                                    onValueChange = { viewModel.holdDurationMs.value = it },
+                                    label = { Text("Hold Duration (ms)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            TriggerType.MULTI_TAP -> {
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(
+                                        value = multiTapCount,
+                                        onValueChange = { viewModel.multiTapCount.value = it },
+                                        label = { Text("Tap Count") },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    OutlinedTextField(
+                                        value = tapWindowMs,
+                                        onValueChange = { viewModel.tapWindowMs.value = it },
+                                        label = { Text("Tap Window (ms)") },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            TriggerType.SEQUENCE -> {
+                                OutlinedTextField(
+                                    value = sequenceWindowMs,
+                                    onValueChange = { viewModel.sequenceWindowMs.value = it },
+                                    label = { Text("Sequence Window (ms)") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+                            else -> {}
+                        }
+
+                        ClientMultiSelect(
+                            selectedClients = selectedClients,
+                            isAllTrusted = isAllTrusted,
+                            trustedDevices = trustedDevices,
+                            onClientsChanged = { viewModel.selectedClients.value = it },
+                            onAllTrustedChanged = { viewModel.isAllTrustedSelected.value = it }
+                        )
+
+                        HorizontalDivider()
+
                         // Macro Name
                         OutlinedTextField(
                             value = macroName,

@@ -40,6 +40,12 @@ fun main(args: Array<String>) = application {
             macroManagerViewModel.onPlayMacro(macroToPlay)
         }
     }
+    
+    // Pass listener back to serverViewModel
+    remember(triggerListener, viewModels.serverViewModel) {
+        viewModels.serverViewModel.triggerListener = triggerListener
+        Unit
+    }
     val inspectorManager = remember { 
         InspectorManager(
             inspectorViewModel, 
@@ -61,18 +67,21 @@ fun main(args: Array<String>) = application {
 
     // Update triggers in the application scope so they stay active even when window is hidden
     val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+    val macroPacks by macroManagerViewModel.macroPacks.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
     val copyConsoleShortcut by settingsViewModel.copyConsoleOutputShortcut.collectAsState()
     val stopKeyShortcut by settingsViewModel.stopKeyShortcut.collectAsState()
     val inspectKeyShortcut by settingsViewModel.inspectKeyShortcut.collectAsState()
 
-    LaunchedEffect(macroFiles, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
+    LaunchedEffect(macroFiles, macroPacks, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
+        val routines = macroPacks.flatMap { it.pack.routines }
         triggerListener.updateActiveTriggers(
             macroFiles,
             eStopKey,
             copyConsoleShortcut,
             stopKeyShortcut,
-            inspectKeyShortcut
+            inspectKeyShortcut,
+            routines
         )
     }
 

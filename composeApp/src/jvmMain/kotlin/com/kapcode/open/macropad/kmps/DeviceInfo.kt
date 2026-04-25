@@ -28,4 +28,12 @@ actual object DeviceInfo {
         get() {
             return "JVM|${System.getProperty("os.name")}|${System.getProperty("os.version")}|${System.getProperty("os.arch")}"
         }
+
+    actual val capabilities: List<String>
+        get() = mutableListOf("KEYBOARD", "MOUSE", "DESKTOP_UI").apply {
+            if (System.getProperty("os.name").lowercase().contains("linux")) {
+                add("X11")
+                add("WAYLAND")
+            }
+        }
 }

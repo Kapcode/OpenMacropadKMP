@@ -18,6 +18,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
 import com.formdev.flatlaf.FlatLightLaf
@@ -92,7 +93,7 @@ fun DesktopAppPreview() {
     val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel) { } }
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
-    val newEventViewModel = remember { NewEventViewModel() }
+    val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
     val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
     val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
     val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
@@ -338,14 +339,38 @@ fun DesktopApp(
             consoleViewModel = consoleViewModel,
             onDismissRequest = { layoutViewModel.setShowNewEventDialog(false) },
             onAddEvent = {
-                if (newEventViewModel.isTriggerEvent.value) {
+                val isTrigger = newEventViewModel.isTriggerEvent.value
+                val isEdit = newEventViewModel.isEditMode.value
+                val editIndex = newEventViewModel.editingIndex.value
+
+                if (isTrigger) {
+                    val allowedClients = if (newEventViewModel.isAllTrustedSelected.value) {
+                        "ALL_TRUSTED"
+                    } else {
+                        (newEventViewModel.selectedClients.value + 
+                            newEventViewModel.allowedClientsText.value.split(',').filter { it.isNotBlank() })
+                            .joinToString(",")
+                    }
+                        
                     macroTimelineViewModel.addOrUpdateTrigger(
-                        keyName = newEventViewModel.keysText.value,
-                        allowedClients = newEventViewModel.allowedClientsText.value
+                        keyName = newEventViewModel.triggerKeysText.value,
+                        allowedClients = allowedClients,
+                        triggerType = newEventViewModel.triggerType.value,
+                        holdDurationMs = newEventViewModel.holdDurationMs.value.toLongOrNull() ?: 500,
+                        multiTapCount = newEventViewModel.multiTapCount.value.toIntOrNull() ?: 2,
+                        tapWindowMs = newEventViewModel.tapWindowMs.value.toLongOrNull() ?: 300,
+                        sequenceWindowMs = newEventViewModel.sequenceWindowMs.value.toLongOrNull() ?: 1000,
+                        confirmationRequired = newEventViewModel.confirmationRequired.value
                     )
                 } else {
                     val events = newEventViewModel.createEvents()
-                    macroTimelineViewModel.addEvents(events)
+                    if (isEdit && editIndex != -1) {
+                        events.firstOrNull()?.let { 
+                            macroTimelineViewModel.updateEvent(editIndex, it)
+                        }
+                    } else {
+                        macroTimelineViewModel.addEvents(events)
+                    }
                 }
                 layoutViewModel.setShowNewEventDialog(false)
             }
@@ -389,6 +414,38 @@ fun DesktopApp(
                 desktopViewModel.startServer(forceRecreateKeystore = true)
             },
             onDismiss = { desktopViewModel.clearServerError() }
+        )
+    }
+
+    val triggerPendingConfirmation by macroManagerViewModel.triggerPendingConfirmation.collectAsState()
+    triggerPendingConfirmation?.let { trigger ->
+        AlertDialog(
+            onDismissRequest = { macroManagerViewModel.cancelTrigger() },
+            title = { Text("Confirm Trigger") },
+            text = { 
+                Column {
+                    Text("The following macro was triggered:")
+                    Text(
+                        trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Trigger Keys: ${trigger.keyCodes}")
+                    Text("Do you want to execute it?")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { macroManagerViewModel.confirmTrigger() }) {
+                    Text("Execute")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { macroManagerViewModel.cancelTrigger() }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 
@@ -527,6 +584,14 @@ fun DesktopApp(
                                             onRecordMacroClicked = {
                                                 recordMacroViewModel.reset()
                                                 layoutViewModel.setShowRecordDialog(true)
+                                            },
+                                            onEditEventClicked = { event, index ->
+                                                newEventViewModel.loadFromEvent(event, index)
+                                                layoutViewModel.setShowNewEventDialog(true)
+                                            },
+                                            onEditTriggerClicked = { trigger ->
+                                                newEventViewModel.loadFromTrigger(trigger)
+                                                layoutViewModel.setShowNewEventDialog(true)
                                             },
                                             onMarketplaceClicked = {
                                                 layoutViewModel.setShowMarketplace(true)

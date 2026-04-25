@@ -8,6 +8,7 @@ This document serves as a guide for AI assistants to navigate the project effect
     - **`src/commonMain/kotlin/`**: Shared logic between Android and Desktop.
         - **`com.kapcode.open.macropad.kmps/`**: Shared root package.
             - `network/sockets/`: Authenticated & Encrypted WebSocket implementation (Client/Server/Model).
+            - `models/`: Shared data models (GridModels, AutomationAST, TrustedServer).
             - `ui/components/`: Shared UI (CommonAppBar, ConnectionItem, LoadingIndicator, SplashScreen).
             - `settings/`: Shared settings ViewModels and Screens.
             - `DeviceInfo.kt` & `IdentityManager.kt`: Shared hardware/security interfaces.
@@ -52,6 +53,11 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. | `androidMain/com/.../TokenManager.kt` |
 | **IconMapper** | Maps string-based icon IDs from the server to Android Material Icons. | `androidMain/com/.../MacroButtonsScreen.kt` |
 | **GridWidget** | Shared model for UI items. Defines type (Button, Toggle, Slider), color, position, and state. | `commonMain/com/.../models/GridModels.kt` |
+| **AutomationAST** | Defines the logic for stateful automation (Triggers, Conditions, Actions). | `commonMain/com/.../models/AutomationAST.kt` |
+| **VisualRoutineBuilder**| Block-based UI for creating automation routines on Android. | `androidMain/com/.../ui/components/VisualRoutineBuilder.kt` |
+| **PackManager** | Manages active packs, layers, and context-aware switching on the server. | `jvmMain/switchdektoptocompose/logic/PackManager.kt` |
+| **SequenceEvaluator** | Evaluates complex key sequences (Hold, Multi-tap) and chords for stateful triggers. | `jvmMain/switchdektoptocompose/logic/SequenceEvaluator.kt` |
+| **AutomationDialogs** | Shared UI components for complex trigger and client configuration. | `jvmMain/switchdektoptocompose/ui/components/MacroDialogComponents.kt` |
 | **SettingsStorage** | Manages Android persistence. Includes JSON-based storage for custom dashboards and migration logic. | `androidMain/com/.../SettingsStorage.kt` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
 | **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |

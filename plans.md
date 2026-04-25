@@ -74,3 +74,20 @@ The Android app gains a dynamic, searchable interface for managing macros and pa
 - [DONE] Drag-to-Trash: Interactive widget removal in Edit Mode with collision feedback.
 - [DONE] Multi-Step Picker: Support choosing widget variants (Button vs. Slider) when adding to the dashboard.
 - [DONE] Persistence Migration: Upgrade SharedPreferences storage to support complex `GridWidget` objects with backward compatibility.
+
+## Phase 6: Advanced Automation & Scripting [IN PROGRESS]
+Transition the project into a stateful, logic-driven ecosystem.
+- [x] Automation AST: Defined sealed classes for complex triggers (Hold, Multi-tap, Sequence) and logic blocks.
+- [/] GraalVM Integration: Integrating GraalVM JS engine into the JVM server for high-performance scripting.
+- [x] Visual Routine Builder: Block-based editor UI on Android for building complex automation routines.
+- [x] Coordinate Capture: Tool to capture mouse coordinates from the desktop and sync them to the client.
+- [x] Macro Dialog Enhancements: Updated New Event and Record Macro dialogs with complex triggers and trusted client selection.
+- [x] State Machine Triggers: Refactor TriggerListener to support the new AST-based complex triggers.
+- [x] Context Watcher 2.0: Enhanced X11 context watching using `xprop` for better compatibility.
+
+## Phase 7: Validation & Hardening [IN PROGRESS]
+Ensuring the stability and security of the new automation ecosystem.
+- [ ] Comprehensive Trigger Testing: Validate all Chord/Sequence combinations across different OS environments.
+- [ ] JS Sandbox Verification: Rigorously test GraalVM restrictions to ensure no filesystem/system access.
+- [ ] Protocol Stress Test: Simulate high-frequency routine synchronization and execution requests.
+- [ ] UI/UX Polish: Final pass on Android's visual routine builder and Desktop's timeline editing flow.

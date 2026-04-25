@@ -34,7 +34,6 @@ object ViewModelFactory {
     fun createViewModels(): DesktopViewModels {
         val settingsViewModel = remember { SettingsViewModel() }
         val sharedSettingsViewModel = remember { com.kapcode.open.macropad.kmps.settings.SettingsViewModel() }
-        val newEventViewModel = remember { NewEventViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
         val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
         
@@ -44,6 +43,8 @@ object ViewModelFactory {
         val clientCommunicationViewModel = remember { 
             ClientCommunicationViewModel(settingsViewModel, consoleViewModel) 
         }
+
+        val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
 
         val serverViewModel = remember {
             ServerViewModel(
@@ -103,7 +104,7 @@ object ViewModelFactory {
             }
         }
         
-        val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
+        val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
         
         val macroEditorViewModel = remember {
             MacroEditorViewModel(settingsViewModel) {

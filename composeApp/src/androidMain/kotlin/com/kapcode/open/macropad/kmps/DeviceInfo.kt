@@ -67,4 +67,7 @@ actual object DeviceInfo {
             // We use a combination of stable hardware identifiers.
             return "${Build.MANUFACTURER}|${Build.MODEL}|${Build.BOARD}|${Build.HARDWARE}"
         }
+
+    actual val capabilities: List<String>
+        get() = listOf("ANDROID_TOUCH", "BIOMETRICS", "ORIENTATION_SENSOR")
 }

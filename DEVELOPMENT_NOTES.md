@@ -479,6 +479,34 @@ Automated macros could cause loss of system control if they ran too long or went
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 
+## 42. Advanced Automation & Scripting Suite (Phase 6)
+
+### Challenge: GraalVM Dependency Bloat
+- **Problem**: Integrating GraalVM JS engine significantly increases the server's binary size and memory footprint.
+- **Solution**: 
+    - **Context Isolation**: Restricted GraalVM context to `js` language only and disabled host class lookup to minimize security risks.
+    - **Lazy Initialization**: The JS engine is initialized only when the first `ScriptAction` is executed.
+
+### Challenge: Complex Trigger State Machine
+- **Problem**: Detecting "Hold" vs "Multi-tap" vs "Sequence" requires precise timing and key-state tracking across multiple OS threads.
+- **Solution**:
+    - **SequenceEvaluator**: Implemented a dedicated evaluator that tracks `pressedKeys` and `tapHistory` using `ConcurrentHashMap`.
+    - **Native Hook Refactor**: Updated `TriggerListener` to pipe both `nativeKeyPressed` and `nativeKeyReleased` into the evaluator, allowing it to distinguish between a single tap and a long hold.
+
+### Challenge: X11 Context Reliability
+- **Problem**: `xdotool` is sometimes missing or fails on certain window managers (e.g., tiling WMs).
+- **Solution**: 
+    - **xprop Fallback**: Implemented a primary context watcher using `xprop -root _NET_ACTIVE_WINDOW` which is the standard X11 protocol for active window tracking. 
+    - **Multi-tool Strategy**: If `xprop` fails or returns `0x0`, the system automatically falls back to `xdotool` for better compatibility across different Linux distributions.
+
+### Challenge: GUI Confirmation vs. Physical Speed
+- **Problem**: Physical key sequences are often too fast for a GUI dialog to feel "natural" as an intermediate step.
+- **Solution**: Implemented a stateful pause in the `SequenceEvaluator` that holds the matched trigger in a "Pending" state, allowing the user to maintain their workflow and confirm when convenient.
+
+### Challenge: Sequence History Management
+- **Problem**: The key sequence history could grow indefinitely or contain stale data from auto-repeat events.
+- **Solution**: Added auto-repeat filtering (ignoring consecutive duplicates) and implemented a sliding window of 20 keys for matching, ensuring the state machine stays efficient and accurate.
+
 
 ### Cross-Platform / Common
 - [ ] **UDP Discovery Polish**: Improve the reliability of server discovery on complex local network topologies (e.g., multiple subnets).

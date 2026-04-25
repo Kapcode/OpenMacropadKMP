@@ -94,12 +94,15 @@ class ProcessWatcher(
 
     private fun getLinuxActiveProcessInfo(): ActiveProcessInfo? {
         return try {
-            // Using xdotool to get the active window's PID and then finding the process name
-            val windowIdProcess = ProcessBuilder("xdotool", "getactivewindow").start()
-            val windowId = BufferedReader(InputStreamReader(windowIdProcess.inputStream)).readLine()?.trim()
-            if (windowId != null) {
-                val pidProcess = ProcessBuilder("xdotool", "getwindowpid", windowId).start()
-                val pid = BufferedReader(InputStreamReader(pidProcess.inputStream)).readLine()?.trim() ?: ""
+            // Use xprop for a more standard X11 approach to get the active window ID
+            val xpropProcess = ProcessBuilder("xprop", "-root", "_NET_ACTIVE_WINDOW").start()
+            val xpropOutput = BufferedReader(InputStreamReader(xpropProcess.inputStream)).readLine()?.trim()
+            val windowId = xpropOutput?.split(" ")?.lastOrNull()?.trim()
+
+            if (windowId != null && windowId != "0x0") {
+                val pidProcess = ProcessBuilder("xprop", "-id", windowId, "_NET_STARTUP_ID", "_NET_WM_PID").start()
+                val pidOutput = BufferedReader(InputStreamReader(pidProcess.inputStream)).readText()
+                val pid = pidOutput.lines().find { it.contains("_NET_WM_PID") }?.split("=")?.lastOrNull()?.trim() ?: ""
                 
                 val nameProcess = ProcessBuilder("ps", "-p", pid, "-o", "comm=").start()
                 val name = BufferedReader(InputStreamReader(nameProcess.inputStream)).readLine()?.trim() ?: "Unknown"
@@ -107,8 +110,10 @@ class ProcessWatcher(
                 val commandProcess = ProcessBuilder("ps", "-p", pid, "-o", "args=").start()
                 val command = BufferedReader(InputStreamReader(commandProcess.inputStream)).readLine()?.trim() ?: "N/A"
                 
-                val titleProcess = ProcessBuilder("xdotool", "getwindowname", windowId).start()
-                val title = BufferedReader(InputStreamReader(titleProcess.inputStream)).readLine()?.trim() ?: "N/A"
+                val titleProcess = ProcessBuilder("xprop", "-id", windowId, "_NET_WM_NAME", "WM_NAME").start()
+                val titleOutput = BufferedReader(InputStreamReader(titleProcess.inputStream)).readText()
+                val title = titleOutput.lines().find { it.contains("_NET_WM_NAME") || it.contains("WM_NAME") }
+                    ?.split("=")?.lastOrNull()?.trim()?.removeSurrounding("\"") ?: "N/A"
                 
                 ActiveProcessInfo(
                     name = name,
@@ -120,7 +125,32 @@ class ProcessWatcher(
                 )
             } else null
         } catch (e: Exception) {
-            null
+            // Fallback to xdotool if xprop fails or windowId is 0x0
+            try {
+                val windowIdProcess = ProcessBuilder("xdotool", "getactivewindow").start()
+                val windowId = BufferedReader(InputStreamReader(windowIdProcess.inputStream)).readLine()?.trim()
+                if (windowId != null) {
+                    val pidProcess = ProcessBuilder("xdotool", "getwindowpid", windowId).start()
+                    val pid = BufferedReader(InputStreamReader(pidProcess.inputStream)).readLine()?.trim() ?: ""
+                    
+                    val nameProcess = ProcessBuilder("ps", "-p", pid, "-o", "comm=").start()
+                    val name = BufferedReader(InputStreamReader(nameProcess.inputStream)).readLine()?.trim() ?: "Unknown"
+                    
+                    val titleProcess = ProcessBuilder("xdotool", "getwindowname", windowId).start()
+                    val title = BufferedReader(InputStreamReader(titleProcess.inputStream)).readLine()?.trim() ?: "N/A"
+                    
+                    ActiveProcessInfo(
+                        name = name,
+                        id = windowId,
+                        pid = pid,
+                        windowId = windowId,
+                        command = "N/A",
+                        windowTitle = title
+                    )
+                } else null
+            } catch (e2: Exception) {
+                null
+            }
         }
     }
 

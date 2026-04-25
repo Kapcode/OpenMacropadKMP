@@ -45,6 +45,7 @@ data class ClientUiState(
     val searchQuery: String = "",
     val currentTab: Int = 0, // 0: My Dashboard, 1: Active Pack, 2: Marketplace
     val isEditMode: Boolean = false,
+    val isCoordinateCaptureActive: Boolean = false,
     val serverHistory: List<TrustedServer> = emptyList()
 )
 
@@ -263,6 +264,10 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setEditMode(enabled: Boolean) {
         _uiState.update { it.copy(isEditMode = enabled) }
+    }
+
+    fun setCoordinateCaptureActive(active: Boolean) {
+        _uiState.update { it.copy(isCoordinateCaptureActive = active) }
     }
 
     fun setDashboardMacros(widgets: List<GridWidget>) {

@@ -189,6 +189,8 @@ fun ClientScreen(
                     }
                 },
                 onCloseScanner = { onQrScannerToggle(false) },
+                isCoordinateCaptureActive = uiState.isCoordinateCaptureActive,
+                onCoordinateCaptureToggle = { clientViewModel.setCoordinateCaptureActive(it) },
                 navigationIcon = {
                     if (showSettings) {
                         IconButton(onClick = { showSettings = false }) {
