@@ -44,6 +44,14 @@ object AppSettings {
 
     private const val TOOLTIP_X_OFFSET_KEY = "tooltipXOffset"
     private const val TOOLTIP_Y_OFFSET_KEY = "tooltipYOffset"
+    private const val ENABLE_PACK_SWITCH_NOTIFICATIONS_KEY = "enablePackSwitchNotifications"
+    private const val ENABLE_TOASTS_KEY = "enableToasts"
+    private const val ENABLE_BACKGROUND_TOASTS_KEY = "enableBackgroundToasts"
+    private const val ENABLE_NETWORK_TOASTS_KEY = "enableNetworkToasts"
+    private const val INCLUDE_WINDOW_NAMES_IN_TOASTS_KEY = "includeWindowNamesInToasts"
+    private const val TOAST_DURATION_MS_KEY = "toastDurationMs"
+    private const val TOAST_TARGET_KEY = "toastTarget"
+    private const val NOTIFICATION_CLIENT_IDS_KEY = "notificationClientIds"
 
     init {
         if (!configDir.exists()) {
@@ -246,6 +254,62 @@ object AppSettings {
         get() = properties.getProperty(TOOLTIP_Y_OFFSET_KEY, "-24").toIntOrNull() ?: -24
         set(value) {
             properties.setProperty(TOOLTIP_Y_OFFSET_KEY, value.toString())
+            save()
+        }
+
+    var enablePackSwitchNotifications: Boolean
+        get() = properties.getProperty(ENABLE_PACK_SWITCH_NOTIFICATIONS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ENABLE_PACK_SWITCH_NOTIFICATIONS_KEY, value.toString())
+            save()
+        }
+
+    var enableToasts: Boolean
+        get() = properties.getProperty(ENABLE_TOASTS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ENABLE_TOASTS_KEY, value.toString())
+            save()
+        }
+
+    var enableBackgroundToasts: Boolean
+        get() = properties.getProperty(ENABLE_BACKGROUND_TOASTS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ENABLE_BACKGROUND_TOASTS_KEY, value.toString())
+            save()
+        }
+
+    var enableNetworkToasts: Boolean
+        get() = properties.getProperty(ENABLE_NETWORK_TOASTS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(ENABLE_NETWORK_TOASTS_KEY, value.toString())
+            save()
+        }
+
+    var includeWindowNamesInToasts: Boolean
+        get() = properties.getProperty(INCLUDE_WINDOW_NAMES_IN_TOASTS_KEY, "true").toBoolean()
+        set(value) {
+            properties.setProperty(INCLUDE_WINDOW_NAMES_IN_TOASTS_KEY, value.toString())
+            save()
+        }
+
+    var toastDurationMs: Long
+        get() = properties.getProperty(TOAST_DURATION_MS_KEY, "3000").toLongOrNull() ?: 3000L
+        set(value) {
+            properties.setProperty(TOAST_DURATION_MS_KEY, value.toString())
+            save()
+        }
+
+    var toastTarget: String
+        get() = properties.getProperty(TOAST_TARGET_KEY, "BOTH")
+        set(value) {
+            properties.setProperty(TOAST_TARGET_KEY, value)
+            save()
+        }
+
+    var notificationClientIds: String
+        get() = properties.getProperty(NOTIFICATION_CLIENT_IDS_KEY, "")
+        set(value) {
+            properties.setProperty(NOTIFICATION_CLIENT_IDS_KEY, value)
             save()
         }
 

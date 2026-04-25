@@ -145,6 +145,13 @@ fun errorMessage(message: String, context: String = "general", throwable: Throwa
         .build()
 }
 
+fun toastMessage(message: String): DataModel {
+    return DataModelBuilder()
+        .addMetadata("type", "toast")
+        .text(message)
+        .build()
+}
+
 
 // Extension function to handle received messages with pattern matching
 inline fun DataModel.handle(

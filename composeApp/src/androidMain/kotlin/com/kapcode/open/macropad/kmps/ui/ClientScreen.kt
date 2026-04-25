@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -153,6 +154,8 @@ fun ClientScreen(
             clientViewModel.setScannerTimedOut(true)
         }
     }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         topBar = {
@@ -635,6 +638,7 @@ fun ClientScreen(
                                                                     deviceName = android.os.Build.MODEL,
                                                                     tokenManager = tokenManager,
                                                                     settingsViewModel = settingsViewModel,
+                                                                    context = context,
                                                                     onExecutionFailedToast = onExecutionFailedToast
                                                                 )
                                                             }

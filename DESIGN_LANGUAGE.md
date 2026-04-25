@@ -50,9 +50,19 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
     - **Success/Active**: Standard Green in Dark Theme, High-Contrast Green (`#008000`) in Light Theme.
     - **Error/Stopped**: Material 3 Error color (`#BA1A1A`).
 - **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
+- **Unified Notification System (Toasts)**:
+    - **Desktop Custom Overlay**: A transparent, always-on-top window positioned at `BottomCenter` for non-intrusive alerts. Replaces standard OS notifications for precise timing control.
+    - **Android Native Toasts**: Leverages the Android `Toast` API for consistent mobile feedback.
+    - **Granular Targeting**: Alerts can be routed to the **Server Only**, **Selected Clients Only**, or **Both**, managed via individual device checkboxes in settings.
+    - **Contextual Awareness**: Option to include application names (e.g., "Floorp") in activation messages.
+    - **Configurable Persistence**: A master "Toast Duration" setting (ms) synchronizes display times across all platforms.
 
 ### Desktop Motion & Layout
 - **Root Split Pane**: The Desktop layout uses a primary horizontal split between the **Left Sidebar** (Console/Inspector) and the **Main Workspace** (Connections/Macros).
+- **Macro Manager Refactoring**: The Macro Manager screen utilizes collapsible, high-contrast headers (`SectionHeader`) for "Packs Manager" and "Macro Manager".
+    - **Headers**: Use solid `Surface` color (Black in Dark mode, White in Light mode) for prominent visual grouping.
+    - **Content Items**: Use a subtle `SurfaceVariant` background with tiled patterns (Keyboard keys for Macros, Library books for Packs) to distinguish from headers.
+    - **Search**: Independent search bars are integrated into each header for local filtering.
 - **Nested Split Panes**: Within the Main Workspace, a vertical split separates **Connections** (left) from **Macros** (right).
 - **Ghost Image Resizing**: To provide real-time visual feedback, splitters display a "Ghost Image" (a semi-transparent representation of the new divider position) during active dragging.
 - **Dynamic Splitter Highlighting**: All split panes use custom-styled "pill" handles (pulltabs). These handles feature dynamic transparency:

@@ -2,6 +2,8 @@ package com.kapcode.open.macropad.kmps
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.content.Context
+import android.widget.Toast
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
@@ -59,6 +61,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         serverName: String? = null,
         tokenManager: TokenManager,
         settingsViewModel: SettingsViewModel,
+        context: Context,
         onExecutionFailedToast: (String) -> Unit
     ) {
         repository.connect(
@@ -117,12 +120,18 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 params["analyticsEnabled"]?.let { settingsViewModel.setAnalyticsEnabled(it.toBoolean()) }
                 params["slamFireEnabled"]?.let { settingsViewModel.setSlamFireEnabled(it.toBoolean()) }
                 params["macroExecutionEnabled"]?.let { setMacroExecutionEnabled(it.toBoolean()) }
+                params["toastDurationMs"]?.let { settingsViewModel.setToastDurationMs(it.toLong()) }
             },
             onPacksReceived = { packs ->
                 setInstalledPacks(packs)
             },
             onMarketplaceItemsReceived = { items ->
                 setMarketplaceItems(items)
+            },
+            onNotificationReceived = { message ->
+                if (settingsViewModel.enableToasts.value) {
+                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                }
             }
         )
     }
@@ -269,6 +278,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         deviceName: String,
         tokenManager: TokenManager,
         settingsViewModel: SettingsViewModel,
+        context: Context,
         onExecutionFailedToast: (String) -> Unit
     ) {
         connect(
@@ -280,6 +290,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             serverName = server.displayName,
             tokenManager = tokenManager,
             settingsViewModel = settingsViewModel,
+            context = context,
             onExecutionFailedToast = onExecutionFailedToast
         )
     }

@@ -43,6 +43,15 @@ class SettingsViewModel {
     private val _slamFireDoubleThreshold = MutableStateFlow(300L) // Default 300ms
     val slamFireDoubleThreshold = _slamFireDoubleThreshold.asStateFlow()
 
+    private val _enableToasts = MutableStateFlow(true)
+    val enableToasts = _enableToasts.asStateFlow()
+
+    private val _enableBackgroundToasts = MutableStateFlow(true)
+    val enableBackgroundToasts = _enableBackgroundToasts.asStateFlow()
+
+    private val _toastDurationMs = MutableStateFlow(3000L)
+    val toastDurationMs = _toastDurationMs.asStateFlow()
+
     private val _scannerTimeoutHours = MutableStateFlow(2) // Default 2 hours
     val scannerTimeoutHours = _scannerTimeoutHours.asStateFlow()
 
@@ -83,6 +92,18 @@ class SettingsViewModel {
 
     fun setSlamFireDoubleThreshold(threshold: Long) {
         _slamFireDoubleThreshold.value = threshold
+    }
+
+    fun setEnableToasts(enabled: Boolean) {
+        _enableToasts.value = enabled
+    }
+
+    fun setEnableBackgroundToasts(enabled: Boolean) {
+        _enableBackgroundToasts.value = enabled
+    }
+
+    fun setToastDurationMs(duration: Long) {
+        _toastDurationMs.value = duration
     }
 
     fun setScannerTimeoutHours(hours: Int) {

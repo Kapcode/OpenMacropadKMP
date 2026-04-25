@@ -88,6 +88,30 @@ class SettingsViewModel {
     private val _tooltipYOffset = MutableStateFlow(AppSettings.tooltipYOffset)
     val tooltipYOffset = _tooltipYOffset.asStateFlow()
 
+    private val _enablePackSwitchNotifications = MutableStateFlow(AppSettings.enablePackSwitchNotifications)
+    val enablePackSwitchNotifications = _enablePackSwitchNotifications.asStateFlow()
+
+    private val _enableToasts = MutableStateFlow(AppSettings.enableToasts)
+    val enableToasts = _enableToasts.asStateFlow()
+
+    private val _enableBackgroundToasts = MutableStateFlow(AppSettings.enableBackgroundToasts)
+    val enableBackgroundToasts = _enableBackgroundToasts.asStateFlow()
+
+    private val _enableNetworkToasts = MutableStateFlow(AppSettings.enableNetworkToasts)
+    val enableNetworkToasts = _enableNetworkToasts.asStateFlow()
+
+    private val _includeWindowNamesInToasts = MutableStateFlow(AppSettings.includeWindowNamesInToasts)
+    val includeWindowNamesInToasts = _includeWindowNamesInToasts.asStateFlow()
+
+    private val _toastDurationMs = MutableStateFlow(AppSettings.toastDurationMs)
+    val toastDurationMs = _toastDurationMs.asStateFlow()
+
+    private val _toastTarget = MutableStateFlow(AppSettings.toastTarget)
+    val toastTarget = _toastTarget.asStateFlow()
+
+    private val _notificationClientIds = MutableStateFlow(AppSettings.notificationClientIds.split(",").filter { it.isNotBlank() }.toSet())
+    val notificationClientIds = _notificationClientIds.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -254,6 +278,53 @@ class SettingsViewModel {
     fun setTooltipYOffset(offset: Int) {
         _tooltipYOffset.value = offset
         AppSettings.tooltipYOffset = offset
+    }
+
+    fun setEnablePackSwitchNotifications(enabled: Boolean) {
+        _enablePackSwitchNotifications.value = enabled
+        AppSettings.enablePackSwitchNotifications = enabled
+    }
+
+    fun setEnableToasts(enabled: Boolean) {
+        _enableToasts.value = enabled
+        AppSettings.enableToasts = enabled
+    }
+
+    fun setEnableBackgroundToasts(enabled: Boolean) {
+        _enableBackgroundToasts.value = enabled
+        AppSettings.enableBackgroundToasts = enabled
+    }
+
+    fun setEnableNetworkToasts(enabled: Boolean) {
+        _enableNetworkToasts.value = enabled
+        AppSettings.enableNetworkToasts = enabled
+    }
+
+    fun setIncludeWindowNamesInToasts(enabled: Boolean) {
+        _includeWindowNamesInToasts.value = enabled
+        AppSettings.includeWindowNamesInToasts = enabled
+    }
+
+    fun setToastDurationMs(duration: Long) {
+        _toastDurationMs.value = duration
+        AppSettings.toastDurationMs = duration
+    }
+
+    fun setToastTarget(target: String) {
+        _toastTarget.value = target
+        AppSettings.toastTarget = target
+    }
+
+    fun toggleNotificationClient(clientId: String) {
+        val current = _notificationClientIds.value
+        val newSet = if (current.contains(clientId)) current - clientId else current + clientId
+        _notificationClientIds.value = newSet
+        AppSettings.notificationClientIds = newSet.joinToString(",")
+    }
+
+    fun setAllNotificationClients(clientIds: Set<String>) {
+        _notificationClientIds.value = clientIds
+        AppSettings.notificationClientIds = clientIds.joinToString(",")
     }
 
     fun getSplitterPosition(name: String, default: Float): Float {

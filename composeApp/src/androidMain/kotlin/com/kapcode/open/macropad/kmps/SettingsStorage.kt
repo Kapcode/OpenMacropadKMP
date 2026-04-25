@@ -84,6 +84,22 @@ class SettingsStorage(context: Context) {
         return prefs.getLong("slam_fire_threshold", 300L)
     }
 
+    fun saveToastsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("enable_toasts", enabled).apply()
+    }
+
+    fun getToastsEnabled(): Boolean {
+        return prefs.getBoolean("enable_toasts", true)
+    }
+
+    fun saveBackgroundToastsEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("enable_background_toasts", enabled).apply()
+    }
+
+    fun getBackgroundToastsEnabled(): Boolean {
+        return prefs.getBoolean("enable_background_toasts", true)
+    }
+
     fun saveDashboardMacros(widgets: List<GridWidget>) {
         val json = Json.encodeToString(widgets)
         prefs.edit().putString("dashboard_widgets", json).apply()
@@ -143,6 +159,8 @@ class SettingsStorage(context: Context) {
         viewModel.setSlamFireSelectedMacro(getSlamFireSelectedMacro())
         viewModel.setSlamFireDoubleSelectedMacro(getSlamFireDoubleSelectedMacro())
         viewModel.setSlamFireDoubleThreshold(getSlamFireDoubleThreshold())
+        viewModel.setEnableToasts(getToastsEnabled())
+        viewModel.setEnableBackgroundToasts(getBackgroundToastsEnabled())
         viewModel.setServerHistory(getServerHistory())
         clientViewModel.setDashboardMacros(getDashboardMacros())
 
@@ -155,6 +173,8 @@ class SettingsStorage(context: Context) {
         viewModel.slamFireSelectedMacro.onEach { saveSlamFireSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleSelectedMacro.onEach { saveSlamFireDoubleSelectedMacro(it) }.launchIn(scope)
         viewModel.slamFireDoubleThreshold.onEach { saveSlamFireDoubleThreshold(it) }.launchIn(scope)
+        viewModel.enableToasts.onEach { saveToastsEnabled(it) }.launchIn(scope)
+        viewModel.enableBackgroundToasts.onEach { saveBackgroundToastsEnabled(it) }.launchIn(scope)
         viewModel.serverHistory.onEach { 
             saveServerHistory(it)
             clientViewModel.setServerHistory(it)

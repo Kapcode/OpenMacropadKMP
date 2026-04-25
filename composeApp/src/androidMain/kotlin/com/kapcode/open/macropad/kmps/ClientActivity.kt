@@ -200,6 +200,7 @@ class ClientActivity : ComponentActivity() {
                         serverName = serverName,
                         tokenManager = tokenManager,
                         settingsViewModel = settingsViewModel,
+                        context = this@ClientActivity,
                         onExecutionFailedToast = { message ->
                             Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
                         }

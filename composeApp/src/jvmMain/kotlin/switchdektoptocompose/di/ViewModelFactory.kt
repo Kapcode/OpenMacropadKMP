@@ -5,8 +5,9 @@ import androidx.compose.runtime.remember
 import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
 import kotlinx.serialization.json.Json
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.*
 import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.viewmodel.*
 
@@ -90,10 +91,16 @@ object ViewModelFactory {
                     val packs = macroManagerViewModelRef?.macroPacks?.value ?: emptyList()
                     if (packs.isNotEmpty()) {
                         val json = Json { ignoreUnknownKeys = true }
-                        serverViewModel.sendToAll(dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
+                        val packsToSerialize = packs.map { it.pack }
+                        serverViewModel.sendToAll(dataMessage("installed_packs", json.encodeToString(packsToSerialize).encodeToByteArray()))
                     }
                 }
-            ).also { macroManagerViewModelRef = it }
+            ).also { viewModel ->
+                macroManagerViewModelRef = viewModel
+                processWatcher.activeProcess.onEach { processName ->
+                    viewModel.onActiveProcessChanged(processName)
+                }.launchIn(CoroutineScope(Dispatchers.Main))
+            }
         }
         
         val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
@@ -112,6 +119,7 @@ object ViewModelFactory {
             clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
             clientCommunicationViewModel.serverViewModel = serverViewModel
             clientCommunicationViewModel.layoutViewModel = layoutViewModel
+            macroManagerViewModel.serverViewModel = serverViewModel
             desktopViewModel.macroManagerViewModel = macroManagerViewModel
         }
 

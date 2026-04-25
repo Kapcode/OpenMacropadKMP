@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 fun GeneralSettingsSection(viewModel: SettingsViewModel) {
     val currentTheme by viewModel.theme.collectAsState()
     val analyticsEnabled by viewModel.analyticsEnabled.collectAsState()
+    val enableToasts by viewModel.enableToasts.collectAsState()
+    val enableBackgroundToasts by viewModel.enableBackgroundToasts.collectAsState()
 
     Column {
         Text("Theme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
@@ -176,6 +178,37 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                     }
                 }
             }
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+        Text("Notifications (Toasts)", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Enable Notifications", modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableToasts,
+                onCheckedChange = { viewModel.setEnableToasts(it) }
+            )
+        }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Notifications in Background", modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableBackgroundToasts,
+                onCheckedChange = { viewModel.setEnableBackgroundToasts(it) }
+            )
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))

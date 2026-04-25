@@ -42,7 +42,8 @@ class ClientRepository(private val context: Context) {
         onExecutionFailed: (String, String) -> Unit,
         onSettingsPushed: (Map<String, String>) -> Unit,
         onPacksReceived: (List<MacroPack>) -> Unit,
-        onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit
+        onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit,
+        onNotificationReceived: (String) -> Unit
     ) {
         clientJob?.cancel()
         clientJob = scope.launch {
@@ -186,7 +187,9 @@ class ClientRepository(private val context: Context) {
                                         }
                                     },
                                     onText = { text ->
-                                        if (text.startsWith("macros:")) {
+                                        if (dataModel.metadata["type"] == "toast") {
+                                            onNotificationReceived(text)
+                                        } else if (text.startsWith("macros:")) {
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                                             onMacrosReceived(macroNames)
                                             onUpdate("Connected", initialServerName ?: ipAddress, null, null)

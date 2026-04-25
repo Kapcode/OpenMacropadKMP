@@ -91,7 +91,7 @@ class MarketplaceViewModel(
                 widgets = emptyList() // In a real scenario, this would come from the downloadUrl
             )
 
-            val fileName = "${item.name.replace(" ", "_")}_pack.json"
+            val fileName = item.name.replace(Regex("[^a-zA-Z0-9]"), "_") + "_pack.json"
             val file = File(macroDir, fileName)
             val json = Json { prettyPrint = true }
             file.writeText(json.encodeToString(pack))

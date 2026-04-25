@@ -71,7 +71,8 @@ class ServerViewModel(
                 theme = settingsViewModel.clientTheme.value,
                 analyticsEnabled = settingsViewModel.clientAnalyticsEnabled.value,
                 slamFireEnabled = settingsViewModel.clientSlamFireEnabled.value,
-                slamFireAction = settingsViewModel.clientSlamFireAction.value
+                slamFireAction = settingsViewModel.clientSlamFireAction.value,
+                toastDurationMs = settingsViewModel.toastDurationMs.value
             )
         }
     }
@@ -148,6 +149,14 @@ class ServerViewModel(
     fun sendToAll(dataModel: DataModel) {
         viewModelScope.launch {
             server.sendToAll(dataModel)
+        }
+    }
+
+    fun sendToSelected(dataModel: DataModel, clientIds: Set<String>) {
+        viewModelScope.launch {
+            clientIds.forEach { clientId ->
+                server.sendToClient(clientId, dataModel)
+            }
         }
     }
 }

@@ -15,6 +15,15 @@ import switchdektoptocompose.viewmodel.SettingsViewModel
 fun BehaviorSettings(
     exitBehavior: String,
     clickTrayToToggle: Boolean,
+    enablePackSwitchNotifications: Boolean,
+    enableToasts: Boolean,
+    enableBackgroundToasts: Boolean,
+    enableNetworkToasts: Boolean,
+    includeWindowNamesInToasts: Boolean,
+    toastDurationMs: Long,
+    toastTarget: String,
+    notificationClientIds: Set<String>,
+    trustedDevices: Map<String, String>,
     settingsViewModel: SettingsViewModel,
     onShowShortcutsRequest: () -> Unit
 ) {
@@ -60,6 +69,123 @@ fun BehaviorSettings(
             checked = clickTrayToToggle,
             onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
         )
+    }
+
+    Spacer(Modifier.height(8.dp))
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Show notifications on pack switch", modifier = Modifier.weight(1f))
+        Checkbox(
+            checked = enablePackSwitchNotifications,
+            onCheckedChange = { settingsViewModel.setEnablePackSwitchNotifications(it) }
+        )
+    }
+
+    Spacer(Modifier.height(8.dp))
+    Text("Toast Notifications", style = MaterialTheme.typography.titleMedium)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Enable Global Toasts", modifier = Modifier.weight(1f))
+        Switch(
+            checked = enableToasts,
+            onCheckedChange = { settingsViewModel.setEnableToasts(it) }
+        )
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Toasts in Background / Headless", modifier = Modifier.weight(1f))
+        Switch(
+            checked = enableBackgroundToasts,
+            onCheckedChange = { settingsViewModel.setEnableBackgroundToasts(it) }
+        )
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Send Toasts over Network", modifier = Modifier.weight(1f))
+        Switch(
+            checked = enableNetworkToasts,
+            onCheckedChange = { settingsViewModel.setEnableNetworkToasts(it) }
+        )
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Include Window Names in Toasts", modifier = Modifier.weight(1f))
+        Switch(
+            checked = includeWindowNamesInToasts,
+            onCheckedChange = { settingsViewModel.setIncludeWindowNamesInToasts(it) }
+        )
+    }
+
+    OutlinedTextField(
+        value = toastDurationMs.toString(),
+        onValueChange = { it.toLongOrNull()?.let { duration -> settingsViewModel.setToastDurationMs(duration) } },
+        label = { Text("Toast Duration (ms)") },
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        singleLine = true
+    )
+
+    Spacer(Modifier.height(16.dp))
+    Text("Notification Target", style = MaterialTheme.typography.titleMedium)
+    Column(Modifier.selectableGroup()) {
+        listOf(
+            "SERVER" to "Show on Server Only",
+            "CLIENTS" to "Show on Selected Clients Only",
+            "BOTH" to "Show on Both Server & Clients"
+        ).forEach { (value, label) ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .selectable(
+                        selected = (toastTarget == value),
+                        onClick = { settingsViewModel.setToastTarget(value) },
+                        role = Role.RadioButton
+                    )
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                RadioButton(selected = (toastTarget == value), onClick = null)
+                Text(text = label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = 16.dp))
+            }
+        }
+    }
+
+    if (toastTarget != "SERVER" && trustedDevices.isNotEmpty()) {
+        Spacer(Modifier.height(8.dp))
+        Text("Target Clients", style = MaterialTheme.typography.titleSmall)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextButton(onClick = { settingsViewModel.setAllNotificationClients(trustedDevices.keys) }) {
+                Text("Select All")
+            }
+            TextButton(onClick = { settingsViewModel.setAllNotificationClients(emptySet()) }) {
+                Text("Deselect All")
+            }
+        }
+        
+        Column {
+            trustedDevices.forEach { (id, name) ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().height(40.dp)
+                ) {
+                    Checkbox(
+                        checked = notificationClientIds.contains(id),
+                        onCheckedChange = { settingsViewModel.toggleNotificationClient(id) }
+                    )
+                    Text(name, modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        }
     }
 
     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

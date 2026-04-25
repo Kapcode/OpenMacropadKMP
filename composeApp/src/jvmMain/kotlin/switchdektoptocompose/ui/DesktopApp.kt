@@ -14,6 +14,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
@@ -155,6 +157,41 @@ fun DesktopApp(
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val activeToast by macroManagerViewModel.activeToast.collectAsState()
+
+    activeToast?.let { toastMsg ->
+        Window(
+            onCloseRequest = {},
+            state = rememberWindowState(
+                position = WindowPosition(Alignment.BottomCenter),
+                width = 400.dp,
+                height = 64.dp
+            ),
+            title = "Toast",
+            transparent = true,
+            undecorated = true,
+            alwaysOnTop = true,
+            focusable = false,
+            resizable = false
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.8f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = toastMsg,
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+        }
+    }
 
     LaunchedEffect(selectedTheme) {
         val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name

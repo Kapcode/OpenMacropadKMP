@@ -45,6 +45,14 @@ fun SettingsDialog(
     val defaultPairingModeQr by settingsViewModel.defaultPairingModeQr.collectAsState()
     val tooltipXOffset by settingsViewModel.tooltipXOffset.collectAsState()
     val tooltipYOffset by settingsViewModel.tooltipYOffset.collectAsState()
+    val enablePackSwitchNotifications by settingsViewModel.enablePackSwitchNotifications.collectAsState()
+    val enableToasts by settingsViewModel.enableToasts.collectAsState()
+    val enableBackgroundToasts by settingsViewModel.enableBackgroundToasts.collectAsState()
+    val enableNetworkToasts by settingsViewModel.enableNetworkToasts.collectAsState()
+    val includeWindowNamesInToasts by settingsViewModel.includeWindowNamesInToasts.collectAsState()
+    val toastDurationMs by settingsViewModel.toastDurationMs.collectAsState()
+    val toastTarget by settingsViewModel.toastTarget.collectAsState()
+    val notificationClientIds by settingsViewModel.notificationClientIds.collectAsState()
 
     // Connected Clients Settings
     val clientTheme by settingsViewModel.clientTheme.collectAsState()
@@ -79,7 +87,12 @@ fun SettingsDialog(
             ) {
                 ThemeSettings(selectedTheme, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                BehaviorSettings(exitBehavior, clickTrayToToggle, settingsViewModel, onShowShortcutsRequest)
+                BehaviorSettings(
+                    exitBehavior, clickTrayToToggle, enablePackSwitchNotifications,
+                    enableToasts, enableBackgroundToasts, enableNetworkToasts, includeWindowNamesInToasts,
+                    toastDurationMs, toastTarget, notificationClientIds, trustedDevices,
+                    settingsViewModel, onShowShortcutsRequest
+                )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 UISettings(tooltipXOffset, tooltipYOffset, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

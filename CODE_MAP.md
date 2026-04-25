@@ -18,8 +18,11 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `di/`: Centralized dependency injection (`ViewModelFactory`).
             - `logic/`: Core automation logic (MacroPlayer, TriggerListener, ServerDiscovery, KeyParser).
             - `model/`: Desktop-specific state models (MacroModels, ClientInfo).
-            - `ui/`: Desktop-specific Compose screens, themes, and specialized components (SwingCodeEditor).
-            - `viewmodel/`: Desktop ViewModels for state management (`ServerViewModel`, `ClientCommunicationViewModel`, `MacroManagerViewModel`).
+            - `ui/`: Desktop-specific Compose screens, themes, and specialized components.
+                * `MacroManagerScreen.kt`: Collapsible `SectionHeader`s, independent search, and tiled item backgrounds.
+            - `viewmodel/`: Desktop ViewModels for state management.
+                * `MacroManagerViewModel.kt`: Manages macro/pack states, active process tracking, and intelligent notification routing.
+                * `ServerViewModel.kt`: Handles WebSocket broadcasts and targeted client communication.
             - `main.kt`: JVM Application entry point.
         - **`MacroKTOR/`**: Ktor 3.x server implementation (`MacroKtorServer.kt`).
         - **`com.kapcode.open.macropad.kmps/`**: JVM implementations of `DeviceInfo` and `IdentityManager`.

@@ -475,13 +475,14 @@ class MacroKtorServer(
         clients.values.forEach { it.session.send(Frame.Binary(true, bytes)) }
     }
 
-    fun pushSettingsToClients(theme: String, analyticsEnabled: Boolean, slamFireEnabled: Boolean, slamFireAction: String) {
+    fun pushSettingsToClients(theme: String, analyticsEnabled: Boolean, slamFireEnabled: Boolean, slamFireAction: String, toastDurationMs: Long) {
         serverScope.launch {
             val settingsMap = mapOf(
                 "theme" to theme,
                 "analyticsEnabled" to analyticsEnabled.toString(),
                 "slamFireEnabled" to slamFireEnabled.toString(),
-                "slamFireAction" to slamFireAction
+                "slamFireAction" to slamFireAction,
+                "toastDurationMs" to toastDurationMs.toString()
             )
             val message = DataModel(
                 messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
