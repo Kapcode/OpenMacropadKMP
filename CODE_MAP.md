@@ -54,7 +54,9 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **IconMapper** | Maps string-based icon IDs from the server to Android Material Icons. | `androidMain/com/.../MacroButtonsScreen.kt` |
 | **GridWidget** | Shared model for UI items. Defines type (Button, Toggle, Slider), color, position, and state. | `commonMain/com/.../models/GridModels.kt` |
 | **AutomationAST** | Defines the logic for stateful automation (Triggers, Conditions, Actions). | `commonMain/com/.../models/AutomationAST.kt` |
-| **VisualRoutineBuilder**| Block-based UI for creating automation routines on Android. | `androidMain/com/.../ui/components/VisualRoutineBuilder.kt` |
+| **VariablePicker** | Shared component for selecting system and user variables with live previews. | `commonMain/com/.../ui/components/VariablePicker.kt` |
+| **VisualRoutineBuilder**| Block-based UI for creating automation routines (Shared). | `commonMain/com/.../ui/components/VisualRoutineBuilder.kt` |
+| **RoutineEditorDialog** | Desktop-specific dialog for visual routine editing. | `jvmMain/switchdektoptocompose/ui/RoutineEditorDialog.kt` |
 | **PackManager** | Manages active packs, layers, and context-aware switching on the server. | `jvmMain/switchdektoptocompose/logic/PackManager.kt` |
 | **SequenceEvaluator** | Evaluates complex key sequences (Hold, Multi-tap) and chords for stateful triggers. | `jvmMain/switchdektoptocompose/logic/SequenceEvaluator.kt` |
 | **AutomationDialogs** | Shared UI components for complex trigger and client configuration. | `jvmMain/switchdektoptocompose/ui/components/MacroDialogComponents.kt` |

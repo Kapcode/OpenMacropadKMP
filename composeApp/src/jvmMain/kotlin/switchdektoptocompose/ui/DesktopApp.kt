@@ -137,7 +137,9 @@ fun DesktopApp(
     showPushSettingsDialog: Boolean = false,
     onShowPushSettingsDialogChange: (Boolean) -> Unit = {},
     showSettingsDialog: Boolean = false,
-    onShowSettingsDialogChange: (Boolean) -> Unit = {}
+    onShowSettingsDialogChange: (Boolean) -> Unit = {},
+    initialScrollToVariables: Boolean = false,
+    onInitialScrollToVariablesChange: (Boolean) -> Unit = {}
 ) {
     val desktopViewModel = viewModels.desktopViewModel
     val serverViewModel = viewModels.serverViewModel
@@ -280,6 +282,7 @@ fun DesktopApp(
             consoleViewModel = consoleViewModel,
             onDismissRequest = { 
                 onShowSettingsDialogChange(false)
+                onInitialScrollToVariablesChange(false)
             },
             onShowShortcutsRequest = {
                 onShowSettingsDialogChange(false)
@@ -288,7 +291,8 @@ fun DesktopApp(
             onShowPushSettingsRequest = {
                 onShowSettingsDialogChange(false)
                 onShowPushSettingsDialogChange(true)
-            }
+            },
+            initialScrollToVariables = initialScrollToVariables
         )
     }
 
@@ -539,7 +543,14 @@ fun DesktopApp(
                                                 .background(panelBackground(2))
                                                 .padding(8.dp)
                                         ) {
-                                            InspectorScreen(viewModel = inspectorViewModel)
+                                            InspectorScreen(
+                                                viewModel = inspectorViewModel, 
+                                                macroManagerViewModel = macroManagerViewModel,
+                                                onOpenVariableSettings = {
+                                                    onInitialScrollToVariablesChange(true)
+                                                    onShowSettingsDialogChange(true)
+                                                }
+                                            )
                                         }
                                     }
                                 )

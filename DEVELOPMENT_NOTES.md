@@ -507,6 +507,27 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: The key sequence history could grow indefinitely or contain stale data from auto-repeat events.
 - **Solution**: Added auto-repeat filtering (ignoring consecutive duplicates) and implemented a sliding window of 20 keys for matching, ensuring the state machine stays efficient and accurate.
 
+## 43. Scripting & Advanced Routines (Phase 6 Completion)
+
+### Challenge: Scripting Context and Host API
+- **Problem**: GraalVM scripts needed a way to interact with the host system (Robot, Logging, Active Process) without exposing dangerous internal classes.
+- **Solution**:
+    - **KapHostApi**: Created a dedicated `KapHostApi` inner class in `MacroPlayer` that exposes safe methods (`pressKey`, `moveMouse`, `delay`, `log`, `getActiveProcess`, `playMacro`, `notify`, `getClipboardText`, `setClipboardText`).
+    - **Context Isolation**: Scripts are restricted to the `js` language and cannot look up Java classes directly.
+
+### Challenge: Visual Routine Building
+- **Problem**: Complex routines with triggers, conditions, and actions were difficult to build via raw JSON.
+- **Solution**:
+    - **Shared UI Component**: Ported and enhanced the `VisualRoutineBuilder` to `commonMain`. It now features a full-featured block-based editor with dropdowns for triggers, conditions, and action types.
+    - **Desktop Integration**: Added a "Advanced Routines" section to the `PackEditorDialog` on Desktop, allowing users to visually create and edit routines within a Macro Pack.
+
+### Challenge: Interleaving Scripts and Recorded Actions
+- **Problem**: Users wanted to add custom logic (e.g., "if window is X, do Y") inside a recorded macro.
+- **Solution**:
+    - **ScriptEvent**: Added a new `ScriptEvent` type to the `MacroEventState` hierarchy.
+    - **Timeline Support**: Updated the Macro Timeline to support adding and editing JavaScript blocks as individual steps within a macro sequence.
+    - **Standalone JS Macros**: Updated `MacroManagerViewModel` to recognize `.js` files as standalone macros that execute directly via the script engine when triggered.
+
 
 ### Cross-Platform / Common
 - [ ] **UDP Discovery Polish**: Improve the reliability of server discovery on complex local network topologies (e.g., multiple subnets).
@@ -569,11 +590,23 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Explicit Disconnect**: Implemented explicit `disconnect()` calls in Android's `ClientActivity` and `ClientScreen` `BackHandler`. This ensures the socket is closed the moment the user leaves the pairing or control screens.
     - **Trust Revocation**: Hardened `MacroKtorServer.kt` to explicitly remove the client ID from `temporaryTrustedDevices` whenever a session is replaced or ends. This guarantees that "Trust Once" is strictly bound to a single, continuous session.
 
-## 41. UI Polish and Persistence
+## 44. Window Context & State-Based Triggers
 
-### Challenge: Lost Server Context during Pairing
-- **Problem**: The friendly name of the server was lost when transitioning between discovery and pairing activities, leading to confusing "Connected to: N/A" labels.
+### Challenge: Window Title Pattern Matching
+- **Problem**: Users needed to trigger actions based on specific window titles (e.g., a specific website) rather than just the application name.
 - **Solution**: 
-    - **Intent Propagation**: Added `SERVER_NAME` as an extra when launching `ClientActivity`.
-    - **State Caching**: Updated `ClientRepository` and `ClientViewModel` to cache this initial name and use it in UI updates until the server provides its identity.
-    - **PIN Auto-Submission**: Improved pairing UX by adding a listener to the 6-digit PIN field that automatically triggers submission as soon as the last digit is entered.
+    - **ActiveWindowTitleIs**: Added a new condition type to the AST that performs partial string matching (`contains`) on the current focused window's title.
+    - **ProcessWatcher Extension**: Enhanced the JVM watcher to track `activeTitle` and `lastTitle` alongside process names.
+
+### Challenge: UI Blocking & Dialog Interference
+- **Problem**: Opening the Settings dialog would occasionally prevent routines from triggering in the background.
+- **Solution**: 
+    - **State Pulse**: Implemented a periodic background coroutine in `MacroManagerViewModel` that pulses every 1s. This ensures triggers (like clipboard changes) are processed even if the UI thread is busy or a modal dialog is open.
+    - **Edge Detection**: Added a `lastTriggeredRoutine` map to the state engine. Triggers now fire only on the *rising edge* (when a condition becomes true), preventing infinite execution loops while a condition remains met.
+
+### Challenge: Variable Persistence & Live Feedback
+- **Problem**: Building coordinate-based or pixel-based routines required manually typing values from the inspector into the builder.
+- **Solution**: 
+    - **Variable Picker Field**: Created a shared component that combines text input with a categorized dropdown of system variables.
+    - **Live Values**: Integrated real-time resolvers into the picker dropdown. Users can now see their current `mouse_x` or `pixel_color_at_cursor` updating live in the menu before selecting them.
+    - **Click-to-Copy**: Updated the Inspector UI and Variable Picker to support instant clipboard capture of any system variable.

@@ -35,7 +35,8 @@ data class MacroPack(
     val author: String,
     val version: String,
     val targetProcess: String? = null, // e.g., "photoshop.exe"
-    val isActive: Boolean = false,
+    val targetWindowTitle: String? = null, // e.g., "Google Chrome"
+    val isActive: Boolean = true,
     val widgets: List<GridWidget> = emptyList(),
     val routines: List<AutomationRoutine> = emptyList()
 )

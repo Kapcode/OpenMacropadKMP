@@ -65,6 +65,7 @@ fun NewEventDialog(
         val delayText by viewModel.delayText.collectAsState()
         val useAutoDelay by viewModel.useAutoDelay.collectAsState()
         val autoDelayText by viewModel.autoDelayText.collectAsState()
+        val scriptContent by viewModel.scriptContent.collectAsState()
         val isEditMode by viewModel.isEditMode.collectAsState()
 
         val validationState by viewModel.validationState.collectAsState()
@@ -177,41 +178,51 @@ fun NewEventDialog(
 
                                 ActionDropdown(selectedAction, viewModel)
                                 
-                                CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
-                                CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
-                                CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
-                                
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
-                                    Text("Mouse Location")
-                                    Spacer(Modifier.weight(1f))
-                                    Text("Animate")
-                                    Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
-                                    OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
-                                    OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
-                                }
-
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
-                                    OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
-                                }
-                                
-                                HorizontalDivider()
-                                
-                                Column {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
-                                        Text("Auto Delay Declaration")
-                                    }
+                                if (selectedAction == MacroAction.SCRIPT) {
                                     OutlinedTextField(
-                                        value = autoDelayText,
-                                        onValueChange = { viewModel.autoDelayText.value = it },
-                                        label = { Text("Auto Delay Value (ms)") },
-                                        modifier = Modifier.fillMaxWidth(),
-                                        enabled = useAutoDelay
+                                        value = scriptContent,
+                                        onValueChange = { viewModel.scriptContent.value = it },
+                                        label = { Text("JavaScript Content") },
+                                        modifier = Modifier.fillMaxWidth().height(200.dp),
+                                        placeholder = { Text("kap.pressKey('A'); kap.delay(100); kap.releaseKey('A');") }
                                     )
+                                } else {
+                                    CheckableTextFieldRow("Key(s):", useKeys, { viewModel.useKeys.value = it }, keysText, { viewModel.keysText.value = it })
+                                    CheckableTextFieldRow("Mouse Button(s) (1=Left, 2=Middle, 3=Right):", useMouseButtons, { viewModel.useMouseButtons.value = it }, mouseButtonsText, { viewModel.mouseButtonsText.value = it })
+                                    CheckableTextFieldRow("Mouse Scroll:", useMouseScroll, { viewModel.useMouseScroll.value = it }, mouseScrollText, { viewModel.mouseScrollText.value = it })
+                                    
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Checkbox(checked = useMouseLocation, onCheckedChange = { viewModel.useMouseLocation.value = it })
+                                        Text("Mouse Location")
+                                        Spacer(Modifier.weight(1f))
+                                        Text("Animate")
+                                        Switch(checked = animateMouse, onCheckedChange = { viewModel.animateMouseMovement.value = it }, enabled = useMouseLocation)
+                                        OutlinedTextField(value = mouseX, onValueChange = { viewModel.mouseX.value = it }, label = { Text("X") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                                        OutlinedTextField(value = mouseY, onValueChange = { viewModel.mouseY.value = it }, label = { Text("Y") }, modifier = Modifier.width(90.dp), enabled = useMouseLocation)
+                                    }
+
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Checkbox(checked = useDelay, onCheckedChange = { viewModel.useDelay.value = it })
+                                        OutlinedTextField(value = delayText, onValueChange = { viewModel.delayText.value = it }, label = { Text("Delay") }, modifier = Modifier.width(120.dp), enabled = useDelay)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("milliseconds (1000 = 1s)", style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    
+                                    HorizontalDivider()
+                                    
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Checkbox(checked = useAutoDelay, onCheckedChange = { viewModel.useAutoDelay.value = it })
+                                            Text("Auto Delay Declaration")
+                                        }
+                                        OutlinedTextField(
+                                            value = autoDelayText,
+                                            onValueChange = { viewModel.autoDelayText.value = it },
+                                            label = { Text("Auto Delay Value (ms)") },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            enabled = useAutoDelay
+                                        )
+                                    }
                                 }
                             }
                         }

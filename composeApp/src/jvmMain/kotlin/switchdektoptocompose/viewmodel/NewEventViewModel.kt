@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import com.kapcode.open.macropad.kmps.models.AutomationTrigger
 
-enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE, TYPE }
+enum class MacroAction { PRESS, RELEASE, `ON-PRESS`, `ON-RELEASE`, PRESS_THEN_RELEASE, TYPE, SCRIPT }
 
 class NewEventViewModel(
     private val clientCommunicationViewModel: ClientCommunicationViewModel? = null
@@ -45,9 +45,10 @@ class NewEventViewModel(
     val animateMouseMovement = MutableStateFlow(false)
     val useDelay = MutableStateFlow(false)
     val delayText = MutableStateFlow("100")
-    // Removed: delayBetweenActions
     val useAutoDelay = MutableStateFlow(false)
     val autoDelayText = MutableStateFlow("50")
+    
+    val scriptContent = MutableStateFlow("")
 
     val validationState: StateFlow<Pair<Boolean, String>> = combine(
         isTriggerEvent,
@@ -72,7 +73,9 @@ class NewEventViewModel(
         useDelay,
         delayText,
         useAutoDelay,
-        autoDelayText
+        autoDelayText,
+        selectedAction,
+        scriptContent
     ) { _: Array<Any?> ->
         validate()
     }.stateIn(viewModelScope, SharingStarted.Lazily, Pair(false, "Initializing..."))
@@ -87,7 +90,6 @@ class NewEventViewModel(
                     useMouseScroll.value = false
                     useMouseLocation.value = false
                     useDelay.value = false
-                    // Removed: delayBetweenActions.value = false
                     useAutoDelay.value = false
                 }
             }
@@ -114,6 +116,11 @@ class NewEventViewModel(
              return true to ""
         }
 
+        if (selectedAction.value == MacroAction.SCRIPT) {
+            if (scriptContent.value.isBlank()) return false to "Script content cannot be empty."
+            return true to ""
+        }
+
         var hasAction = false
 
         if (useKeys.value) {
@@ -123,7 +130,6 @@ class NewEventViewModel(
 
         if (useMouseButtons.value) {
             if (mouseButtonsText.value.isBlank()) return false to "Mouse Button field is checked but empty."
-            // Validate comma separated numbers
             val parts = mouseButtonsText.value.split(',')
             for (part in parts) {
                 if (part.trim().toIntOrNull() == null) {
@@ -184,9 +190,9 @@ class NewEventViewModel(
         animateMouseMovement.value = false
         useDelay.value = false
         delayText.value = "100"
-        // Removed: delayBetweenActions.value = false
         useAutoDelay.value = false
         autoDelayText.value = "50"
+        scriptContent.value = ""
         isEditMode.value = false
         editingIndex.value = -1
     }
@@ -230,10 +236,7 @@ class NewEventViewModel(
                 mouseX.value = event.x.toString()
                 mouseY.value = event.y.toString()
                 animateMouseMovement.value = event.isAnimated
-                selectedAction.value = when (event.action) {
-                    MouseAction.MOVE -> MacroAction.`ON-PRESS` // MOVE maps to something, placeholder
-                    MouseAction.CLICK -> MacroAction.TYPE // CLICK maps to something, placeholder
-                }
+                selectedAction.value = MacroAction.TYPE // placeholder mapping
             }
             is MacroEventState.MouseButtonEvent -> {
                 useMouseButtons.value = true
@@ -255,25 +258,27 @@ class NewEventViewModel(
                 useAutoDelay.value = true
                 autoDelayText.value = event.delayMs.toString()
             }
+            is MacroEventState.ScriptEvent -> {
+                selectedAction.value = MacroAction.SCRIPT
+                scriptContent.value = event.script
+            }
         }
     }
 
     fun createEvents(): List<MacroEventState> {
-        val events = mutableListOf<MacroEventState>()
+        if (isTriggerEvent.value) return emptyList()
         
-        if (isTriggerEvent.value) {
-            return emptyList()
+        if (selectedAction.value == MacroAction.SCRIPT) {
+            return listOf(MacroEventState.ScriptEvent(scriptContent.value))
         }
-        
+
+        val events = mutableListOf<MacroEventState>()
         val autoDelay = if (useAutoDelay.value) autoDelayText.value.toLongOrNull() else null
 
-        // If "Auto Delay Declaration" is checked, emit a SetAutoWaitEvent first
         if (useAutoDelay.value && autoDelay != null) {
             events.add(MacroEventState.SetAutoWaitEvent(autoDelay.toInt()))
         }
         
-        // Removed addedAction tracking logic for delayBetweenActions
-
         if (useKeys.value && keysText.value.isNotBlank()) {
             when (selectedAction.value) {
                 MacroAction.PRESS, MacroAction.`ON-PRESS` -> {
@@ -285,16 +290,15 @@ class NewEventViewModel(
                 MacroAction.PRESS_THEN_RELEASE -> {
                     val keys = keysText.value.split(',').map { it.trim() }
                     keys.forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.PRESS)) }
-                    // Removed implicit delay injection
                     keys.reversed().forEach { events.add(MacroEventState.KeyEvent(it, KeyAction.RELEASE)) }
                 }
                 MacroAction.TYPE -> {
-                    keysText.value.forEachIndexed { index, char ->
-                        // Removed implicit delay injection
+                    keysText.value.forEach { char ->
                         events.add(MacroEventState.KeyEvent(char.toString(), KeyAction.PRESS))
                         events.add(MacroEventState.KeyEvent(char.toString(), KeyAction.RELEASE))
                     }
                 }
+                else -> {}
             }
         }
 
@@ -313,23 +317,18 @@ class NewEventViewModel(
                         buttons.reversed().forEach { btn -> events.add(MacroEventState.MouseButtonEvent(btn, KeyAction.RELEASE)) }
                     }
                     MacroAction.TYPE -> {
-                        // For mouse, TYPE behaves same as PRESS_THEN_RELEASE for each button individually? 
-                        // Or sequentially? For keys, TYPE is press/release char by char.
-                        // Let's do button by button.
                         buttons.forEach { btn ->
                             events.add(MacroEventState.MouseButtonEvent(btn, KeyAction.PRESS))
                             events.add(MacroEventState.MouseButtonEvent(btn, KeyAction.RELEASE))
                         }
                     }
+                    else -> {}
                 }
              }
         }
 
         if (useMouseScroll.value && mouseScrollText.value.isNotBlank()) {
-            val scrollAmount = mouseScrollText.value.toIntOrNull()
-            if (scrollAmount != null) {
-                events.add(MacroEventState.ScrollEvent(scrollAmount))
-            }
+            mouseScrollText.value.toIntOrNull()?.let { events.add(MacroEventState.ScrollEvent(it)) }
         }
 
         if (useMouseLocation.value) {

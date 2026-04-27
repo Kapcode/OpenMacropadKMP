@@ -10,6 +10,12 @@ object AppSettings {
     private val configFile = File(configDir, "config.properties")
     private val properties = Properties()
 
+    private const val WINDOW_PLACEMENT_MODE_KEY = "window.placement.mode"
+    private const val WINDOW_MONITOR_INDEX_KEY = "window.monitor.index"
+    private const val WINDOW_POLLING_RATE_KEY = "window.polling.rate"
+    private const val MOUSE_POLLING_RATE_KEY = "mouse.polling.rate"
+    private const val SYSTEM_POLLING_RATE_KEY = "system.polling.rate"
+
     private const val MACRO_DIR_KEY = "macroDirectory"
     private const val SERVER_PORT_KEY = "serverPort"
     private const val SECURE_SERVER_PORT_KEY = "secureServerPort"
@@ -330,6 +336,41 @@ object AppSettings {
         properties.setProperty(SPLITTER_SWAPPED_PREFIX + name, swapped.toString())
         save()
     }
+
+    var windowPlacementMode: String
+        get() = properties.getProperty(WINDOW_PLACEMENT_MODE_KEY, "CURSOR")
+        set(value) {
+            properties.setProperty(WINDOW_PLACEMENT_MODE_KEY, value)
+            save()
+        }
+
+    var windowMonitorIndex: Int
+        get() = properties.getProperty(WINDOW_MONITOR_INDEX_KEY, "0").toIntOrNull() ?: 0
+        set(value) {
+            properties.setProperty(WINDOW_MONITOR_INDEX_KEY, value.toString())
+            save()
+        }
+
+    var windowPollingRate: Long
+        get() = properties.getProperty(WINDOW_POLLING_RATE_KEY, "250").toLongOrNull() ?: 250L
+        set(value) {
+            properties.setProperty(WINDOW_POLLING_RATE_KEY, value.toString())
+            save()
+        }
+
+    var mousePollingRate: Long
+        get() = properties.getProperty(MOUSE_POLLING_RATE_KEY, "100").toLongOrNull() ?: 100L
+        set(value) {
+            properties.setProperty(MOUSE_POLLING_RATE_KEY, value.toString())
+            save()
+        }
+
+    var systemPollingRate: Long
+        get() = properties.getProperty(SYSTEM_POLLING_RATE_KEY, "1000").toLongOrNull() ?: 1000L
+        set(value) {
+            properties.setProperty(SYSTEM_POLLING_RATE_KEY, value.toString())
+            save()
+        }
 
     private fun save() {
         FileOutputStream(configFile).use { properties.store(it, "OpenMacropadServer Settings") }

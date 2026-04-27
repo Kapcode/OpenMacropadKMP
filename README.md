@@ -32,6 +32,11 @@ OpenMacropadKMP is a Kotlin Multiplatform project that transforms your Android d
 *   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
 *   **Inspector:** Utility to identify screen coordinates and pixel colors.
 *   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging. The toolbar supports **mouse-wheel horizontal scrolling** and features a high-visibility **custom scrollbar**.
+*   **Advanced Automation Engine:** A professional-grade stateful automation suite integrated with **GraalVM** for high-performance JavaScript scripting.
+    *   **Logic-Driven Routines**: Create "If/Then" logic based on system variables (e.g., "If window is Photoshop AND mouse_y > 800").
+    *   **Multi-Trigger Stacks**: Assign multiple independent triggers (Hotkeys, sequences, or state changes) to a single routine.
+    *   **Live Variable Inspector**: Real-time sidebar dashboard for monitoring mouse coordinates, pixel colors, window titles, and system clipboard state.
+    *   **Granular Performance Tuning**: Individual polling rate controls for Window, Input, and System data to balance responsiveness with CPU load.
 
 ### Android Client
 *   **Rich Widget Support:** Interface to execute desktop macros from a mobile device with real-time execution feedback. Supports multiple widget variants:

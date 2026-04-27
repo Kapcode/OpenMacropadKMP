@@ -75,14 +75,17 @@ The Android app gains a dynamic, searchable interface for managing macros and pa
 - [DONE] Multi-Step Picker: Support choosing widget variants (Button vs. Slider) when adding to the dashboard.
 - [DONE] Persistence Migration: Upgrade SharedPreferences storage to support complex `GridWidget` objects with backward compatibility.
 
-## Phase 6: Advanced Automation & Scripting [IN PROGRESS]
+## Phase 6: Advanced Automation & Scripting [DONE]
 Transition the project into a stateful, logic-driven ecosystem.
 - [x] Automation AST: Defined sealed classes for complex triggers (Hold, Multi-tap, Sequence) and logic blocks.
-- [/] GraalVM Integration: Integrating GraalVM JS engine into the JVM server for high-performance scripting.
-- [x] Visual Routine Builder: Block-based editor UI on Android for building complex automation routines.
-- [x] Coordinate Capture: Tool to capture mouse coordinates from the desktop and sync them to the client.
-- [x] Macro Dialog Enhancements: Updated New Event and Record Macro dialogs with complex triggers and trusted client selection.
-- [x] State Machine Triggers: Refactor TriggerListener to support the new AST-based complex triggers.
+- [x] GraalVM Integration: Integrated GraalVM JS engine into the JVM server for high-performance scripting.
+- [x] Visual Routine Builder: Block-based editor UI (shared) for building complex automation routines.
+- [x] Window Context: Support for `current_window_title` and `ActiveWindowTitleIs` conditions.
+- [x] Multi-Trigger Stacks: Support for multiple independent triggers per routine.
+- [x] Live Variable Inspector: Real-time dashboard for mouse, window, and system state.
+- [x] Polling Controls: Granular settings for Window, Input, and System refresh rates.
+- [x] Variable Picker: Categorized dropdown with live previews for routine building.
+- [x] State Machine Triggers: Refactored TriggerListener for AST-based complex triggers.
 - [x] Context Watcher 2.0: Enhanced X11 context watching using `xprop` for better compatibility.
 
 ## Phase 7: Validation & Hardening [IN PROGRESS]

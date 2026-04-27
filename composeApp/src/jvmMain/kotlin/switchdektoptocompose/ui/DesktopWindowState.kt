@@ -10,6 +10,7 @@ import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import kotlinx.coroutines.*
 import java.awt.GraphicsEnvironment
+import java.awt.MouseInfo
 
 class DesktopWindowState(
     val windowState: WindowState,
@@ -22,6 +23,40 @@ class DesktopWindowState(
     var isTransitioning by mutableStateOf(false)
         private set
     private var animationJob: Job? = null
+
+    init {
+        applyInitialPlacement()
+    }
+
+    private fun applyInitialPlacement() {
+        val ge = GraphicsEnvironment.getLocalGraphicsEnvironment()
+        val screens = ge.screenDevices
+        val mode = settingsViewModel.windowPlacementMode.value
+        val index = settingsViewModel.windowMonitorIndex.value
+
+        println("Applying initial placement. Mode: $mode, Index: $index, Screens detected: ${screens.size}")
+
+        val targetBounds = when (mode) {
+            "INDEX" -> {
+                if (index >= 0 && index < screens.size) {
+                    screens[index].defaultConfiguration.bounds
+                } else ge.maximumWindowBounds
+            }
+            "CURSOR" -> {
+                val mouseLoc = MouseInfo.getPointerInfo().location
+                println("Cursor location: $mouseLoc")
+                screens.find { it.defaultConfiguration.bounds.contains(mouseLoc) }?.defaultConfiguration?.bounds
+                    ?: ge.maximumWindowBounds
+            }
+            else -> ge.maximumWindowBounds // PRIMARY
+        }
+
+        println("Target bounds for placement: $targetBounds")
+
+        windowState.placement = WindowPlacement.Floating // Force floating to allow positioning
+        windowState.position = WindowPosition(targetBounds.x.dp + 100.dp, targetBounds.y.dp + 100.dp)
+        windowState.size = DpSize(1200.dp, 800.dp) // Set a reasonable default size if not maximized
+    }
 
     fun toggleWindow() {
         if (isWindowVisible && !windowState.isMinimized && !isTransitioning) {

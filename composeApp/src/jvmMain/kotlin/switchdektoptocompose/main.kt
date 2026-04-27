@@ -58,6 +58,8 @@ fun main(args: Array<String>) = application {
     var showShortcutsDialog by remember { mutableStateOf(false) }
     var showPushSettingsDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
+    var initialScrollToSecurity by remember { mutableStateOf(false) }
+    var initialScrollToVariables by remember { mutableStateOf(false) }
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
@@ -74,7 +76,7 @@ fun main(args: Array<String>) = application {
     val inspectKeyShortcut by settingsViewModel.inspectKeyShortcut.collectAsState()
 
     LaunchedEffect(macroFiles, macroPacks, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
-        val routines = macroPacks.flatMap { it.pack.routines }
+        val routines = macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }
         triggerListener.updateActiveTriggers(
             macroFiles,
             eStopKey,
@@ -174,7 +176,9 @@ fun main(args: Array<String>) = application {
             showPushSettingsDialog = showPushSettingsDialog,
             onShowPushSettingsDialogChange = { showPushSettingsDialog = it },
             showSettingsDialog = showSettingsDialog,
-            onShowSettingsDialogChange = { showSettingsDialog = it }
+            onShowSettingsDialogChange = { showSettingsDialog = it },
+            initialScrollToVariables = initialScrollToVariables,
+            onInitialScrollToVariablesChange = { initialScrollToVariables = it }
         )
     }
 }

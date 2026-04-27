@@ -76,6 +76,16 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
 - **Minimize Animation**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area when "Exit to Tray" is triggered (respecting the `animateToTray` setting).
 - **Tray Interaction**: Single-click on the tray icon toggles window visibility; right-click provides an OS-native context menu. Manual "Exit" triggers from the tray or UI header bypass the "Tray" setting to ensure the user can always fully quit the application.
 
+### Integrated Inspection & Context Awareness
+- **Live Variable Inspector**: The Inspector pane provides a real-time, scrolling dashboard of system variables:
+    - **Window Context**: Current/Last process names and full window titles.
+    - **Input Context**: Real-time mouse coordinates and pixel colors.
+    - **System Context**: Clipboard text and system timers.
+- **Visual Routine Builder**: A shared, block-based UI for creating complex automation.
+    - **Triggers**: Supports a "stack" of multiple triggers per routine.
+    - **Actions**: Provides dedicated editors for low-level keyboard/mouse events, scripts, and macro execution.
+    - **Variables**: Integrated `VariablePickerField` allows selecting system variables with live previews directly in the dropdown.
+
 ## 3. Accessibility & Usability
 
 ### High-Visibility Scrollbars

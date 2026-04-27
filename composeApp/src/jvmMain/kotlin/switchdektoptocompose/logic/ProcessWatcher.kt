@@ -8,13 +8,23 @@ import java.io.BufferedReader
 import java.io.InputStreamReader
 
 class ProcessWatcher(
-    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
+    private val getPollingRate: () -> Long = { 250L }
 ) {
     private val _activeProcess = MutableStateFlow<String?>(null)
     val activeProcess = _activeProcess.asStateFlow()
 
     private val _focusHistory = MutableStateFlow<List<ActiveProcessInfo>>(emptyList())
     val focusHistory = _focusHistory.asStateFlow()
+
+    private val _lastProcess = MutableStateFlow<String?>(null)
+    val lastProcess = _lastProcess.asStateFlow()
+
+    private val _activeTitle = MutableStateFlow<String?>(null)
+    val activeTitle = _activeTitle.asStateFlow()
+
+    private val _lastTitle = MutableStateFlow<String?>(null)
+    val lastTitle = _lastTitle.asStateFlow()
 
     private var watchJob: Job? = null
 
@@ -23,12 +33,16 @@ class ProcessWatcher(
         watchJob = scope.launch {
             while (isActive) {
                 val info = getActiveProcessInfo()
-                val currentProcess = info?.name
-                if (currentProcess != _activeProcess.value) {
-                    _activeProcess.value = currentProcess
-                    info?.let { updateHistory(it) }
+                if (info != null && (info.name != _activeProcess.value || info.windowTitle != _activeTitle.value)) {
+                    _lastProcess.value = _activeProcess.value
+                    _activeProcess.value = info.name
+                    
+                    _lastTitle.value = _activeTitle.value
+                    _activeTitle.value = info.windowTitle
+                    
+                    updateHistory(info)
                 }
-                delay(2000) // Check every 2 seconds
+                delay(getPollingRate())
             }
         }
     }

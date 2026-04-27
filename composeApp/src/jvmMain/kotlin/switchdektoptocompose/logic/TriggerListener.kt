@@ -24,7 +24,7 @@ class TriggerListener(
     private val onTrigger: (MacroFileState) -> Unit
 ) : NativeKeyListener {
 
-    private val evaluator = SequenceEvaluator(
+    val evaluator = SequenceEvaluator(
         viewModel,
         onTriggerRoutine = { routine -> viewModel.macroManagerViewModel.onTriggerRoutine(routine) },
         onTriggerMacro = { macro -> onTrigger(macro) }
@@ -70,30 +70,34 @@ class TriggerListener(
 
         // Parse advanced routines
         routines.forEach { routine ->
-            val keyCodes = when (val t = routine.trigger) {
-                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> KeyParser.parseNativeHookKeys(t.keyName)
-                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> KeyParser.parseNativeHookKeys(t.keyName)
-                is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> KeyParser.parseNativeHookKeys(t.keys.joinToString(","))
-            }
-            
-            if (keyCodes.isNotEmpty()) {
-                val triggerType = when (routine.trigger) {
-                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> TriggerType.HOLD
-                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> TriggerType.MULTI_TAP
-                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> TriggerType.SEQUENCE
+            routine.triggers.forEach { trigger ->
+                val keyCodes = when (trigger) {
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> KeyParser.parseNativeHookKeys(trigger.keyName)
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> KeyParser.parseNativeHookKeys(trigger.keyName)
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> KeyParser.parseNativeHookKeys(trigger.keys.joinToString(","))
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet -> emptyList()
                 }
                 
-                unifiedTriggers.add(UnifiedTrigger(
-                    id = routine.id,
-                    keyCodes = keyCodes,
-                    triggerType = triggerType,
-                    durationMs = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold)?.durationMs ?: 0L,
-                    tapCount = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.tapCount ?: 0,
-                    windowMs = (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.windowMs 
-                        ?: (routine.trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence)?.windowMs ?: 0L,
-                    confirmationRequired = false, // Routines handle confirmation internally if needed
-                    routine = routine
-                ))
+                if (keyCodes.isNotEmpty()) {
+                    val triggerType = when (trigger) {
+                        is com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold -> TriggerType.HOLD
+                        is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> TriggerType.MULTI_TAP
+                        is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> TriggerType.SEQUENCE
+                        is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet -> TriggerType.RELEASE // Placeholder
+                    }
+                    
+                    unifiedTriggers.add(UnifiedTrigger(
+                        id = "${routine.id}_${trigger.hashCode()}",
+                        keyCodes = keyCodes,
+                        triggerType = triggerType,
+                        durationMs = (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.KeyHold)?.durationMs?.toLongOrNull() ?: 0L,
+                        tapCount = (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.tapCount?.toIntOrNull() ?: 0,
+                        windowMs = (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.windowMs?.toLongOrNull() 
+                            ?: (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence)?.windowMs?.toLongOrNull() ?: 0L,
+                        confirmationRequired = false, 
+                        routine = routine
+                    ))
+                }
             }
         }
 

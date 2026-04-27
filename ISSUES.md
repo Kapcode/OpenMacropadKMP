@@ -14,6 +14,14 @@ This document tracks identified security risks that have not yet been fully miti
 - **Description**: Clicking the standard "X" (close) button on the Desktop application immediately terminates the process or minimizes to tray based on settings, without a unified confirmation dialog that offers all options.
 - **Status**: ✅ **Fixed**. Implemented a three-option `exitBehavior` system (**Ask, Exit to Tray, Just Exit**) that is consistently applied across the Window [X] button, Tray Menu, and UI Header.
 
+### 3. Routine Builder NPE on Condition Change
+- **Description**: Switching between different condition types in the `VisualRoutineBuilder` would occasionally throw a `NullPointerException` if the condition state was not handled atomically.
+- **Status**: ✅ **Fixed**. Implemented safe state-copying and explicit null-handling in the builder UI.
+
+### 4. Tab Focus Traversal in Desktop TextFields
+- **Description**: Pressing the Tab key in an `OutlinedTextField` on Desktop would type a tab character into the field instead of moving focus to the next item.
+- **Status**: ✅ **Fixed**. Implemented a custom `tabFocus()` modifier that intercepts the Tab key event and manually triggers the `FocusManager`.
+
 ---
 
 ## ✅ Resolved

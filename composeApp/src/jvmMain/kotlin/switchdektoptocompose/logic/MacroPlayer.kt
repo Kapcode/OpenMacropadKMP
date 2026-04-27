@@ -13,7 +13,12 @@ import java.awt.Robot
 import java.awt.event.InputEvent
 import java.awt.event.KeyEvent
 
-class MacroPlayer {
+class MacroPlayer(
+    private val onLog: (LogLevel, String) -> Unit = { _, _ -> },
+    private val getActiveProcess: () -> String? = { null },
+    private val onPlayMacroRequested: (String) -> Unit = { },
+    private val onNotify: (String) -> Unit = { }
+) {
     private val robot = Robot().apply {
         isAutoWaitForIdle = true
         autoDelay = 0 // We will handle delays manually to allow cancellation
@@ -50,11 +55,41 @@ class MacroPlayer {
         fun delay(ms: Long) {
             Thread.sleep(ms)
         }
+        fun log(message: String) {
+            onLog(LogLevel.Info, "[JS] $message")
+        }
+        fun getActiveProcess(): String? {
+            return this@MacroPlayer.getActiveProcess()
+        }
+        fun playMacro(macroId: String) {
+            onPlayMacroRequested(macroId)
+        }
+        fun notify(message: String) {
+            onNotify(message)
+        }
+        fun getClipboardText(): String? {
+            return try {
+                val transferable = java.awt.Toolkit.getDefaultToolkit().systemClipboard.getContents(null)
+                if (transferable != null && transferable.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.stringFlavor)) {
+                    transferable.getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
+                } else null
+            } catch (e: Exception) { null }
+        }
+        fun setClipboardText(text: String) {
+            try {
+                val selection = java.awt.datatransfer.StringSelection(text)
+                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+            } catch (e: Exception) { }
+        }
     }
 
     suspend fun executeScript(script: String) {
         withContext(Dispatchers.Default) {
-            jsContext.eval("js", script)
+            try {
+                jsContext.eval("js", script)
+            } catch (e: Exception) {
+                onLog(LogLevel.Error, "Script error: ${e.message}")
+            }
         }
     }
 
@@ -110,8 +145,11 @@ class MacroPlayer {
                         }
                     }
                     is MacroEventState.ScrollEvent -> {
-                        robot.mouseWheel(event.scrollAmount)
+                        robot.mouseWheel(-event.scrollAmount)
                         delay(currentAutoDelay)
+                    }
+                    is MacroEventState.ScriptEvent -> {
+                        executeScript(event.script)
                     }
                 }
             }

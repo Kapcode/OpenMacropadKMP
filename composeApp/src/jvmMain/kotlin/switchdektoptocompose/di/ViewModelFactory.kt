@@ -37,7 +37,12 @@ object ViewModelFactory {
         val consoleViewModel = remember { ConsoleViewModel() }
         val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
         
-        val processWatcher = remember { ProcessWatcher(CoroutineScope(Dispatchers.Main)) }
+        val processWatcher = remember { 
+            ProcessWatcher(
+                scope = CoroutineScope(Dispatchers.Main),
+                getPollingRate = { settingsViewModel.windowPollingRate.value }
+            ) 
+        }
         val inspectorViewModel = remember { InspectorViewModel(consoleViewModel, processWatcher) }
         
         val clientCommunicationViewModel = remember { 
@@ -112,6 +117,10 @@ object ViewModelFactory {
             }
         }
 
+        val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+        val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
+        val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
+
         // Wire up late dependencies and circular references
         remember(macroManagerViewModel, macroEditorViewModel, serverViewModel, clientCommunicationViewModel) {
             macroManagerViewModel.onEditMacroRequested = { macroState ->
@@ -123,10 +132,6 @@ object ViewModelFactory {
             macroManagerViewModel.serverViewModel = serverViewModel
             desktopViewModel.macroManagerViewModel = macroManagerViewModel
         }
-
-        val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
-        val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
-        val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
 
         return DesktopViewModels(
             desktopViewModel = desktopViewModel,

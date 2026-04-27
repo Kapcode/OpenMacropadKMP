@@ -22,8 +22,10 @@ class PackManager {
 
     fun activatePack(packId: String) {
         val pack = _installedPacks.value.find { it.id == packId }
-        _activePack.value = pack
-        _activeLayerId.value = "default"
+        if (pack?.isActive == true) {
+            _activePack.value = pack
+            _activeLayerId.value = "default"
+        }
     }
 
     fun switchLayer(layerId: String) {
@@ -32,7 +34,7 @@ class PackManager {
 
     fun handleActiveProcessChanged(processName: String?) {
         val autoPack = _installedPacks.value.find { 
-            it.targetProcess?.equals(processName, ignoreCase = true) == true 
+            it.targetProcess?.equals(processName, ignoreCase = true) == true && it.isActive
         }
         if (autoPack != null) {
             _activePack.value = autoPack

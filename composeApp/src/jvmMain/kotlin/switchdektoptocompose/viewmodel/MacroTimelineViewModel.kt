@@ -166,6 +166,10 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                     eventJson.put("type", "set_auto_wait")
                     eventJson.put("value", event.delayMs)
                 }
+                is MacroEventState.ScriptEvent -> {
+                    eventJson.put("type", "script")
+                    eventJson.put("content", event.script)
+                }
             }
             eventsJsonArray.put(eventJson)
         }
@@ -207,6 +211,7 @@ class MacroTimelineViewModel(private val macroEditorViewModel: MacroEditorViewMo
                             "scroll" -> newEvents.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
                             "delay" -> newEvents.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
                             "set_auto_wait" -> newEvents.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
+                            "script" -> newEvents.add(MacroEventState.ScriptEvent(eventObj.getString("content")))
                         }
                     }
                 }

@@ -38,7 +38,7 @@ data class MacroManagerState(
 )
 
 class MacroManagerViewModel(
-    private val settingsViewModel: SettingsViewModel,
+    val settingsViewModel: SettingsViewModel,
     private val consoleViewModel: ConsoleViewModel,
     var serverViewModel: ServerViewModel? = null,
     var onEditMacroRequested: (MacroFileState) -> Unit,
@@ -128,9 +128,24 @@ class MacroManagerViewModel(
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
 
-    private val macroPlayer = MacroPlayer()
+    private val macroPlayer = MacroPlayer(
+        onLog = { level, msg -> consoleViewModel.addLog(level, msg) },
+        getActiveProcess = { _uiState.value.currentActiveProcess },
+        onPlayMacroRequested = { macroId -> 
+            _uiState.value.macroFiles.find { it.id == macroId }?.let { onPlayMacro(it) }
+        },
+        onNotify = { msg -> showSystemNotification(msg) }
+    )
 
+    @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)
+    private val prettyJson = Json { 
+        ignoreUnknownKeys = true 
+        prettyPrint = true
+        prettyPrintIndent = "    "
+    }
     private val json = Json { ignoreUnknownKeys = true }
+    private val variables = mutableMapOf<String, String>()
+    private val lastTriggeredRoutine = mutableMapOf<String, Boolean>()
 
     private val activeMacrosFile = File(System.getProperty("user.home"), ".open-macropad-active-macros.properties")
     private val activeMacrosProps = Properties()
@@ -140,6 +155,14 @@ class MacroManagerViewModel(
         viewModelScope.launch {
             settingsViewModel.macroDirectory.collect { directoryPath ->
                 loadMacrosFromDisk(directoryPath)
+            }
+        }
+        
+        // Periodic background pulse for state triggers (e.g. catch clipboard changes while UI is open)
+        viewModelScope.launch(Dispatchers.Default) {
+            while(isActive) {
+                delay(settingsViewModel.systemPollingRate.value)
+                evaluateStateTriggers()
             }
         }
     }
@@ -159,15 +182,23 @@ class MacroManagerViewModel(
         val allFiles = if (!macroDir.exists() || !macroDir.isDirectory) {
             emptyList()
         } else {
-            macroDir.listFiles { _, name -> name.endsWith(".json", ignoreCase = true) }?.toList() ?: emptyList()
+            macroDir.listFiles { _, name -> 
+                name.endsWith(".json", ignoreCase = true) || name.endsWith(".js", ignoreCase = true)
+            }?.toList() ?: emptyList()
         }
 
         val fileMacros = allFiles.filter { !it.name.endsWith("_pack.json", ignoreCase = true) }
             .mapNotNull { file ->
                 try {
                     val content = file.readText()
-                    val trigger = JSONObject(content).optJSONObject("trigger")
-                    val allowedClients = trigger?.optString("allowedClients", "") ?: ""
+                    val (trigger, allowedClients) = if (file.name.endsWith(".json", ignoreCase = true)) {
+                        val json = JSONObject(content)
+                        val t = json.optJSONObject("trigger")
+                        t to (t?.optString("allowedClients", "") ?: "")
+                    } else {
+                        null to "" // JS files don't have built-in triggers yet
+                    }
+
                     val isActive = activeMacrosProps.getProperty(file.absolutePath, "false").toBoolean()
                     MacroFileState(
                         id = file.absolutePath,
@@ -226,12 +257,64 @@ class MacroManagerViewModel(
 
     fun onTriggerRoutine(routine: com.kapcode.open.macropad.kmps.models.AutomationRoutine) {
         viewModelScope.launch {
+            // Check if routine belongs to a pack and if that pack's window conditions are met
+            val parentPack = _uiState.value.macroPacks.find { it.pack.routines.any { r -> r.id == routine.id } }?.pack
+            if (parentPack != null) {
+                val isProcessMatch = parentPack.targetProcess == null || 
+                    _uiState.value.currentActiveProcess?.contains(parentPack.targetProcess, ignoreCase = true) == true
+                val isTitleMatch = parentPack.targetWindowTitle == null || 
+                    getSystemVariable("current_window_title")?.contains(parentPack.targetWindowTitle, ignoreCase = true) == true
+                
+                if (!isProcessMatch || !isTitleMatch) {
+                    // Routine belongs to a pack but the focus conditions are not met
+                    return@launch
+                }
+            }
+
             if (executionMutex.tryLock()) {
                 try {
                     consoleViewModel.addLog(LogLevel.Info, "Routine triggered: ${routine.name}")
+                    var currentAutoDelay = 50L
                     routine.logicBlocks.forEach { block ->
                         if (evaluateCondition(block.condition)) {
-                            executeActions(block.actions)
+                            block.actions.forEach { action ->
+                                when (action) {
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.SetAutoDelay -> {
+                                        currentAutoDelay = resolveToLong(action.delayMs)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.SetVariable -> {
+                                        setVariable(action.name, action.value)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.KeyEvent -> {
+                                        executeKeyEvent(action)
+                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.MouseEvent -> {
+                                        executeMouseEvent(action)
+                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.MouseButtonEvent -> {
+                                        executeMouseButtonEvent(action)
+                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.ScrollEvent -> {
+                                        macroPlayer.play(listOf(MacroEventState.ScrollEvent(resolveToInt(action.amount))))
+                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.DelayEvent -> {
+                                        kotlinx.coroutines.delay(resolveToLong(action.durationMs))
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.ScriptAction -> {
+                                        macroPlayer.executeScript(action.script)
+                                    }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.MacroAction -> {
+                                        _uiState.value.macroFiles.find { it.id == action.macroId }?.let {
+                                            onPlayMacro(it)
+                                        }
+                                    }
+                                    else -> { /* Handle others */ }
+                                }
+                            }
                         }
                     }
                 } finally {
@@ -241,28 +324,127 @@ class MacroManagerViewModel(
         }
     }
 
+    fun setVariable(name: String, value: String) {
+        val resolvedValue = getSystemVariable(value) ?: value
+        if (name == "clipboard_text") {
+            try {
+                val selection = java.awt.datatransfer.StringSelection(resolvedValue)
+                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+            } catch (e: Exception) { e.printStackTrace() }
+        } else {
+            variables[name] = resolvedValue
+        }
+        evaluateStateTriggers()
+    }
+
+    fun getSystemVariable(name: String): String? {
+        return when (name) {
+            "current_window_name" -> _uiState.value.currentActiveProcess ?: ""
+            "last_window_name" -> serverViewModel?.processWatcher?.lastProcess?.value ?: ""
+            "current_window_title" -> serverViewModel?.processWatcher?.activeTitle?.value ?: ""
+            "last_window_title" -> serverViewModel?.processWatcher?.lastTitle?.value ?: ""
+            "mouse_x" -> try { java.awt.MouseInfo.getPointerInfo().location.x.toString() } catch(e: Exception) { "0" }
+            "mouse_y" -> try { java.awt.MouseInfo.getPointerInfo().location.y.toString() } catch(e: Exception) { "0" }
+            "pixel_color_at_cursor" -> {
+                try {
+                    val info = java.awt.MouseInfo.getPointerInfo()
+                    if (info != null) {
+                        val loc = info.location
+                        val color = java.awt.Robot().getPixelColor(loc.x, loc.y)
+                        String.format("#%02x%02x%02x", color.red, color.green, color.blue)
+                    } else "#000000"
+                } catch(e: Exception) { "#000000" }
+            }
+            "clipboard_text" -> {
+                try {
+                    val transferable = java.awt.Toolkit.getDefaultToolkit().systemClipboard.getContents(null)
+                    if (transferable != null && transferable.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.stringFlavor)) {
+                        transferable.getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
+                    } else ""
+                } catch (e: Exception) { "" }
+            }
+            "current_time_ms" -> System.currentTimeMillis().toString()
+            else -> variables[name]
+        }
+    }
+
+    private fun evaluateStateTriggers() {
+        _uiState.value.macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }.forEach { routine ->
+            routine.triggers.forEach { trigger ->
+                if (trigger is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet) {
+                    val triggerId = "${routine.id}_${trigger.hashCode()}"
+                    val isMet = evaluateCondition(trigger.condition)
+                    val wasMet = lastTriggeredRoutine[triggerId] ?: false
+                    
+                    if (isMet && !wasMet) {
+                        onTriggerRoutine(routine)
+                    }
+                    lastTriggeredRoutine[triggerId] = isMet
+                }
+            }
+        }
+    }
+
+    private fun resolveToLong(input: String): Long {
+        return getSystemVariable(input)?.toLongOrNull() ?: input.toLongOrNull() ?: 0L
+    }
+
+    private fun resolveToInt(input: String): Int {
+        return getSystemVariable(input)?.toIntOrNull() ?: input.toIntOrNull() ?: 0
+    }
+
+    private suspend fun executeKeyEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.KeyEvent) {
+        if (action.type == "TYPE") {
+            action.keyName.forEach { char ->
+                macroPlayer.play(listOf(
+                    MacroEventState.KeyEvent(char.toString(), KeyAction.PRESS),
+                    MacroEventState.KeyEvent(char.toString(), KeyAction.RELEASE)
+                ))
+            }
+        } else {
+            val keyAction = if (action.type == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
+            macroPlayer.play(listOf(MacroEventState.KeyEvent(action.keyName, keyAction)))
+        }
+    }
+
+    private suspend fun executeMouseEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.MouseEvent) {
+        val mouseAction = if (action.type == "MOVE") MouseAction.MOVE else MouseAction.CLICK
+        macroPlayer.play(listOf(MacroEventState.MouseEvent(resolveToInt(action.x), resolveToInt(action.y), mouseAction, action.isAnimated)))
+    }
+
+    private suspend fun executeMouseButtonEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.MouseButtonEvent) {
+        val keyAction = if (action.type == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
+        macroPlayer.play(listOf(MacroEventState.MouseButtonEvent(resolveToInt(action.buttonNumber), keyAction)))
+    }
+
     private fun evaluateCondition(condition: com.kapcode.open.macropad.kmps.models.AutomationCondition?): Boolean {
         if (condition == null) return true
         return when (condition) {
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.ActiveWindowIs -> {
-                _uiState.value.currentActiveProcess?.equals(condition.processName, ignoreCase = true) == true
+                _uiState.value.currentActiveProcess?.contains(condition.processName, ignoreCase = true) == true
             }
-            else -> false // Handle other conditions as needed
-        }
-    }
-
-    private suspend fun executeActions(actions: List<com.kapcode.open.macropad.kmps.models.AutomationAction>) {
-        actions.forEach { action ->
-            when (action) {
-                is com.kapcode.open.macropad.kmps.models.AutomationAction.ScriptAction -> {
-                    macroPlayer.executeScript(action.script)
-                }
-                is com.kapcode.open.macropad.kmps.models.AutomationAction.MacroAction -> {
-                    _uiState.value.macroFiles.find { it.id == action.macroId }?.let {
-                        onPlayMacro(it)
-                    }
-                }
-                else -> { /* Handle others */ }
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.ActiveWindowTitleIs -> {
+                getSystemVariable("current_window_title")?.contains(condition.windowTitle, ignoreCase = true) == true
+            }
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.Equals -> {
+                val current = getSystemVariable(condition.variable)
+                val target = getSystemVariable(condition.value) ?: condition.value
+                current == target
+            }
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.GreaterThan -> {
+                val varVal = getSystemVariable(condition.variable)?.toDoubleOrNull() ?: 0.0
+                val targetVal = getSystemVariable(condition.value)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
+                varVal > targetVal
+            }
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.LessThan -> {
+                val varVal = getSystemVariable(condition.variable)?.toDoubleOrNull() ?: 0.0
+                val targetVal = getSystemVariable(condition.value)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
+                varVal < targetVal
+            }
+            is com.kapcode.open.macropad.kmps.models.AutomationCondition.Contains -> {
+                val current = getSystemVariable(condition.variable)
+                val target = getSystemVariable(condition.substring) ?: condition.substring
+                current?.contains(target, ignoreCase = true) == true
             }
         }
     }
@@ -282,8 +464,14 @@ class MacroManagerViewModel(
                     consoleViewModel.addLog(LogLevel.Info, logStart)
                     val startTime = System.currentTimeMillis()
                     val content = macro.file?.readText() ?: macro.content
-                    val events = parseEventsFromJson(content)
-                    MacroPlayer().play(events)
+                    
+                    if (macro.file?.name?.endsWith(".js", ignoreCase = true) == true) {
+                        macroPlayer.executeScript(content)
+                    } else {
+                        val events = parseEventsFromJson(content)
+                        macroPlayer.play(events)
+                    }
+
                     val duration = System.currentTimeMillis() - startTime
                     val logFinish = "<<< MACRO FINISHED: ${macro.name} (Duration: ${duration}ms)"
                     println(logFinish)
@@ -529,16 +717,35 @@ class MacroManagerViewModel(
         }
     }
 
-    fun onToggleMacroActive(macroId: String, isActive: Boolean) {
-        _uiState.update { state ->
-            state.copy(
-                macroFiles = state.macroFiles.map {
-                    if (it.id == macroId) it.copy(isActive = isActive) else it
+    fun onToggleMacroActive(id: String, isActive: Boolean) {
+        if (id.startsWith("/")) {
+            _uiState.update { state ->
+                state.copy(
+                    macroFiles = state.macroFiles.map {
+                        if (it.id == id) it.copy(isActive = isActive) else it
+                    }
+                )
+            }
+            activeMacrosProps.setProperty(id, isActive.toString())
+            saveActiveMacros()
+        } else {
+            _uiState.update { state ->
+                val updatedPacks = state.macroPacks.map { packState ->
+                    if (packState.pack.id == id) {
+                        val updatedPack = packState.pack.copy(isActive = isActive)
+                        packState.file?.let { file ->
+                            try {
+                                val jsonString = json.encodeToString(updatedPack)
+                                file.writeText(jsonString)
+                            } catch (e: Exception) { e.printStackTrace() }
+                        }
+                        packState.copy(pack = updatedPack)
+                    } else packState
                 }
-            )
+                state.copy(macroPacks = updatedPacks)
+            }
         }
-        activeMacrosProps.setProperty(macroId, isActive.toString())
-        saveActiveMacros()
+        onMacrosUpdated()
     }
 
     fun onActiveProcessChanged(processName: String?) {
@@ -550,6 +757,8 @@ class MacroManagerViewModel(
         if (oldActivePack?.pack?.id != newActivePack?.pack?.id) {
             handlePackSwitch(oldActivePack?.pack, newActivePack?.pack)
         }
+        
+        evaluateStateTriggers()
     }
 
     private fun MacroPack.isActiveLive(activeProcess: String?): Boolean {
@@ -597,6 +806,7 @@ class MacroManagerViewModel(
     }
 
     fun onCreatePack() {
+        println("[PackLifecycle] Creating new pack...")
         val newPack = MacroPack(
             id = UUID.randomUUID().toString(),
             name = "New Pack",
@@ -604,27 +814,39 @@ class MacroManagerViewModel(
             version = "1.0.0",
             isActive = false
         )
-        _uiState.update { it.copy(packBeingEdited = newPack) }
+        _uiState.update { 
+            println("[PackLifecycle] Setting packBeingEdited for new pack: ${newPack.id}")
+            it.copy(packBeingEdited = newPack) 
+        }
     }
 
     fun onEditPack(pack: MacroPack) {
+        println("[PackLifecycle] Editing existing pack: ${pack.name} (${pack.id})")
         _uiState.update { it.copy(packBeingEdited = pack) }
     }
 
     fun onCancelPackEdit() {
+        println("[PackLifecycle] Cancelling pack edit.")
         _uiState.update { it.copy(packBeingEdited = null) }
     }
 
     fun onSavePack(pack: MacroPack) {
+        println("[PackLifecycle] Saving pack: ${pack.name} (${pack.id})")
         val filename = getPackFilename(pack.name)
         val file = File(settingsViewModel.macroDirectory.value, filename)
         try {
-            val content = json.encodeToString(MacroPack.serializer(), pack)
+            println("[PackLifecycle] Serializing pack data...")
+            val content = prettyJson.encodeToString(MacroPack.serializer(), pack)
+            println("[PackLifecycle] Writing to file: ${file.absolutePath}")
             file.writeText(content)
-            _uiState.update { it.copy(packBeingEdited = null) }
+            _uiState.update { 
+                println("[PackLifecycle] Resetting packBeingEdited to null after save.")
+                it.copy(packBeingEdited = null) 
+            }
             refresh()
             consoleViewModel.addLog(LogLevel.Info, "Pack '${pack.name}' saved to $filename")
         } catch (e: Exception) {
+            println("[PackLifecycle] ERROR saving pack: ${e.message}")
             consoleViewModel.addLog(LogLevel.Error, "Failed to save pack: ${e.message}")
             e.printStackTrace()
         }
@@ -650,12 +872,20 @@ class MacroManagerViewModel(
         val packState = _uiState.value.macroPacks.find { it.pack.id == pack.id }
         val file = packState?.file ?: File(settingsViewModel.macroDirectory.value, getPackFilename(pack.name))
 
-        if (file.exists()) {
+        // Serialize with indentation for the editor
+        val indentedContent = try {
+            prettyJson.encodeToString(MacroPack.serializer(), pack)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+
+        if (indentedContent != null) {
             val macroState = MacroFileState(
                 id = file.absolutePath,
                 file = file,
                 name = pack.name,
-                content = file.readText(),
+                content = indentedContent,
                 isActive = true
             )
             onEditMacroRequested(macroState)

@@ -77,4 +77,37 @@ fun UISettings(
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 4.dp)
     )
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
+    Text("Window Placement", style = MaterialTheme.typography.titleMedium)
+    Spacer(modifier = Modifier.height(8.dp))
+    Text(
+        "Choose which monitor the application window should open on.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+    Spacer(modifier = Modifier.height(16.dp))
+
+    val placementMode by settingsViewModel.windowPlacementMode.collectAsState()
+    val monitorIndex by settingsViewModel.windowMonitorIndex.collectAsState()
+
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RadioButton(selected = placementMode == "PRIMARY", onClick = { settingsViewModel.setWindowPlacementMode("PRIMARY") })
+        Text("Primary Monitor")
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RadioButton(selected = placementMode == "CURSOR", onClick = { settingsViewModel.setWindowPlacementMode("CURSOR") })
+        Text("Monitor with Cursor")
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        RadioButton(selected = placementMode == "INDEX", onClick = { settingsViewModel.setWindowPlacementMode("INDEX") })
+        Text("Monitor Index:")
+        OutlinedTextField(
+            value = monitorIndex.toString(),
+            onValueChange = { settingsViewModel.setWindowMonitorIndex(it.toIntOrNull() ?: 0) },
+            modifier = Modifier.width(80.dp),
+            enabled = placementMode == "INDEX"
+        )
+    }
 }

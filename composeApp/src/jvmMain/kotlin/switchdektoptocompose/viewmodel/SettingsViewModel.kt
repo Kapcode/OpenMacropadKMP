@@ -112,6 +112,21 @@ class SettingsViewModel {
     private val _notificationClientIds = MutableStateFlow(AppSettings.notificationClientIds.split(",").filter { it.isNotBlank() }.toSet())
     val notificationClientIds = _notificationClientIds.asStateFlow()
 
+    private val _windowPlacementMode = MutableStateFlow(AppSettings.windowPlacementMode)
+    val windowPlacementMode = _windowPlacementMode.asStateFlow()
+
+    private val _windowMonitorIndex = MutableStateFlow(AppSettings.windowMonitorIndex)
+    val windowMonitorIndex = _windowMonitorIndex.asStateFlow()
+
+    private val _windowPollingRate = MutableStateFlow(AppSettings.windowPollingRate)
+    val windowPollingRate = _windowPollingRate.asStateFlow()
+
+    private val _mousePollingRate = MutableStateFlow(AppSettings.mousePollingRate)
+    val mousePollingRate = _mousePollingRate.asStateFlow()
+
+    private val _systemPollingRate = MutableStateFlow(AppSettings.systemPollingRate)
+    val systemPollingRate = _systemPollingRate.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -325,6 +340,31 @@ class SettingsViewModel {
     fun setAllNotificationClients(clientIds: Set<String>) {
         _notificationClientIds.value = clientIds
         AppSettings.notificationClientIds = clientIds.joinToString(",")
+    }
+
+    fun setWindowPlacementMode(mode: String) {
+        _windowPlacementMode.value = mode
+        AppSettings.windowPlacementMode = mode
+    }
+
+    fun setWindowMonitorIndex(index: Int) {
+        _windowMonitorIndex.value = index
+        AppSettings.windowMonitorIndex = index
+    }
+
+    fun setWindowPollingRate(rate: Long) {
+        _windowPollingRate.value = rate
+        AppSettings.windowPollingRate = rate
+    }
+
+    fun setMousePollingRate(rate: Long) {
+        _mousePollingRate.value = rate
+        AppSettings.mousePollingRate = rate
+    }
+
+    fun setSystemPollingRate(rate: Long) {
+        _systemPollingRate.value = rate
+        AppSettings.systemPollingRate = rate
     }
 
     fun getSplitterPosition(name: String, default: Float): Float {

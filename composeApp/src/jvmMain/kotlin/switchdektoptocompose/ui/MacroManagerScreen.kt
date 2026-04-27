@@ -18,6 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -64,6 +65,7 @@ fun MacroManagerScreen(
     packBeingEdited?.let { pack ->
         PackEditorDialog(
             pack = pack,
+            macroManagerViewModel = viewModel,
             availableMacros = macroFiles,
             onDismissRequest = { viewModel.onCancelPackEdit() },
             onSave = { updatedPack -> viewModel.onSavePack(updatedPack) },
@@ -110,6 +112,7 @@ fun MacroManagerScreen(
                         isSelectionMode = isPackSelectionMode,
                         isSelected = uiState.selectedPackIds.contains(packState.pack.id),
                         isLiveActive = isLiveActive,
+                        onToggleActive = { viewModel.onToggleMacroActive(packState.pack.id, it) },
                         onToggleSelection = { viewModel.togglePackSelection(packState.pack.id, it) },
                         onEdit = { viewModel.onEditPack(packState.pack) },
                         onDelete = { viewModel.onDeletePack(packState.pack) }
@@ -238,6 +241,7 @@ private fun PackItem(
     isSelectionMode: Boolean,
     isSelected: Boolean,
     isLiveActive: Boolean,
+    onToggleActive: (Boolean) -> Unit,
     onToggleSelection: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit
@@ -246,7 +250,14 @@ private fun PackItem(
         modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant),
         colors = ListItemDefaults.colors(containerColor = Color.Transparent),
         headlineContent = {
-            Text(pack.name, maxLines = 1)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(pack.name, maxLines = 1, modifier = Modifier.weight(1f))
+                Switch(
+                    checked = pack.isActive,
+                    onCheckedChange = onToggleActive,
+                    modifier = Modifier.scale(0.7f).padding(0.dp)
+                )
+            }
         },
         supportingContent = {
             Column {

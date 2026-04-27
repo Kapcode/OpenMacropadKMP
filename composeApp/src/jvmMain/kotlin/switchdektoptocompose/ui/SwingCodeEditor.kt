@@ -14,13 +14,14 @@ fun SwingCodeEditor(
     text: String,
     onTextChange: (String) -> Unit,
     isDark: Boolean,
+    syntaxStyle: String = "text/json",
     modifier: Modifier = Modifier
 ) {
     SwingPanel(
         modifier = modifier,
         factory = {
             val textArea = RSyntaxTextArea().apply {
-                syntaxEditingStyle = SyntaxConstants.SYNTAX_STYLE_JSON
+                this.syntaxEditingStyle = syntaxStyle
                 isCodeFoldingEnabled = true
             }
 
@@ -39,6 +40,11 @@ fun SwingCodeEditor(
         update = { scrollPane ->
             val textArea = scrollPane.textArea as RSyntaxTextArea
             
+            // Update syntax style if it changed
+            if (textArea.syntaxEditingStyle != syntaxStyle) {
+                textArea.syntaxEditingStyle = syntaxStyle
+            }
+
             // Update theme if it changed
             val currentThemeIsDark = scrollPane.getClientProperty("isDark") as? Boolean
             if (currentThemeIsDark != isDark) {

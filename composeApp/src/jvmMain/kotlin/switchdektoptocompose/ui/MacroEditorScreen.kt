@@ -83,6 +83,7 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
                     viewModel.updateSelectedTabContent(newContent)
                 },
                 isDark = isDark,
+                syntaxStyle = currentTab.syntaxStyle,
                 modifier = Modifier.fillMaxSize().padding(8.dp)
             )
         } else {

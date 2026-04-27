@@ -20,6 +20,7 @@ sealed class MacroEventState(val id: String = UUID.randomUUID().toString()) {
     data class ScrollEvent(val scrollAmount: Int) : MacroEventState()
     data class DelayEvent(val durationMs: Long) : MacroEventState()
     data class SetAutoWaitEvent(val delayMs: Int) : MacroEventState()
+    data class ScriptEvent(val script: String) : MacroEventState()
 }
 
 enum class KeyAction { PRESS, RELEASE }

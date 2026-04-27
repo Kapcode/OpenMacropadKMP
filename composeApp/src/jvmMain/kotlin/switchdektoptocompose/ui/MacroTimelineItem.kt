@@ -42,6 +42,7 @@ fun MacroTimelineItem(
                     is MacroEventState.ScrollEvent -> ScrollItem(event)
                     is MacroEventState.DelayEvent -> DelayItem(event)
                     is MacroEventState.SetAutoWaitEvent -> SetAutoWaitItem(event)
+                    is MacroEventState.ScriptEvent -> ScriptItem(event)
                 }
             }
             
@@ -156,5 +157,22 @@ private fun SetAutoWaitItem(event: MacroEventState.SetAutoWaitEvent) {
         Text("AUTO DELAY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("Set automatic delay to ${event.delayMs} ms", style = MaterialTheme.typography.bodyMedium)
+    }
+}
+
+@Composable
+private fun ScriptItem(event: MacroEventState.ScriptEvent) {
+    Row(
+        modifier = Modifier.padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("SCRIPT", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = event.script.take(50).replace("\n", " ") + (if (event.script.length > 50) "..." else ""),
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+        )
     }
 }

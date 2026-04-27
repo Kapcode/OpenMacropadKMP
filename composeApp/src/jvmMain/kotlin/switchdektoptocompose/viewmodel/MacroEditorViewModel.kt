@@ -47,10 +47,17 @@ class MacroEditorViewModel(
         } else {
             try {
                 val content = fileToOpen?.readText() ?: macro.content
+                val syntaxStyle = if (fileToOpen?.name?.endsWith(".js", ignoreCase = true) == true) {
+                    "text/javascript"
+                } else {
+                    "text/json"
+                }
+                
                 val newTab = EditorTabState(
                     title = macro.name,
                     content = content,
-                    file = fileToOpen
+                    file = fileToOpen,
+                    syntaxStyle = syntaxStyle
                 )
                 _uiState.update { it.copy(tabs = it.tabs + newTab, selectedTabIndex = it.tabs.size) }
             } catch (e: Exception) {
@@ -62,7 +69,8 @@ class MacroEditorViewModel(
     fun addNewTab() {
         val newTab = EditorTabState(
             title = "New Macro",
-            content = "{\n    \"events\": []\n}"
+            content = "{\n    \"events\": []\n}",
+            syntaxStyle = "text/json"
         )
         _uiState.update { it.copy(tabs = it.tabs + newTab, selectedTabIndex = it.tabs.size) }
     }
