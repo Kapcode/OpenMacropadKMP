@@ -56,6 +56,7 @@ fun SettingsDialog(
     val toastDurationMs by settingsViewModel.toastDurationMs.collectAsState()
     val toastTarget by settingsViewModel.toastTarget.collectAsState()
     val notificationClientIds by settingsViewModel.notificationClientIds.collectAsState()
+    val controllerNavigationMode by settingsViewModel.controllerNavigationMode.collectAsState()
 
     // Connected Clients Settings
     val clientTheme by settingsViewModel.clientTheme.collectAsState()
@@ -106,6 +107,8 @@ fun SettingsDialog(
                     toastDurationMs, toastTarget, notificationClientIds, trustedDevices,
                     settingsViewModel, onShowShortcutsRequest
                 )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                ControllerSettings(controllerNavigationMode, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 UISettings(tooltipXOffset, tooltipYOffset, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

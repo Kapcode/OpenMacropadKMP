@@ -24,6 +24,7 @@ import androidx.compose.ui.window.rememberDialogState
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import switchdektoptocompose.model.MacroFileState
+import switchdektoptocompose.ui.components.AppTooltipArea
 import switchdektoptocompose.viewmodel.MacroManagerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -166,10 +167,16 @@ fun PackEditorDialog(
                         keyboardActions = commonKeyboardActions
                     )
                     
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Active Pack (Auto-switch)")
-                        Spacer(Modifier.weight(1f))
-                        Switch(checked = isActive, onCheckedChange = { isActive = it })
+                    AppTooltipArea(
+                        tooltipText = if (isActive) 
+                            "ENABLED: This pack will automatically activate on your phone when its target window is focused." 
+                            else "DISABLED: This pack will never auto-switch, even if its target window is open."
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Active Pack (Auto-switch)")
+                            Spacer(Modifier.weight(1f))
+                            Switch(checked = isActive, onCheckedChange = { isActive = it })
+                        }
                     }
                     
                     if (isActive) {

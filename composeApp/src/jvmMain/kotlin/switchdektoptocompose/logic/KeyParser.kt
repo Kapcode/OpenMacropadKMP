@@ -57,4 +57,13 @@ object KeyParser {
             .map { it.trim().uppercase() }
             .mapNotNull { nativeHookKeyMap[it] }
     }
+
+    fun getAllValidKeyNames(): List<String> {
+        return (awtKeyMap.keys + nativeHookKeyMap.keys).distinct().sorted()
+    }
+
+    fun isValidKey(name: String): Boolean {
+        val upper = name.trim().uppercase()
+        return awtKeyMap.containsKey(upper) || nativeHookKeyMap.containsKey(upper)
+    }
 }

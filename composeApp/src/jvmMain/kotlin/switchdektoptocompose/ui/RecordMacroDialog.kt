@@ -14,6 +14,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.open.macropad.kmps.ui.components.KeyValidationField
+import switchdektoptocompose.logic.KeyParser
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import switchdektoptocompose.viewmodel.ConsoleViewModel
 
@@ -105,10 +107,16 @@ fun RecordMacroDialog(
                             Text("Require GUI Confirmation", style = MaterialTheme.typography.labelLarge)
                         }
 
-                        OutlinedTextField(
+                        KeyValidationField(
+                            label = "Trigger Key(s)",
                             value = triggerKeysText,
                             onValueChange = { viewModel.triggerKeysText.value = it },
-                            label = { Text("Trigger Key(s)") },
+                            isValidKey = { KeyParser.isValidKey(it) },
+                            getSuggestions = { input ->
+                                val query = input.split('+', ',').lastOrNull()?.trim()?.uppercase() ?: ""
+                                if (query.isEmpty()) emptyList()
+                                else KeyParser.getAllValidKeyNames().filter { it.startsWith(query) }.take(5)
+                            },
                             modifier = Modifier.fillMaxWidth()
                         )
 

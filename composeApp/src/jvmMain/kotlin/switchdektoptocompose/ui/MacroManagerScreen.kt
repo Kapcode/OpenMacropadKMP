@@ -252,11 +252,17 @@ private fun PackItem(
         headlineContent = {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(pack.name, maxLines = 1, modifier = Modifier.weight(1f))
-                Switch(
-                    checked = pack.isActive,
-                    onCheckedChange = onToggleActive,
-                    modifier = Modifier.scale(0.7f).padding(0.dp)
-                )
+                AppTooltipArea(
+                    tooltipText = if (pack.isActive) 
+                        "AUTO-SWITCH ENABLED: This pack can activate when you use '${pack.targetProcess ?: "its target app"}'." 
+                        else "AUTO-SWITCH DISABLED: This pack will never activate on your phone."
+                ) {
+                    Switch(
+                        checked = pack.isActive,
+                        onCheckedChange = onToggleActive,
+                        modifier = Modifier.scale(0.7f).padding(0.dp)
+                    )
+                }
             }
         },
         supportingContent = {
@@ -265,15 +271,21 @@ private fun PackItem(
                 if (!pack.targetProcess.isNullOrBlank()) {
                     Text("Auto-switching: ${pack.targetProcess}", style = MaterialTheme.typography.bodySmall)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusText = if (isLiveActive) "(Activated)" else "(Not Activated)"
-                    val statusColor = if (isLiveActive) Color(0xFF00C853) else MaterialTheme.colorScheme.error
-                    Text(
-                        text = statusText,
-                        color = statusColor,
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
+                AppTooltipArea(
+                    tooltipText = if (isLiveActive) 
+                        "ACTIVE: This pack is currently displayed on your phone because the target app is focused." 
+                        else "INACTIVE: This pack is hidden because its target app is not focused or auto-switching is off."
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val statusText = if (isLiveActive) "(Activated)" else "(Not Activated)"
+                        val statusColor = if (isLiveActive) Color(0xFF00C853) else MaterialTheme.colorScheme.error
+                        Text(
+                            text = statusText,
+                            color = statusColor,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(top = 2.dp)
+                        )
+                    }
                 }
             }
         },

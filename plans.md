@@ -88,9 +88,24 @@ Transition the project into a stateful, logic-driven ecosystem.
 - [x] State Machine Triggers: Refactored TriggerListener for AST-based complex triggers.
 - [x] Context Watcher 2.0: Enhanced X11 context watching using `xprop` for better compatibility.
 
-## Phase 7: Validation & Hardening [IN PROGRESS]
-Ensuring the stability and security of the new automation ecosystem.
-- [ ] Comprehensive Trigger Testing: Validate all Chord/Sequence combinations across different OS environments.
-- [ ] JS Sandbox Verification: Rigorously test GraalVM restrictions to ensure no filesystem/system access.
-- [ ] Protocol Stress Test: Simulate high-frequency routine synchronization and execution requests.
-- [ ] UI/UX Polish: Final pass on Android's visual routine builder and Desktop's timeline editing flow.
+## Phase 7: Validation, Hardening & Controller Support [IN PROGRESS]
+- [x] Android Reconnection: Fix 'Connecting' freeze and duplicate server history buttons.
+- [x] Performance: Optimize `java.awt.Robot` (singleton) and implement per-pulse `variableCache` for routines.
+- [x] UI/UX Clarity: Add tooltips for Pack Activation states and live window focus.
+- [x] Input Validation: Live red-highlighting and suggestions for keyboard input fields.
+- [/] Controller Support:
+    - [x] Core Infrastructure: Integrate Jamepad (SDL2) and implement background polling.
+    - [x] Navigation Modes: Implement Standard Traversal and Virtual Cursor logic.
+    - [x] Automation Integration: Add Controller Button triggers and actions to the AST.
+    - [ ] Visual Feedback: Render the 'Virtual Cursor' dot in the Desktop UI overlay.
+    - [ ] Movement Safety: Implement screen/window boundary clamping for the virtual cursor.
+- [ ] Security Audit:
+    - [ ] GraalVM Sandbox: Verify `allowHostClassLookup { false }` effectively blocks file system and network access from JS.
+    - [ ] Log Cleanup: Verify if AWT clipboard warnings can be further suppressed if they persist.
+
+## Phase 8: Backward Compatibility & Legacy Support [NOT STARTED]
+Ensure the current server remains compatible with older client versions (v1.0 / last stable release).
+- [ ] Version Detection: Server identifies client protocol version during handshake.
+- [ ] Legacy Protocol Handler: Implement fallback logic for v1.0 clients (e.g., handling non-AST macro requests).
+- [ ] Compatibility Testing: Clone the `main` branch (v1.0) into a separate directory to run side-by-side tests with the current `dev` server.
+- [ ] Graceful Degradation: Ensure new features (like complex routines) either fallback safely or are hidden from older clients.

@@ -128,6 +128,8 @@ class MacroManagerViewModel(
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
 
+    private val robot = try { java.awt.Robot() } catch(e: Exception) { null }
+
     private val macroPlayer = MacroPlayer(
         onLog = { level, msg -> consoleViewModel.addLog(level, msg) },
         getActiveProcess = { _uiState.value.currentActiveProcess },
@@ -145,6 +147,7 @@ class MacroManagerViewModel(
     }
     private val json = Json { ignoreUnknownKeys = true }
     private val variables = mutableMapOf<String, String>()
+    private val variableCache = mutableMapOf<String, String>() // Per-pulse cache
     private val lastTriggeredRoutine = mutableMapOf<String, Boolean>()
 
     private val activeMacrosFile = File(System.getProperty("user.home"), ".open-macropad-active-macros.properties")
@@ -312,6 +315,9 @@ class MacroManagerViewModel(
                                             onPlayMacro(it)
                                         }
                                     }
+                                    is com.kapcode.open.macropad.kmps.models.AutomationAction.ControllerButton -> {
+                                        consoleViewModel.addLog(LogLevel.Info, "Simulated Controller Button: ${action.button}")
+                                    }
                                     else -> { /* Handle others */ }
                                 }
                             }
@@ -337,8 +343,12 @@ class MacroManagerViewModel(
         evaluateStateTriggers()
     }
 
-    fun getSystemVariable(name: String): String? {
-        return when (name) {
+    fun getSystemVariable(name: String, useCache: Boolean = false): String? {
+        if (useCache && variableCache.containsKey(name)) {
+            return variableCache[name]
+        }
+
+        val value = when (name) {
             "current_window_name" -> _uiState.value.currentActiveProcess ?: ""
             "last_window_name" -> serverViewModel?.processWatcher?.lastProcess?.value ?: ""
             "current_window_title" -> serverViewModel?.processWatcher?.activeTitle?.value ?: ""
@@ -348,38 +358,60 @@ class MacroManagerViewModel(
             "pixel_color_at_cursor" -> {
                 try {
                     val info = java.awt.MouseInfo.getPointerInfo()
-                    if (info != null) {
+                    if (info != null && robot != null) {
                         val loc = info.location
-                        val color = java.awt.Robot().getPixelColor(loc.x, loc.y)
+                        // Optimization: snapshot pixel color to avoid repeated heavy system calls
+                        val color = robot.getPixelColor(loc.x, loc.y)
                         String.format("#%02x%02x%02x", color.red, color.green, color.blue)
                     } else "#000000"
-                } catch(e: Exception) { "#000000" }
+                } catch(e: Throwable) { "#000000" }
             }
             "clipboard_text" -> {
                 try {
-                    val transferable = java.awt.Toolkit.getDefaultToolkit().systemClipboard.getContents(null)
-                    if (transferable != null && transferable.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.stringFlavor)) {
-                        transferable.getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
+                    // NOTE: ClassNotFoundExceptions seen in logs while running in IDE are benign side-effects 
+                    // of AWT probing IntelliJ's custom clipboard formats.
+                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                    if (clipboard.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor)) {
+                        clipboard.getData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
                     } else ""
-                } catch (e: Exception) { "" }
+                } catch (e: Throwable) { "" }
             }
             "current_time_ms" -> System.currentTimeMillis().toString()
             else -> variables[name]
         }
+
+        if (useCache && value != null) {
+            variableCache[name] = value
+        }
+        return value
     }
 
-    private fun evaluateStateTriggers() {
+    fun evaluateStateTriggers() {
+        variableCache.clear() // Clear cache at start of pulse
         _uiState.value.macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }.forEach { routine ->
             routine.triggers.forEach { trigger ->
                 if (trigger is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet) {
                     val triggerId = "${routine.id}_${trigger.hashCode()}"
-                    val isMet = evaluateCondition(trigger.condition)
+                    val isMet = evaluateCondition(trigger.condition, useCache = true)
                     val wasMet = lastTriggeredRoutine[triggerId] ?: false
                     
                     if (isMet && !wasMet) {
                         onTriggerRoutine(routine)
                     }
                     lastTriggeredRoutine[triggerId] = isMet
+                }
+            }
+        }
+    }
+
+    fun onControllerButtonTriggered(button: String, controllerIndex: Int) {
+        _uiState.value.macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }.forEach { routine ->
+            routine.triggers.forEach { trigger ->
+                if (trigger is com.kapcode.open.macropad.kmps.models.AutomationTrigger.ControllerButton) {
+                    if (trigger.button.equals(button, ignoreCase = true) && 
+                        (trigger.controllerIndex == controllerIndex.toString() || trigger.controllerIndex == "ANY")) {
+                        onTriggerRoutine(routine)
+                    }
                 }
             }
         }
@@ -417,33 +449,33 @@ class MacroManagerViewModel(
         macroPlayer.play(listOf(MacroEventState.MouseButtonEvent(resolveToInt(action.buttonNumber), keyAction)))
     }
 
-    private fun evaluateCondition(condition: com.kapcode.open.macropad.kmps.models.AutomationCondition?): Boolean {
+    private fun evaluateCondition(condition: com.kapcode.open.macropad.kmps.models.AutomationCondition?, useCache: Boolean = false): Boolean {
         if (condition == null) return true
         return when (condition) {
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.ActiveWindowIs -> {
                 _uiState.value.currentActiveProcess?.contains(condition.processName, ignoreCase = true) == true
             }
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.ActiveWindowTitleIs -> {
-                getSystemVariable("current_window_title")?.contains(condition.windowTitle, ignoreCase = true) == true
+                getSystemVariable("current_window_title", useCache)?.contains(condition.windowTitle, ignoreCase = true) == true
             }
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.Equals -> {
-                val current = getSystemVariable(condition.variable)
-                val target = getSystemVariable(condition.value) ?: condition.value
+                val current = getSystemVariable(condition.variable, useCache)
+                val target = getSystemVariable(condition.value, useCache) ?: condition.value
                 current == target
             }
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.GreaterThan -> {
-                val varVal = getSystemVariable(condition.variable)?.toDoubleOrNull() ?: 0.0
-                val targetVal = getSystemVariable(condition.value)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
+                val varVal = getSystemVariable(condition.variable, useCache)?.toDoubleOrNull() ?: 0.0
+                val targetVal = getSystemVariable(condition.value, useCache)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
                 varVal > targetVal
             }
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.LessThan -> {
-                val varVal = getSystemVariable(condition.variable)?.toDoubleOrNull() ?: 0.0
-                val targetVal = getSystemVariable(condition.value)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
+                val varVal = getSystemVariable(condition.variable, useCache)?.toDoubleOrNull() ?: 0.0
+                val targetVal = getSystemVariable(condition.value, useCache)?.toDoubleOrNull() ?: condition.value.toDoubleOrNull() ?: 0.0
                 varVal < targetVal
             }
             is com.kapcode.open.macropad.kmps.models.AutomationCondition.Contains -> {
-                val current = getSystemVariable(condition.variable)
-                val target = getSystemVariable(condition.substring) ?: condition.substring
+                val current = getSystemVariable(condition.variable, useCache)
+                val target = getSystemVariable(condition.substring, useCache) ?: condition.substring
                 current?.contains(target, ignoreCase = true) == true
             }
         }

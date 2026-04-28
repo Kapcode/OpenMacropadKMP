@@ -89,8 +89,8 @@ fun DesktopAppPreview() {
         Unit
     }
     
-    val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel) }
-    val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel) { } }
+    val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
+    val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel, consoleViewModel, macroManagerViewModel) }
     val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
     val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
     val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
@@ -155,6 +155,12 @@ fun DesktopApp(
     val newEventViewModel = viewModels.newEventViewModel
     val marketplaceViewModel = viewModels.marketplaceViewModel
     val layoutViewModel = viewModels.layoutViewModel
+
+    val virtualCursorPosition by layoutViewModel.virtualCursorPosition.collectAsState()
+    val isVirtualCursorVisible by layoutViewModel.isVirtualCursorVisible.collectAsState()
+
+    val mainTab by layoutViewModel.mainTab.collectAsState()
+    var activeTab by remember(mainTab) { mutableStateOf(mainTab) }
 
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()

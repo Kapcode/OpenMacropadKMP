@@ -91,10 +91,12 @@ fun main(args: Array<String>) = application {
         desktopViewModel.startServer()
         triggerListener.startListening()
         inspectorManager.startListening()
+        viewModels.serverViewModel.controllerManager?.start()
         onDispose {
             desktopViewModel.shutdown()
             triggerListener.shutdown()
             inspectorManager.stopListening()
+            viewModels.serverViewModel.controllerManager?.stop()
         }
     }
     

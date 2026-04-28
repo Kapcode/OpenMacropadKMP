@@ -76,6 +76,7 @@ class TriggerListener(
                     is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> KeyParser.parseNativeHookKeys(trigger.keyName)
                     is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> KeyParser.parseNativeHookKeys(trigger.keys.joinToString(","))
                     is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet -> emptyList()
+                    is com.kapcode.open.macropad.kmps.models.AutomationTrigger.ControllerButton -> emptyList()
                 }
                 
                 if (keyCodes.isNotEmpty()) {
@@ -84,6 +85,7 @@ class TriggerListener(
                         is com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap -> TriggerType.MULTI_TAP
                         is com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence -> TriggerType.SEQUENCE
                         is com.kapcode.open.macropad.kmps.models.AutomationTrigger.OnConditionMet -> TriggerType.RELEASE // Placeholder
+                        is com.kapcode.open.macropad.kmps.models.AutomationTrigger.ControllerButton -> TriggerType.RELEASE // Placeholder
                     }
                     
                     unifiedTriggers.add(UnifiedTrigger(

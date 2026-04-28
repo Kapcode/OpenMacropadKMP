@@ -80,20 +80,18 @@ class MacroKtorClient(
                                         if (cmd == com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_CHALLENGE) {
                                             val challenge = params["challenge"]
                                             if (challenge != null) {
-                                                clientScope.launch {
-                                                    println("MacroKtorClient: Received challenge, signing...")
-                                                    val sig = identityManager.signMessage(challenge.encodeToByteArray())
-                                                    val response = com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(
-                                                        com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_RESPONSE,
-                                                        mapOf(
-                                                            "signature" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(sig),
-                                                            "publicKey" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey),
-                                                            "metadata" to com.kapcode.open.macropad.kmps.DeviceInfo.hardwareMetadata
-                                                        )
+                                                println("MacroKtorClient: Received challenge, signing...")
+                                                val sig = identityManager.signMessage(challenge.encodeToByteArray())
+                                                val response = com.kapcode.open.macropad.kmps.network.sockets.model.controlMessage(
+                                                    com.kapcode.open.macropad.kmps.network.sockets.model.ControlCommand.AUTH_RESPONSE,
+                                                    mapOf(
+                                                        "signature" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(sig),
+                                                        "publicKey" to com.kapcode.open.macropad.kmps.utils.Base64Utils.encode(publicKey),
+                                                        "metadata" to com.kapcode.open.macropad.kmps.DeviceInfo.hardwareMetadata
                                                     )
-                                                    send(response.toBytes())
-                                                    println("MacroKtorClient: Auth response sent")
-                                                }
+                                                )
+                                                session?.send(Frame.Binary(true, response.toBytes()))
+                                                println("MacroKtorClient: Auth response sent")
                                             }
                                         }
                                     }

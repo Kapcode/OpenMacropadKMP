@@ -32,13 +32,23 @@ class ProcessWatcher(
         if (watchJob != null) return
         watchJob = scope.launch {
             while (isActive) {
+                val startTime = System.currentTimeMillis()
                 val info = getActiveProcessInfo()
+                val elapsed = System.currentTimeMillis() - startTime
+                if (elapsed > 200) {
+                    println("ProcessWatcher: Warning! Polling took ${elapsed}ms (Shell overhead)")
+                }
+
                 if (info != null && (info.name != _activeProcess.value || info.windowTitle != _activeTitle.value)) {
-                    _lastProcess.value = _activeProcess.value
-                    _activeProcess.value = info.name
+                    if (info.name != _activeProcess.value) {
+                        _lastProcess.value = _activeProcess.value
+                        _activeProcess.value = info.name
+                    }
                     
-                    _lastTitle.value = _activeTitle.value
-                    _activeTitle.value = info.windowTitle
+                    if (info.windowTitle != _activeTitle.value) {
+                        _lastTitle.value = _activeTitle.value
+                        _activeTitle.value = info.windowTitle
+                    }
                     
                     updateHistory(info)
                 }

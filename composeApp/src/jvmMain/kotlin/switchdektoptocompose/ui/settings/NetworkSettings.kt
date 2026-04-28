@@ -59,7 +59,7 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(8.dp))
     AppTooltipArea(
-        tooltipText = "When enabled, new devices can find this server and request to pair."
+        tooltipText = "When enabled, the server will broadcast its presence to let phones find it automatically on your home network."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -74,7 +74,7 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(8.dp))
     AppTooltipArea(
-        tooltipText = "When enabled, multiple QR codes can be used for pairing."
+        tooltipText = "When enabled, the server will show extra QR codes to make it easier for phones to scan and join."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -89,7 +89,7 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(8.dp))
     AppTooltipArea(
-        tooltipText = "When enabled, the pairing dialog uses a multi-QR grid for high-reliability syncing."
+        tooltipText = "When enabled, the server will show a large grid of QR codes to help you connect many devices at the same time."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -104,7 +104,7 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(12.dp))
     AppTooltipArea(
-        tooltipText = "If enabled, all new connections must be approved manually every time. No new devices will be added to the trusted list."
+        tooltipText = "When enabled, you must give manual permission for every phone connection. This is the safest way to run the server."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -119,7 +119,7 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(8.dp))
     AppTooltipArea(
-        tooltipText = "When enabled, the server uses Ktor native WebSocket pings (15s/30s). Disable this if clients are disconnecting frequently due to timeout errors."
+        tooltipText = "When enabled, the server uses background signals to check if phones are still connected. Disable only if you have connectivity issues."
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -155,17 +155,21 @@ fun NetworkSettings(
     }
     Spacer(modifier = Modifier.height(16.dp))
 
-    // --- Encryption Setting ---
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Adds an extra layer of security to your connection. Highly recommended for most users."
     ) {
-        Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
-        Checkbox(
-            checked = encryptionEnabled,
-            onCheckedChange = { serverViewModel.setEncryption(it) },
-            enabled = !isServerRunning
-        )
+        // --- Encryption Setting ---
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Enable Encryption (WSS)", modifier = Modifier.weight(1f))
+            Checkbox(
+                checked = encryptionEnabled,
+                onCheckedChange = { serverViewModel.setEncryption(it) },
+                enabled = !isServerRunning
+            )
+        }
     }
     Text(
         text = "Requires a restart of the server to apply.",

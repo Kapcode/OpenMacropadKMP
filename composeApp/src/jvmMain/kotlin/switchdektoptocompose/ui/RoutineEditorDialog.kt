@@ -11,6 +11,7 @@ import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
 import com.kapcode.open.macropad.kmps.models.*
 import com.kapcode.open.macropad.kmps.ui.components.VisualRoutineBuilder
+import switchdektoptocompose.logic.KeyParser
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -67,7 +68,13 @@ fun RoutineEditorDialog(
                 VisualRoutineBuilder(
                     routine = routine,
                     onRoutineChange = { routine = it },
-                    getLiveValue = { macroManagerViewModel.getSystemVariable(it) }
+                    getLiveValue = { macroManagerViewModel.getSystemVariable(it) },
+                    isValidKey = { KeyParser.isValidKey(it) },
+                    getKeySuggestions = { input ->
+                        val query = input.split('+', ',').lastOrNull()?.trim()?.uppercase() ?: ""
+                        if (query.isEmpty()) emptyList()
+                        else KeyParser.getAllValidKeyNames().filter { it.startsWith(query) }.take(5)
+                    }
                 )
             }
         }

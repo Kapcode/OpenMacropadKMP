@@ -4,10 +4,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import com.kapcode.open.macropad.kmps.network.sockets.model.dataMessage
 import com.kapcode.open.macropad.kmps.network.sockets.model.macroListMessage
-import kotlinx.serialization.json.Json
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.*
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.viewmodel.*
 
@@ -51,6 +53,8 @@ object ViewModelFactory {
 
         val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
 
+        var macroManagerViewModelRef: MacroManagerViewModel? = null
+
         val serverViewModel = remember {
             ServerViewModel(
                 settingsViewModel = settingsViewModel,
@@ -74,21 +78,11 @@ object ViewModelFactory {
             )
         }
 
-        val desktopViewModel = remember { 
-            DesktopViewModel(
-                settingsViewModel, 
-                consoleViewModel, 
-                inspectorViewModel,
-                serverViewModel,
-                clientCommunicationViewModel
-            ) 
-        }
-        
-        var macroManagerViewModelRef: MacroManagerViewModel? = null
         val macroManagerViewModel = remember {
             MacroManagerViewModel(
                 settingsViewModel = settingsViewModel,
                 consoleViewModel = consoleViewModel,
+                serverViewModel = serverViewModel,
                 onEditMacroRequested = { }, // Wired below
                 onMacrosUpdated = {
                     val macroNames = macroManagerViewModelRef?.macroFiles?.value?.map { it.name } ?: emptyList()
@@ -108,29 +102,50 @@ object ViewModelFactory {
                 }.launchIn(CoroutineScope(Dispatchers.Main))
             }
         }
+
+        val controllerManager = remember {
+            switchdektoptocompose.logic.ControllerManager(
+                settingsViewModel,
+                macroManagerViewModel,
+                layoutViewModel
+            )
+        }
         
-        val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
-        
-        val macroEditorViewModel = remember {
-            MacroEditorViewModel(settingsViewModel) {
-                macroManagerViewModel.refresh()
-            }
+        remember(controllerManager) {
+            serverViewModel.controllerManager = controllerManager
+            Unit
         }
 
+        val desktopViewModel = remember { 
+            DesktopViewModel(
+                settingsViewModel, 
+                consoleViewModel, 
+                inspectorViewModel,
+                serverViewModel,
+                clientCommunicationViewModel
+            ) 
+        }
+
+        clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
+        clientCommunicationViewModel.serverViewModel = serverViewModel
+        clientCommunicationViewModel.layoutViewModel = layoutViewModel
+
+        val macroEditorViewModel = remember {
+            MacroEditorViewModel(
+                settingsViewModel = settingsViewModel,
+                consoleViewModel = consoleViewModel,
+                macroManagerViewModel = macroManagerViewModel
+            )
+        }
         val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
+        val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
         val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
         val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
 
-        // Wire up late dependencies and circular references
-        remember(macroManagerViewModel, macroEditorViewModel, serverViewModel, clientCommunicationViewModel) {
-            macroManagerViewModel.onEditMacroRequested = { macroState ->
-                macroEditorViewModel.openOrSwitchToTab(macroState)
-            }
-            clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
-            clientCommunicationViewModel.serverViewModel = serverViewModel
-            clientCommunicationViewModel.layoutViewModel = layoutViewModel
-            macroManagerViewModel.serverViewModel = serverViewModel
-            desktopViewModel.macroManagerViewModel = macroManagerViewModel
+        // Final wiring
+        macroManagerViewModel.onEditMacroRequested = { macroState ->
+            macroEditorViewModel.openOrSwitchToTab(macroState)
+            layoutViewModel.setMainTab(1) // Switch to Editor tab
         }
 
         return DesktopViewModels(

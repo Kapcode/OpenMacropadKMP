@@ -127,6 +127,9 @@ class SettingsViewModel {
     private val _systemPollingRate = MutableStateFlow(AppSettings.systemPollingRate)
     val systemPollingRate = _systemPollingRate.asStateFlow()
 
+    private val _controllerNavigationMode = MutableStateFlow(AppSettings.controllerNavigationMode)
+    val controllerNavigationMode = _controllerNavigationMode.asStateFlow()
+
     // For now, we'll keep theme settings separate as they are specific to the Compose UI.
     // In the future, this could also be moved to the properties file if desired.
     private val _selectedTheme = MutableStateFlow("Dark Blue") // Default value
@@ -365,6 +368,11 @@ class SettingsViewModel {
     fun setSystemPollingRate(rate: Long) {
         _systemPollingRate.value = rate
         AppSettings.systemPollingRate = rate
+    }
+
+    fun setControllerNavigationMode(mode: String) {
+        _controllerNavigationMode.value = mode
+        AppSettings.controllerNavigationMode = mode
     }
 
     fun getSplitterPosition(name: String, default: Float): Float {

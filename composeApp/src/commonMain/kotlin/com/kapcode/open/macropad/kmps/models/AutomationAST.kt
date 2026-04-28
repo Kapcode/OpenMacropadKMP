@@ -48,6 +48,9 @@ sealed class AutomationTrigger {
     
     @Serializable
     data class OnConditionMet(val condition: AutomationCondition) : AutomationTrigger()
+
+    @Serializable
+    data class ControllerButton(val button: String, val controllerIndex: String = "0") : AutomationTrigger()
 }
 
 @Serializable
@@ -108,6 +111,9 @@ sealed class AutomationAction {
         val type: String,
         val parameters: Map<String, String>
     ) : AutomationAction()
+
+    @Serializable
+    data class ControllerButton(val button: String, val controllerIndex: String = "0", val type: String = "PRESS") : AutomationAction()
 }
 
 @Serializable

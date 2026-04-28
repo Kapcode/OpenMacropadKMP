@@ -402,7 +402,7 @@ fun ClientScreen(
                         }
 
                         Box(modifier = Modifier.weight(1f)) {
-                            if (macros.isNotEmpty() && !showQrScanner) {
+                            if (connectionStatus == "Connected" && !showQrScanner) {
                                 Box(modifier = Modifier.fillMaxSize()) {
                                     val displayWidgets = if (uiState.currentTab == 1) {
                                         uiState.activePack?.widgets ?: emptyList()
@@ -616,25 +616,29 @@ fun ClientScreen(
                                     verticalArrangement = Arrangement.Center,
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    if (connectionStatus != "Connected" && serverHistory.isNotEmpty()) {
+                                    if (connectionStatus != "Connected" && connectionStatus != "Authenticating" && connectionStatus != "Connecting..." && serverHistory.isNotEmpty()) {
                                         Column(
                                             modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
                                             horizontalAlignment = Alignment.Start
                                         ) {
                                             Text(
-                                                "Reconnect to:",
+                                                "Quick Reconnect",
                                                 style = MaterialTheme.typography.labelLarge,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
                                             Spacer(Modifier.height(8.dp))
+                                            val distinctHistory = serverHistory
+                                                .distinctBy { it.displayName } // Filter by name as well since that's what the user sees
+                                                .take(3)
                                             LazyRow(
                                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                                                 modifier = Modifier.fillMaxWidth()
                                             ) {
-                                                items(serverHistory.take(3)) { server ->
+                                                items(distinctHistory) { server ->
                                                     SuggestionChip(
                                                         onClick = {
                                                             if (tokenManager != null) {
+                                                                clientViewModel.updateConnection("Connecting...", server.displayName, null, null)
                                                                 clientViewModel.connectToServer(
                                                                     server = server,
                                                                     deviceName = android.os.Build.MODEL,
@@ -795,7 +799,7 @@ fun ClientScreen(
                                                 )
                                             }
                                         }
-                                    } else if (disconnectReason != null) {
+                                    } else if (disconnectReason != null && connectionStatus != "Connecting..." && connectionStatus != "Authenticating") {
                                         val configuration = LocalConfiguration.current
                                         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                                         

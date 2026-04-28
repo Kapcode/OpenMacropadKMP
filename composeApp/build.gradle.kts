@@ -86,6 +86,7 @@ kotlin {
             implementation(libs.ktor.server.call.logging)
             
             implementation(libs.jnativehook)
+            implementation(libs.jamepad)
             implementation(libs.rsyntaxtextarea)
             implementation(libs.flatlaf)
             implementation(libs.svg.salamander)

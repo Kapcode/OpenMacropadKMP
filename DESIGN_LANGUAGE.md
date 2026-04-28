@@ -145,3 +145,22 @@ To ensure secure and ergonomic device pairing on mobile:
   - Dark Blue Theme -> `dark.xml`
   - Light Blue Theme -> `idea.xml`
 - **Dialogs**: All modal interactions use `Window` (replacing `DialogWindow` for better minimization behavior) or custom `Surface`-based overlays to ensure they remain top-level over Swing-based components.
+
+## 5. Gamepad & Controller Interaction
+
+### Connectivity & Status
+To provide immediate feedback on controller status, the application utilizes a persistent **GamepadStatusIndicator** in the `TopAppBar`.
+
+- **Visual States**:
+    - **No Controllers**: The gamepad icon is semi-transparent (`0.38f` alpha) or matches the `onSurfaceVariant` color to indicate inactivity.
+    - **Controller Connected**: The icon switches to `MaterialTheme.colorScheme.primary` or the **Success (Green)** status color (respecting theme-specific contrast).
+    - **Active Input**: During button presses or stick movement, the indicator can provide a subtle "pulse" or highlight to confirm the application is receiving signals.
+
+### Focus & Navigation (Common)
+The UI is designed to be fully navigable via D-Pad and Left Stick:
+- **Focus Rings**: Focused elements MUST display a high-contrast focus ring (using `MaterialTheme.colorScheme.primary`).
+- **Dead Zones**: Software-level dead zones are applied to analog sticks to prevent "drift" during UI navigation.
+- **Button Mapping**:
+    - **Accept**: Bottom face button (e.g., 'A' / Cross).
+    - **Back/Cancel**: Right face button (e.g., 'B' / Circle).
+    - **Menu**: 'Start' or 'Menu' button.

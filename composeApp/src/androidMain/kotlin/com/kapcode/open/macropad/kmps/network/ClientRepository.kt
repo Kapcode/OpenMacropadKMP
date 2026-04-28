@@ -46,6 +46,7 @@ class ClientRepository(private val context: Context) {
         onNotificationReceived: (String) -> Unit
     ) {
         clientJob?.cancel()
+        Log.i("ClientRepository", "Previous connection job cancelled. Starting new connection to $ipAddress")
         clientJob = scope.launch {
             var backoffMillis = 1000L
             val maxBackoffMillis = 16000L
@@ -75,12 +76,15 @@ class ClientRepository(private val context: Context) {
                     tempClient = MacroKtorClient(ktorHttpClient, ipAddress, port, isSecure)
                     this@ClientRepository.client = tempClient
 
+                    Log.i("ClientRepository", "Starting connection to $ipAddress:$port")
                     onUpdate("Connecting...", initialServerName ?: ipAddress, null, null)
                     withContext(Dispatchers.IO) {
                         tempClient.connect(deviceName)
                     }
 
-                    onUpdate("Connected", initialServerName ?: ipAddress, null, null)
+                    Log.i("ClientRepository", "WebSocket established. Waiting for Auth/Pairing...")
+                    onUpdate("Authenticating...", initialServerName ?: ipAddress, null, null)
+
                     backoffMillis = 1000L
                     retryCount = 0
                     var lastHeartbeat = System.currentTimeMillis()
@@ -101,19 +105,24 @@ class ClientRepository(private val context: Context) {
                             delay(5000)
                             if (System.currentTimeMillis() - lastHeartbeat > 40000) {
                                 Log.w("ClientRepository", "Heartbeat timeout! Reconnecting...")
-                                this@launch.cancel()
                                 tempClient.close()
+                                this@launch.cancel()
                             }
                         }
                     }
 
+                    Log.i("ClientRepository", "Starting message collection...")
                     tempClient.incomingMessages.receiveAsFlow().collect { frame ->
                         if (frame is Frame.Binary) {
                             try {
                                 lastHeartbeat = System.currentTimeMillis()
-                                val dataModel = DataModel.fromBytes(frame.readBytes())
+                                val bytes = frame.readBytes()
+                                val dataModel = DataModel.fromBytes(bytes)
+                                Log.d("ClientRepository", "Received message: ${dataModel.messageType}")
+                                
                                 dataModel.handle(
                                     onControl = { command, params ->
+                                        Log.i("ClientRepository", "Control command: $command")
                                         when (command) {
                                             ControlCommand.AUTH_CHALLENGE -> {
                                                 val fingerprint = params["fingerprint"]
@@ -122,18 +131,25 @@ class ClientRepository(private val context: Context) {
                                                 }
                                             }
                                             ControlCommand.PAIRING_PENDING -> {
+                                                Log.i("ClientRepository", "Pairing pending. Resetting macros.")
                                                 onMacrosReceived(emptyList())
                                                 val code = params["code"]
                                                 currentVerificationCode = code
                                                 onUpdate("Pending Approval", initialServerName, null, code)
                                             }
                                             ControlCommand.PAIRING_CODE_MATCHED -> {
+                                                Log.i("ClientRepository", "Pairing code matched.")
                                                 onUpdate("Code Matched", initialServerName, null, currentVerificationCode)
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
+                                                Log.i("ClientRepository", "Pairing approved!")
                                                 onUpdate("Connected", initialServerName ?: ipAddress, null, null)
-                                                launch {
-                                                    tempClient.send(textMessage("getMacros").toBytes())
+                                                
+                                                // Trigger macro fetch immediately upon approval
+                                                scope.launch {
+                                                    delay(100) // Small delay to let server state settle
+                                                    Log.d("ClientRepository", "Requesting macros after approval/auth")
+                                                    this@ClientRepository.client?.send(textMessage("getMacros").toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
@@ -187,24 +203,33 @@ class ClientRepository(private val context: Context) {
                                         }
                                     },
                                     onText = { text ->
+                                        Log.d("ClientRepository", "Text message received: ${text.take(50)}")
                                         if (dataModel.metadata["type"] == "toast") {
                                             onNotificationReceived(text)
                                         } else if (text.startsWith("macros:")) {
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
-                                            onMacrosReceived(macroNames)
+                                            Log.i("ClientRepository", "Received ${macroNames.size} macros. Marking as Connected.")
+                                            
+                                            // 1. Reset disconnect state if macros are found
+                                            // 2. Set connected status
+                                            // 3. Notify UI
                                             onUpdate("Connected", initialServerName ?: ipAddress, null, null)
+                                            onMacrosReceived(macroNames)
                                             macroFetchJob.cancel()
                                         }
                                     },
                                     onHeartbeat = {
+                                        Log.v("ClientRepository", "Heartbeat received")
                                         lastHeartbeat = System.currentTimeMillis()
                                     },
                                     onCommand = { command, params ->
+                                        Log.d("ClientRepository", "Command received: $command")
                                         if (command == "active_process") {
                                             onActiveProcessChanged(params["name"])
                                         }
                                     },
                                     onData = { key, value ->
+                                        Log.d("ClientRepository", "Data received: $key")
                                         when (key) {
                                             "currency_update" -> {
                                                 try {
@@ -244,15 +269,20 @@ class ClientRepository(private val context: Context) {
                     macroFetchJob.cancel()
 
                 } catch (e: Exception) {
-                    if (e is CancellationException) throw e
+                    if (e is CancellationException) {
+                        Log.i("ClientRepository", "Connection job cancelled.")
+                        throw e
+                    }
+                    Log.e("ClientRepository", "Connection error: ${e.message}", e)
                     retryCount++
                     if (retryCount > maxRetries) {
-                        onUpdate("Failed", null, "Max retries reached.", null)
+                        onUpdate("Failed", null, "Max retries reached: ${e.message}", null)
                         this@launch.cancel()
                         return@launch
                     }
                     onUpdate("Connecting...", null, "Retrying ($retryCount/$maxRetries)...", null)
                 } finally {
+                    Log.i("ClientRepository", "Cleaning up connection...")
                     tempClient?.close()
                     this@ClientRepository.client = null
                 }

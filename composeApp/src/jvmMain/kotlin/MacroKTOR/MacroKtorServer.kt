@@ -211,8 +211,7 @@ class MacroKtorServer(
                 client.pendingChallenge = challenge
                 logger.info("Sending AUTH_CHALLENGE to trusted device {}", client.id)
                 send(Frame.Binary(true, controlMessage(ControlCommand.AUTH_CHALLENGE, mapOf("challenge" to challenge)).toBytes()))
-                // Notify the ViewModel that a trusted client has connected
-                onClientConnected(client.id, client.name)
+                // Note: onClientConnected will be called after successful AUTH_RESPONSE
             } else {
                 if (!appSettings.allowNewConnections) {
                     send(Frame.Binary(true, controlMessage(ControlCommand.BANNED, mapOf("reason" to "New connections disabled")).toBytes()))
@@ -393,8 +392,12 @@ class MacroKtorServer(
                 client.pendingChallenge = null
                 client.lastSeen = System.currentTimeMillis()
 
+                logger.info("Client {} authenticated successfully. Sending approvals.", client.id)
                 client.session.send(Frame.Binary(true, controlMessage(ControlCommand.PAIRING_APPROVED).toBytes()))
                 
+                // Notify the ViewModel that a client is now FULLY connected and authenticated
+                onClientConnected(client.id, client.name)
+
                 // Send Server Info
                 val os = System.getProperty("os.name")
                 val arch = System.getProperty("os.arch")
@@ -414,8 +417,6 @@ class MacroKtorServer(
                 client.session.send(Frame.Binary(true, DataModel(
                     messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
                 ).toBytes()))
-
-                onMessageReceived(client.id, getMacrosRequest())
             } else {
                 logger.warn("Authentication failed for {}", client.id)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))

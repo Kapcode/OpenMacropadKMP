@@ -610,3 +610,13 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Variable Picker Field**: Created a shared component that combines text input with a categorized dropdown of system variables.
     - **Live Values**: Integrated real-time resolvers into the picker dropdown. Users can now see their current `mouse_x` or `pixel_color_at_cursor` updating live in the menu before selecting them.
     - **Click-to-Copy**: Updated the Inspector UI and Variable Picker to support instant clipboard capture of any system variable.
+
+## 45. Integrated Gamepad Support (Jamepad)
+
+### Challenge: Low-Latency Controller Polling
+- **Problem**: Standard event-driven input libraries often introduce latency or missed frames when handling rapid analog movements or button mashes.
+- **Solution**:
+    - **Jamepad Integration**: Leveraged Jamepad (SDL2 wrapper) for robust, cross-platform controller support on JVM.
+    - **High-Frequency Polling**: Implemented a dedicated `ControllerManager` that polls the gamepad state at ~60fps using a coroutine-based loop (`Dispatchers.Default`).
+    - **State Flow**: Exposed `isConnected` and `activeButton` states via `StateFlow` to ensure the UI and Macro Manager can react instantly to hardware changes.
+    - **Macro Mapping**: Integrated with `MacroManagerViewModel` to allow gamepad buttons to trigger macros directly, bypassing the standard keyboard/mouse event loop for lower overhead.

@@ -15,6 +15,7 @@ object AppSettings {
     private const val WINDOW_POLLING_RATE_KEY = "window.polling.rate"
     private const val MOUSE_POLLING_RATE_KEY = "mouse.polling.rate"
     private const val SYSTEM_POLLING_RATE_KEY = "system.polling.rate"
+    private const val CONTROLLER_NAVIGATION_MODE_KEY = "controller.navigation.mode"
 
     private const val MACRO_DIR_KEY = "macroDirectory"
     private const val SERVER_PORT_KEY = "serverPort"
@@ -369,6 +370,13 @@ object AppSettings {
         get() = properties.getProperty(SYSTEM_POLLING_RATE_KEY, "1000").toLongOrNull() ?: 1000L
         set(value) {
             properties.setProperty(SYSTEM_POLLING_RATE_KEY, value.toString())
+            save()
+        }
+
+    var controllerNavigationMode: String
+        get() = properties.getProperty(CONTROLLER_NAVIGATION_MODE_KEY, "TRAVERSAL")
+        set(value) {
+            properties.setProperty(CONTROLLER_NAVIGATION_MODE_KEY, value)
             save()
         }
 

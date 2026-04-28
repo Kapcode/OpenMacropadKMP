@@ -14,8 +14,9 @@ data class EditorUiState(
 )
 
 class MacroEditorViewModel(
-    private val settingsViewModel: SettingsViewModel,
-    private val onSave: () -> Unit
+    val settingsViewModel: SettingsViewModel,
+    private val consoleViewModel: ConsoleViewModel,
+    private val macroManagerViewModel: MacroManagerViewModel
 ) {
 
     private val _uiState = MutableStateFlow(EditorUiState())
@@ -120,7 +121,7 @@ class MacroEditorViewModel(
         val currentTab = _uiState.value.tabs.getOrNull(_uiState.value.selectedTabIndex) ?: return
         if (currentTab.file != null) {
             currentTab.file.writeText(currentTab.content)
-            onSave()
+            macroManagerViewModel.refresh()
         } else {
             saveSelectedTabAs()
         }
@@ -161,7 +162,7 @@ class MacroEditorViewModel(
                 val newTabs = state.tabs.toMutableList().apply { set(state.selectedTabIndex, newTabState) }
                 state.copy(tabs = newTabs)
             }
-            onSave()
+             macroManagerViewModel.refresh()
         }
     }
 }

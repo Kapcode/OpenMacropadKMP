@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.*
+import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,70 +61,94 @@ fun BehaviorSettings(
     }
 
     Spacer(Modifier.height(8.dp))
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "When enabled, clicking the icon in your system tray (near the clock) will hide or show the main window."
     ) {
-        Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
-        Checkbox(
-            checked = clickTrayToToggle,
-            onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Click tray icon to show/hide window", modifier = Modifier.weight(1f))
+            Checkbox(
+                checked = clickTrayToToggle,
+                onCheckedChange = { settingsViewModel.setClickTrayToToggle(it) }
+            )
+        }
     }
 
     Spacer(Modifier.height(8.dp))
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Shows a small pop-up on your screen whenever a new Macro Pack is automatically activated."
     ) {
-        Text("Show notifications on pack switch", modifier = Modifier.weight(1f))
-        Checkbox(
-            checked = enablePackSwitchNotifications,
-            onCheckedChange = { settingsViewModel.setEnablePackSwitchNotifications(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Show notifications on pack switch", modifier = Modifier.weight(1f))
+            Checkbox(
+                checked = enablePackSwitchNotifications,
+                onCheckedChange = { settingsViewModel.setEnablePackSwitchNotifications(it) }
+            )
+        }
     }
 
     Spacer(Modifier.height(8.dp))
     Text("Toast Notifications", style = MaterialTheme.typography.titleMedium)
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Enables short temporary messages (Toasts) that appear on your screen to confirm actions."
     ) {
-        Text("Enable Global Toasts", modifier = Modifier.weight(1f))
-        Switch(
-            checked = enableToasts,
-            onCheckedChange = { settingsViewModel.setEnableToasts(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Enable Global Toasts", modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableToasts,
+                onCheckedChange = { settingsViewModel.setEnableToasts(it) }
+            )
+        }
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Shows notifications even if the app is hidden or minimized."
     ) {
-        Text("Toasts in Background / Headless", modifier = Modifier.weight(1f))
-        Switch(
-            checked = enableBackgroundToasts,
-            onCheckedChange = { settingsViewModel.setEnableBackgroundToasts(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Toasts in Background / Headless", modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableBackgroundToasts,
+                onCheckedChange = { settingsViewModel.setEnableBackgroundToasts(it) }
+            )
+        }
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Sends the notification message to your connected phones or tablets."
     ) {
-        Text("Send Toasts over Network", modifier = Modifier.weight(1f))
-        Switch(
-            checked = enableNetworkToasts,
-            onCheckedChange = { settingsViewModel.setEnableNetworkToasts(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Send Toasts over Network", modifier = Modifier.weight(1f))
+            Switch(
+                checked = enableNetworkToasts,
+                onCheckedChange = { settingsViewModel.setEnableNetworkToasts(it) }
+            )
+        }
     }
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
+    AppTooltipArea(
+        tooltipText = "Adds the name of the active app (e.g., Photoshop) to the notification message."
     ) {
-        Text("Include Window Names in Toasts", modifier = Modifier.weight(1f))
-        Switch(
-            checked = includeWindowNamesInToasts,
-            onCheckedChange = { settingsViewModel.setIncludeWindowNamesInToasts(it) }
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Include Window Names in Toasts", modifier = Modifier.weight(1f))
+            Switch(
+                checked = includeWindowNamesInToasts,
+                onCheckedChange = { settingsViewModel.setIncludeWindowNamesInToasts(it) }
+            )
+        }
     }
 
     OutlinedTextField(

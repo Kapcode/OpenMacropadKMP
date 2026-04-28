@@ -30,6 +30,7 @@ class MacroPlayer(
         Context.newBuilder("js")
             .allowHostAccess(HostAccess.ALL)
             .allowHostClassLookup { false } // Restrict access to Java classes
+            .option("engine.WarnInterpreterOnly", "false") // Silence harmless performance warning
             .build().apply {
                 getBindings("js").putMember("kap", KapHostApi())
             }
