@@ -246,6 +246,8 @@ class DataModelBuilder {
 
     fun heartbeat() = apply { this.messageType = MessageType.Heartbeat() }
     
+    fun systemQuery(query: String) = apply { this.messageType = MessageType.SystemQuery(query) }
+
     fun addMetadata(key: String, value: String) = apply { this.metadata[key] = value }
     
     fun metadata(metadata: Map<String, String>) = apply { this.metadata.putAll(metadata) }

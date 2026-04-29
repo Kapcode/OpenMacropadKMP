@@ -164,6 +164,7 @@ class ClientCommunicationViewModel(
             serverViewModel.server.sendToClient(clientId, pairingApprovedMessage())
             val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
             serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
+            serverViewModel.server.sendToClient(clientId, getCurrencyRequest())
             
             val packs = macroManagerViewModel.macroPacks.value
             if (packs.isNotEmpty()) {

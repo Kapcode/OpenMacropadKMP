@@ -8,6 +8,11 @@ import org.fife.ui.rsyntaxtextarea.SyntaxConstants
 import org.fife.ui.rtextarea.RTextScrollPane
 import javax.swing.event.DocumentEvent
 import javax.swing.event.DocumentListener
+import javax.swing.TransferHandler
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
+import java.awt.datatransfer.Clipboard
+import javax.swing.JComponent
 
 @Composable
 fun SwingCodeEditor(
@@ -23,6 +28,35 @@ fun SwingCodeEditor(
             val textArea = RSyntaxTextArea().apply {
                 this.syntaxEditingStyle = syntaxStyle
                 isCodeFoldingEnabled = true
+                
+                // Custom TransferHandler to fix ClassNotFoundException during clipboard operations
+                transferHandler = object : TransferHandler() {
+                    override fun canImport(support: TransferSupport): Boolean {
+                        return support.isDataFlavorSupported(DataFlavor.stringFlavor)
+                    }
+
+                    override fun importData(support: TransferSupport): Boolean {
+                        if (!canImport(support)) return false
+                        return try {
+                            val data = support.transferable.getTransferData(DataFlavor.stringFlavor) as String
+                            replaceSelection(data)
+                            true
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                            false
+                        }
+                    }
+
+                    override fun exportToClipboard(comp: JComponent, clip: Clipboard, action: Int) {
+                        val selection = (comp as RSyntaxTextArea).selectedText
+                        if (!selection.isNullOrEmpty()) {
+                            val contents = StringSelection(selection)
+                            clip.setContents(contents, contents)
+                        }
+                    }
+
+                    override fun getSourceActions(c: JComponent): Int = COPY_OR_MOVE
+                }
             }
 
             val documentListener = object : DocumentListener {

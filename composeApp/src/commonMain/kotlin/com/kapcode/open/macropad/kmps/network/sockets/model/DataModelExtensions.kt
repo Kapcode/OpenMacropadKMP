@@ -83,6 +83,11 @@ fun activeProcessMessage(processName: String?): DataModel =
 fun getMacrosRequest(): DataModel =
     textMessage("getMacros")
 
+fun getCurrencyRequest(): DataModel =
+    DataModelBuilder()
+        .systemQuery("currency")
+        .build()
+
 // Security & Pairing specialized builders
 fun pairingRequestMessage(deviceName: String, deviceId: String): DataModel =
     controlMessage(
