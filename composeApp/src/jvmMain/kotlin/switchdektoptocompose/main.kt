@@ -3,6 +3,8 @@ package switchdektoptocompose
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.*
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
 import switchdektoptocompose.di.ViewModelFactory
@@ -54,15 +56,6 @@ fun main(args: Array<String>) = application {
         ) 
     }
 
-    var showExitDialog by remember { mutableStateOf(false) }
-    var showShortcutsDialog by remember { mutableStateOf(false) }
-    var showPushSettingsDialog by remember { mutableStateOf(false) }
-    var showSettingsDialog by remember { mutableStateOf(false) }
-    var initialScrollToSecurity by remember { mutableStateOf(false) }
-    var initialScrollToVariables by remember { mutableStateOf(false) }
-    val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
-    val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
-    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
     val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
     val icon = painterResource("macropadIcon512.png")
@@ -100,6 +93,10 @@ fun main(args: Array<String>) = application {
         }
     }
     
+    val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
+    val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+    
     Tray(
         icon = icon,
         tooltip = "Open Macropad Server (Right-click for menu)",
@@ -119,12 +116,13 @@ fun main(args: Array<String>) = application {
                 Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
             }
             Separator()
-            Item("Shortcuts & Keymap", onClick = { showShortcutsDialog = true })
-            Item("Bulk Settings Pusher", onClick = { showPushSettingsDialog = true })
+            Item("Shortcuts & Keymap", onClick = { desktopWindowState.toggleShortcuts(true) })
+            Item("Bulk Settings Pusher", onClick = { desktopWindowState.togglePushSettings(true) })
+            Item("Settings", onClick = { desktopWindowState.toggleSettings(true) })
             Separator()
             Item("Exit", onClick = {
                 if (exitBehavior == "ASK") {
-                    showExitDialog = true
+                    desktopWindowState.showExitDialog = true
                     desktopWindowState.showWindow()
                 } else {
                     exitApplication()
@@ -133,21 +131,36 @@ fun main(args: Array<String>) = application {
         }
     )
 
-    if (showShortcutsDialog) {
+    if (desktopWindowState.showShortcutsDialog) {
         switchdektoptocompose.ui.ShortcutsDialog(
             settingsViewModel = settingsViewModel,
             consoleViewModel = consoleViewModel,
             selectedTheme = selectedTheme,
-            onDismissRequest = { showShortcutsDialog = false }
+            onDismissRequest = { desktopWindowState.showShortcutsDialog = false },
+            windowState = desktopWindowState.shortcutsWindowState
         )
     }
 
-    if (showPushSettingsDialog) {
+    if (desktopWindowState.showPushSettingsDialog) {
         switchdektoptocompose.ui.PushSettingsDialog(
             settingsViewModel = settingsViewModel,
             consoleViewModel = consoleViewModel,
             selectedTheme = selectedTheme,
-            onDismissRequest = { showPushSettingsDialog = false }
+            onDismissRequest = { desktopWindowState.showPushSettingsDialog = false },
+            windowState = desktopWindowState.pushSettingsWindowState
+        )
+    }
+
+    if (desktopWindowState.showSettingsDialog) {
+        switchdektoptocompose.ui.SettingsDialog(
+            desktopViewModel = desktopViewModel,
+            settingsViewModel = settingsViewModel,
+            sharedSettingsViewModel = viewModels.sharedSettingsViewModel,
+            consoleViewModel = consoleViewModel,
+            onDismissRequest = { desktopWindowState.showSettingsDialog = false },
+            onShowShortcutsRequest = { desktopWindowState.toggleShortcuts(true) },
+            onShowPushSettingsRequest = { desktopWindowState.togglePushSettings(true) },
+            windowState = desktopWindowState.settingsWindowState
         )
     }
 
@@ -159,7 +172,7 @@ fun main(args: Array<String>) = application {
                 "TRAY" -> desktopWindowState.animateToTray()
                 "EXIT" -> exitApplication()
                 else -> {
-                    showExitDialog = true
+                    desktopWindowState.showExitDialog = true
                 }
             }
         },
@@ -170,17 +183,7 @@ fun main(args: Array<String>) = application {
         DesktopApp(
             viewModels = viewModels,
             desktopWindowState = desktopWindowState,
-            onExit = ::exitApplication,
-            showExitDialog = showExitDialog,
-            onShowExitDialogChange = { showExitDialog = it },
-            showShortcutsDialog = showShortcutsDialog,
-            onShowShortcutsDialogChange = { showShortcutsDialog = it },
-            showPushSettingsDialog = showPushSettingsDialog,
-            onShowPushSettingsDialogChange = { showPushSettingsDialog = it },
-            showSettingsDialog = showSettingsDialog,
-            onShowSettingsDialogChange = { showSettingsDialog = it },
-            initialScrollToVariables = initialScrollToVariables,
-            onInitialScrollToVariablesChange = { initialScrollToVariables = it }
+            onExit = ::exitApplication
         )
     }
 }

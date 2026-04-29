@@ -611,7 +611,15 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Live Values**: Integrated real-time resolvers into the picker dropdown. Users can now see their current `mouse_x` or `pixel_color_at_cursor` updating live in the menu before selecting them.
     - **Click-to-Copy**: Updated the Inspector UI and Variable Picker to support instant clipboard capture of any system variable.
 
-## 45. Integrated Gamepad Support (Jamepad)
+## 46. Settings UI Layout Standardization
+
+### Challenge: UI Overlaps in Settings Screen
+- **Problem**: Sub-components within the Settings screen lacked root layout containers (like `Column`), causing them to stack on top of each other when placed inside a parent `Box`.
+- **Solution**:
+    - **Root Column Wrapper**: Standardized all settings components (`VariableSettings`, `ClientSettings`, `NetworkSettings`, `UISettings`, `ThemeSettings`, `BehaviorSettings`, `ControllerSettings`, and `DeviceManagement`) to be wrapped in a root `Column(modifier = Modifier.fillMaxWidth())`.
+    - **Consistent Formatting**: Cleaned up excessive whitespace and ensured all sub-components follow a predictable vertical flow, preventing visual overlaps and ensuring future components are easier to integrate.
+
+## 47. Integrated Gamepad Support (Jamepad)
 
 ### Challenge: Low-Latency Controller Polling
 - **Problem**: Standard event-driven input libraries often introduce latency or missed frames when handling rapid analog movements or button mashes.

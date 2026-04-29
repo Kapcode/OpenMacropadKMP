@@ -16,37 +16,45 @@ fun ControllerSettings(
     navigationMode: String,
     settingsViewModel: SettingsViewModel
 ) {
-    Text("Controller Navigation", style = MaterialTheme.typography.titleMedium)
-    Text("Configure how your Xbox controller interacts with the application UI.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    
-    Spacer(Modifier.height(8.dp))
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Text("Controller Navigation", style = MaterialTheme.typography.titleMedium)
+        Text(
+            "Configure how your Xbox controller interacts with the application UI.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-    Column(Modifier.selectableGroup()) {
-        listOf(
-            "TRAVERSAL" to "Standard (D-Pad to Tab)",
-            "CURSOR" to "Virtual Cursor (Stick to Mouse)"
-        ).forEach { (value, label) ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .selectable(
+        Spacer(Modifier.height(8.dp))
+
+        Column(Modifier.selectableGroup()) {
+            listOf(
+                "TRAVERSAL" to "Standard (D-Pad to Tab)",
+                "CURSOR" to "Virtual Cursor (Stick to Mouse)"
+            ).forEach { (value, label) ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .selectable(
+                            selected = (navigationMode == value),
+                            onClick = { settingsViewModel.setControllerNavigationMode(value) },
+                            role = Role.RadioButton
+                        )
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
                         selected = (navigationMode == value),
-                        onClick = { settingsViewModel.setControllerNavigationMode(value) },
-                        role = Role.RadioButton
+                        onClick = null // Selected by Row
                     )
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = (navigationMode == value),
-                    onClick = null // Selected by Row
-                )
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
+                    Text(
+                        text = label,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
             }
         }
     }

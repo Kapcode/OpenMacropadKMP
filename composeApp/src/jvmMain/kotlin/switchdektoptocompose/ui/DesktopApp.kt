@@ -44,83 +44,14 @@ import switchdektoptocompose.di.ViewModelFactory
 @Preview
 @Composable
 fun DesktopAppPreview() {
-    val settingsViewModel = remember { DesktopSettingsViewModel() }
-    val consoleViewModel = remember { ConsoleViewModel() }
-    val scope = rememberCoroutineScope()
-    val processWatcher = remember { ProcessWatcher(scope) }
-    val inspectorViewModel = remember { InspectorViewModel(consoleViewModel, processWatcher) }
-    val clientCommunicationViewModel = remember { ClientCommunicationViewModel(settingsViewModel, consoleViewModel) }
-    val serverViewModel = remember {
-        ServerViewModel(
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            processWatcher = processWatcher,
-            onMessageReceived = { clientId, dataModel -> clientCommunicationViewModel.onDataReceived(clientId, dataModel) },
-            onClientConnected = { clientId, name -> clientCommunicationViewModel.onClientConnected(clientId, name) },
-            onClientDisconnected = { clientId -> clientCommunicationViewModel.onClientDisconnected(clientId) },
-            onPairingRequest = { clientId, name -> clientCommunicationViewModel.onPairingRequest(clientId, name) },
-            onUpgradeRequest = { clientId, jarBytes, hash, isSimulation -> 
-                clientCommunicationViewModel.onUpgradeRequest(clientId, jarBytes, hash, isSimulation)
-            }
-        )
-    }
-    val desktopViewModel = remember {
-        DesktopViewModel(
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            inspectorViewModel = inspectorViewModel,
-            serverViewModel = serverViewModel,
-            clientCommunicationViewModel = clientCommunicationViewModel
-        )
-    }
-    val macroManagerViewModel = remember {
-        MacroManagerViewModel(
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            onEditMacroRequested = { },
-            onMacrosUpdated = { }
-        )
-    }
-    // Wire up circular references for preview
-    remember(macroManagerViewModel, serverViewModel, clientCommunicationViewModel) {
-        clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
-        clientCommunicationViewModel.serverViewModel = serverViewModel
-        desktopViewModel.macroManagerViewModel = macroManagerViewModel
-        Unit
-    }
-    
-    val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
-    val macroEditorViewModel = remember { MacroEditorViewModel(settingsViewModel, consoleViewModel, macroManagerViewModel) }
-    val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
-    val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
-    val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
-    val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
-    val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
-    val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
-
-    val viewModels = DesktopViewModels(
-        desktopViewModel = desktopViewModel,
-        serverViewModel = serverViewModel,
-        clientCommunicationViewModel = clientCommunicationViewModel,
-        consoleViewModel = consoleViewModel,
-        inspectorViewModel = inspectorViewModel,
-        recordMacroViewModel = recordMacroViewModel,
-        macroEditorViewModel = macroEditorViewModel,
-        macroManagerViewModel = macroManagerViewModel,
-        settingsViewModel = settingsViewModel,
-        sharedSettingsViewModel = sharedSettingsViewModel,
-        macroTimelineViewModel = macroTimelineViewModel,
-        newEventViewModel = newEventViewModel,
-        marketplaceViewModel = marketplaceViewModel,
-        pairingViewModel = pairingViewModel,
-        layoutViewModel = layoutViewModel
-    )
-
-    val desktopWindowState = rememberDesktopWindowState(settingsViewModel = settingsViewModel)
+    val viewModels = ViewModelFactory.createViewModels()
+    val desktopWindowState = rememberDesktopWindowState(settingsViewModel = viewModels.settingsViewModel)
 
     DesktopApp(
         viewModels = viewModels,
-        desktopWindowState = desktopWindowState
+        desktopWindowState = desktopWindowState,
+        showSettingsDialog = false,
+        onShowSettingsDialogChange = {}
     )
 }
 
@@ -132,14 +63,12 @@ fun DesktopApp(
     onExit: () -> Unit = {},
     showExitDialog: Boolean = false,
     onShowExitDialogChange: (Boolean) -> Unit = {},
+    showSettingsDialog: Boolean = false,
+    onShowSettingsDialogChange: (Boolean) -> Unit = {},
     showShortcutsDialog: Boolean = false,
     onShowShortcutsDialogChange: (Boolean) -> Unit = {},
     showPushSettingsDialog: Boolean = false,
-    onShowPushSettingsDialogChange: (Boolean) -> Unit = {},
-    showSettingsDialog: Boolean = false,
-    onShowSettingsDialogChange: (Boolean) -> Unit = {},
-    initialScrollToVariables: Boolean = false,
-    onInitialScrollToVariablesChange: (Boolean) -> Unit = {}
+    onShowPushSettingsDialogChange: (Boolean) -> Unit = {}
 ) {
     val desktopViewModel = viewModels.desktopViewModel
     val serverViewModel = viewModels.serverViewModel
@@ -150,17 +79,12 @@ fun DesktopApp(
     val macroEditorViewModel = viewModels.macroEditorViewModel
     val macroManagerViewModel = viewModels.macroManagerViewModel
     val settingsViewModel = viewModels.settingsViewModel
-    val sharedSettingsViewModel = viewModels.sharedSettingsViewModel
     val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val newEventViewModel = viewModels.newEventViewModel
     val marketplaceViewModel = viewModels.marketplaceViewModel
     val layoutViewModel = viewModels.layoutViewModel
 
-    val virtualCursorPosition by layoutViewModel.virtualCursorPosition.collectAsState()
-    val isVirtualCursorVisible by layoutViewModel.isVirtualCursorVisible.collectAsState()
-
     val mainTab by layoutViewModel.mainTab.collectAsState()
-    var activeTab by remember(mainTab) { mutableStateOf(mainTab) }
 
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
@@ -280,27 +204,6 @@ fun DesktopApp(
         )
     }
 
-    if (showSettingsDialog) {
-        SettingsDialog(
-            desktopViewModel = desktopViewModel,
-            settingsViewModel = settingsViewModel,
-            sharedSettingsViewModel = sharedSettingsViewModel,
-            consoleViewModel = consoleViewModel,
-            onDismissRequest = { 
-                onShowSettingsDialogChange(false)
-                onInitialScrollToVariablesChange(false)
-            },
-            onShowShortcutsRequest = {
-                onShowSettingsDialogChange(false)
-                onShowShortcutsDialogChange(true)
-            },
-            onShowPushSettingsRequest = {
-                onShowSettingsDialogChange(false)
-                onShowPushSettingsDialogChange(true)
-            },
-            initialScrollToVariables = initialScrollToVariables
-        )
-    }
 
     if (showLoggingWarning) {
         LoggingToFileWarningDialog(
@@ -553,7 +456,6 @@ fun DesktopApp(
                                                 viewModel = inspectorViewModel, 
                                                 macroManagerViewModel = macroManagerViewModel,
                                                 onOpenVariableSettings = {
-                                                    onInitialScrollToVariablesChange(true)
                                                     onShowSettingsDialogChange(true)
                                                 }
                                             )

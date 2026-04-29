@@ -16,30 +16,32 @@ fun ThemeSettings(
     selectedTheme: String,
     settingsViewModel: SettingsViewModel
 ) {
-    Text("Theme", style = MaterialTheme.typography.titleMedium)
-    Column(Modifier.selectableGroup()) {
-        settingsViewModel.availableThemes.forEach { theme ->
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .selectable(
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text("Theme", style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.selectableGroup()) {
+            settingsViewModel.availableThemes.forEach { theme ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(56.dp)
+                        .selectable(
+                            selected = (theme == selectedTheme),
+                            onClick = { settingsViewModel.selectTheme(theme) },
+                            role = Role.RadioButton
+                        )
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    RadioButton(
                         selected = (theme == selectedTheme),
-                        onClick = { settingsViewModel.selectTheme(theme) },
-                        role = Role.RadioButton
+                        onClick = null
                     )
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                RadioButton(
-                    selected = (theme == selectedTheme),
-                    onClick = null
-                )
-                Text(
-                    text = theme,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.padding(start = 16.dp)
-                )
+                    Text(
+                        text = theme,
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                }
             }
         }
     }

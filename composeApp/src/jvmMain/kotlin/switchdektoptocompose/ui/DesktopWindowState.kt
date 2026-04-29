@@ -24,6 +24,17 @@ class DesktopWindowState(
         private set
     private var animationJob: Job? = null
 
+    // Centralized dialog visibility states
+    var showExitDialog by mutableStateOf(false)
+    var showShortcutsDialog by mutableStateOf(false)
+    var showPushSettingsDialog by mutableStateOf(false)
+    var showSettingsDialog by mutableStateOf(false)
+
+    // Secondary window states
+    val shortcutsWindowState = WindowState(size = DpSize(500.dp, 550.dp))
+    val pushSettingsWindowState = WindowState(size = DpSize(500.dp, 600.dp))
+    val settingsWindowState = WindowState(size = DpSize(600.dp, 700.dp))
+
     init {
         applyInitialPlacement()
     }
@@ -56,6 +67,41 @@ class DesktopWindowState(
         windowState.placement = WindowPlacement.Floating // Force floating to allow positioning
         windowState.position = WindowPosition(targetBounds.x.dp + 100.dp, targetBounds.y.dp + 100.dp)
         windowState.size = DpSize(1200.dp, 800.dp) // Set a reasonable default size if not maximized
+    }
+
+    fun calculateCenteredWindowPosition(dialogSize: DpSize): WindowPosition {
+        val mainPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
+        val mainSize = windowState.size
+
+        val centerX = mainPos.x + (mainSize.width - dialogSize.width) / 2
+        val centerY = mainPos.y + (mainSize.height - dialogSize.height) / 2
+
+        return WindowPosition(centerX, centerY)
+    }
+
+    fun toggleShortcuts(show: Boolean = !showShortcutsDialog) {
+        if (show) {
+            shortcutsWindowState.position = calculateCenteredWindowPosition(shortcutsWindowState.size)
+        }
+        showShortcutsDialog = show
+    }
+
+    fun togglePushSettings(show: Boolean = !showPushSettingsDialog) {
+        if (show) {
+            pushSettingsWindowState.position = calculateCenteredWindowPosition(pushSettingsWindowState.size)
+        }
+        showPushSettingsDialog = show
+    }
+
+    fun toggleSettings(show: Boolean = !showSettingsDialog) {
+        if (show) {
+            settingsWindowState.position = calculateCenteredWindowPosition(settingsWindowState.size)
+        }
+        showSettingsDialog = show
+    }
+
+    fun toggleExitDialog(show: Boolean = !showExitDialog) {
+        showExitDialog = show
     }
 
     fun toggleWindow() {

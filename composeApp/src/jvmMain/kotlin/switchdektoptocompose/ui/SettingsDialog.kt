@@ -10,9 +10,8 @@ import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettin
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import switchdektoptocompose.ui.settings.*
 
@@ -27,7 +26,7 @@ fun SettingsDialog(
     onShowShortcutsRequest: () -> Unit = {},
     onShowPushSettingsRequest: () -> Unit = {},
     initialScrollToSecurity: Boolean = false,
-    initialScrollToVariables: Boolean = false
+    windowState: WindowState? = null
 ) {
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
@@ -70,7 +69,6 @@ fun SettingsDialog(
     // Scroll state management
     val scrollState = rememberScrollState()
     var securitySectionOffset by remember { mutableStateOf(0f) }
-    var variablesSectionOffset by remember { mutableStateOf(0f) }
 
     LaunchedEffect(initialScrollToSecurity, securitySectionOffset) {
         if (initialScrollToSecurity && securitySectionOffset > 0) {
@@ -78,15 +76,9 @@ fun SettingsDialog(
         }
     }
 
-    LaunchedEffect(initialScrollToVariables, variablesSectionOffset) {
-        if (initialScrollToVariables && variablesSectionOffset > 0) {
-            scrollState.animateScrollTo(variablesSectionOffset.toInt())
-        }
-    }
-
     AppDialog(
         onCloseRequest = onDismissRequest,
-        state = rememberWindowState(width = 600.dp, height = 700.dp),
+        state = windowState ?: rememberWindowState(width = 600.dp, height = 700.dp),
         title = "Settings",
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel
@@ -114,9 +106,7 @@ fun SettingsDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel, onShowPushSettingsRequest)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                Box(modifier = Modifier.onGloballyPositioned { variablesSectionOffset = it.positionInParent().y }) {
-                    VariableSettings(settingsViewModel)
-                }
+                VariableSettings(settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 NetworkSettings(
                     serverPort, secureServerPort, encryptionEnabled, isServerRunning,

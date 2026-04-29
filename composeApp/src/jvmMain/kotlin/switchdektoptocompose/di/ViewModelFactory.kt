@@ -12,6 +12,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.viewmodel.*
+import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 
 data class DesktopViewModels(
     val desktopViewModel: DesktopViewModel,
@@ -23,7 +24,7 @@ data class DesktopViewModels(
     val macroEditorViewModel: MacroEditorViewModel,
     val macroManagerViewModel: MacroManagerViewModel,
     val settingsViewModel: SettingsViewModel,
-    val sharedSettingsViewModel: com.kapcode.open.macropad.kmps.settings.SettingsViewModel,
+    val sharedSettingsViewModel: SharedSettingsViewModel,
     val macroTimelineViewModel: MacroTimelineViewModel,
     val newEventViewModel: NewEventViewModel,
     val marketplaceViewModel: MarketplaceViewModel,
@@ -35,7 +36,7 @@ object ViewModelFactory {
     @Composable
     fun createViewModels(): DesktopViewModels {
         val settingsViewModel = remember { SettingsViewModel() }
-        val sharedSettingsViewModel = remember { com.kapcode.open.macropad.kmps.settings.SettingsViewModel() }
+        val sharedSettingsViewModel = remember { SharedSettingsViewModel() }
         val consoleViewModel = remember { ConsoleViewModel() }
         val layoutViewModel = remember { LayoutViewModel(settingsViewModel) }
         

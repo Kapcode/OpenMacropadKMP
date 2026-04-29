@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import switchdektoptocompose.viewmodel.SettingsViewModel
 import switchdektoptocompose.viewmodel.ConsoleViewModel
@@ -19,7 +20,8 @@ fun PushSettingsDialog(
     settingsViewModel: SettingsViewModel,
     consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    windowState: WindowState? = null
 ) {
     val clientTheme by settingsViewModel.clientTheme.collectAsState()
     val clientAnalyticsEnabled by settingsViewModel.clientAnalyticsEnabled.collectAsState()
@@ -28,7 +30,7 @@ fun PushSettingsDialog(
 
     AppDialog(
         onCloseRequest = onDismissRequest,
-        state = rememberWindowState(width = 500.dp, height = 600.dp),
+        state = windowState ?: rememberWindowState(width = 500.dp, height = 600.dp),
         title = "Settings Pusher (Bulk Provisioning)",
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel

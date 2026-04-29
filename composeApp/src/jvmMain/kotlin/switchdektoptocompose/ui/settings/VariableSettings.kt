@@ -17,56 +17,58 @@ fun VariableSettings(
     val mouseRate by settingsViewModel.mousePollingRate.collectAsState()
     val systemRate by settingsViewModel.systemPollingRate.collectAsState()
 
-    Text("Variable System Settings", style = MaterialTheme.typography.titleMedium)
-    Spacer(modifier = Modifier.height(8.dp))
-    Text(
-        "Configure how often the system refreshes dynamic data. Faster rates are more responsive but increase CPU load.",
-        style = MaterialTheme.typography.bodySmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-    Spacer(modifier = Modifier.height(16.dp))
-
-    // --- Window Polling ---
-    AppTooltipArea(
-        tooltipText = "Higher speed makes the app react faster when you switch windows, but uses slightly more computer power."
-    ) {
-        PollingSlider(
-            label = "Window Tracking (Process/Title)",
-            description = "Affects how fast 'Current Window' and 'Active Window Is' react.",
-            value = windowRate,
-            onValueChange = { settingsViewModel.setWindowPollingRate(it) },
-            range = 50f..5000f
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text("Variable System Settings", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            "Configure how often the system refreshes dynamic data. Faster rates are more responsive but increase CPU load.",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
+        Spacer(modifier = Modifier.height(16.dp))
 
-    Spacer(modifier = Modifier.height(24.dp))
+        // --- Window Polling ---
+        AppTooltipArea(
+            tooltipText = "Higher speed makes the app react faster when you switch windows, but uses slightly more computer power."
+        ) {
+            PollingSlider(
+                label = "Window Tracking (Process/Title)",
+                description = "Affects how fast 'Current Window' and 'Active Window Is' react.",
+                value = windowRate,
+                onValueChange = { settingsViewModel.setWindowPollingRate(it) },
+                range = 50f..5000f
+            )
+        }
 
-    // --- Mouse Polling ---
-    AppTooltipArea(
-        tooltipText = "Essential for pixel-perfect automation. Lower values make mouse coordinate tracking much smoother."
-    ) {
-        PollingSlider(
-            label = "Input Tracking (Mouse/Pixel)",
-            description = "Affects real-time coordinate variables and pixel color checks.",
-            value = mouseRate,
-            onValueChange = { settingsViewModel.setMousePollingRate(it) },
-            range = 10f..1000f
-        )
-    }
+        Spacer(modifier = Modifier.height(24.dp))
 
-    Spacer(modifier = Modifier.height(24.dp))
+        // --- Mouse Polling ---
+        AppTooltipArea(
+            tooltipText = "Essential for pixel-perfect automation. Lower values make mouse coordinate tracking much smoother."
+        ) {
+            PollingSlider(
+                label = "Input Tracking (Mouse/Pixel)",
+                description = "Affects real-time coordinate variables and pixel color checks.",
+                value = mouseRate,
+                onValueChange = { settingsViewModel.setMousePollingRate(it) },
+                range = 10f..1000f
+            )
+        }
 
-    // --- System Polling ---
-    AppTooltipArea(
-        tooltipText = "Determines how often the app checks for things like clipboard changes or background tasks."
-    ) {
-        PollingSlider(
-            label = "System Environment (Clipboard/Time)",
-            description = "Affects clipboard change detection and generic state pulses.",
-            value = systemRate,
-            onValueChange = { settingsViewModel.setSystemPollingRate(it) },
-            range = 100f..10000f
-        )
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- System Polling ---
+        AppTooltipArea(
+            tooltipText = "Determines how often the app checks for things like clipboard changes or background tasks."
+        ) {
+            PollingSlider(
+                label = "System Environment (Clipboard/Time)",
+                description = "Affects clipboard change detection and generic state pulses.",
+                value = systemRate,
+                onValueChange = { settingsViewModel.setSystemPollingRate(it) },
+                range = 100f..10000f
+            )
+        }
     }
 }
 
