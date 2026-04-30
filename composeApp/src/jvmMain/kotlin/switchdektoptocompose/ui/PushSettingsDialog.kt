@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
@@ -21,7 +22,8 @@ fun PushSettingsDialog(
     consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
     onDismissRequest: () -> Unit,
-    windowState: WindowState? = null
+    windowState: WindowState? = null,
+    icon: Painter? = null
 ) {
     val clientTheme by settingsViewModel.clientTheme.collectAsState()
     val clientAnalyticsEnabled by settingsViewModel.clientAnalyticsEnabled.collectAsState()
@@ -33,7 +35,8 @@ fun PushSettingsDialog(
         state = windowState ?: rememberWindowState(width = 500.dp, height = 600.dp),
         title = "Settings Pusher (Bulk Provisioning)",
         selectedTheme = selectedTheme,
-        consoleViewModel = consoleViewModel
+        consoleViewModel = consoleViewModel,
+        icon = icon
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),

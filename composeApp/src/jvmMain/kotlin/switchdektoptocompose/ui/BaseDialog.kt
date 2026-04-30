@@ -6,6 +6,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
@@ -27,6 +28,7 @@ fun AppDialog(
     selectedTheme: String,
     closeOnMinimize: Boolean = true,
     consoleViewModel: ConsoleViewModel? = null,
+    icon: Painter? = null,
     content: @Composable () -> Unit
 ) {
     Window(
@@ -35,7 +37,8 @@ fun AppDialog(
         title = title,
         resizable = resizable,
         alwaysOnTop = alwaysOnTop,
-        focusable = true
+        focusable = true,
+        icon = icon
     ) {
         LaunchedEffect(state.isMinimized) {
             if (state.isMinimized && closeOnMinimize) {

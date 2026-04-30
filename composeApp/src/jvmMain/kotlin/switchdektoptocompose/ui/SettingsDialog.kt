@@ -10,6 +10,7 @@ import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettin
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
@@ -26,7 +27,8 @@ fun SettingsDialog(
     onShowShortcutsRequest: () -> Unit = {},
     onShowPushSettingsRequest: () -> Unit = {},
     initialScrollToSecurity: Boolean = false,
-    windowState: WindowState? = null
+    windowState: WindowState? = null,
+    icon: Painter? = null
 ) {
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
@@ -80,6 +82,7 @@ fun SettingsDialog(
         onCloseRequest = onDismissRequest,
         state = windowState ?: rememberWindowState(width = 600.dp, height = 700.dp),
         title = "Settings",
+        icon = icon,
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel
     ) {

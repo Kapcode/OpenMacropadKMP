@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.RadioButtonChecked
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.rememberWindowState
 import com.github.kwhat.jnativehook.GlobalScreen
@@ -23,6 +24,7 @@ fun RecordShortcutDialog(
     selectedTheme: String,
     consoleViewModel: ConsoleViewModel,
     isFullShortcut: Boolean = true,
+    icon: Painter? = null,
     onShortcutRecorded: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -61,7 +63,8 @@ fun RecordShortcutDialog(
         state = rememberWindowState(width = 450.dp, height = 350.dp),
         title = title,
         selectedTheme = selectedTheme,
-        consoleViewModel = consoleViewModel
+        consoleViewModel = consoleViewModel,
+        icon = icon
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),

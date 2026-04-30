@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
@@ -19,7 +20,8 @@ fun ShortcutsDialog(
     consoleViewModel: ConsoleViewModel,
     selectedTheme: String,
     onDismissRequest: () -> Unit,
-    windowState: WindowState? = null
+    windowState: WindowState? = null,
+    icon: Painter? = null
 ) {
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
     val hardEstop by settingsViewModel.hardEstop.collectAsState()
@@ -37,6 +39,7 @@ fun ShortcutsDialog(
             title = "Record Shortcut for $recordingShortcutFor",
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
+            icon = icon,
             isFullShortcut = recordingShortcutType == ShortcutType.SHORTCUT,
             onShortcutRecorded = { shortcut ->
                 when (recordingShortcutFor) {
@@ -56,7 +59,8 @@ fun ShortcutsDialog(
         state = windowState ?: rememberWindowState(width = 500.dp, height = 550.dp),
         title = "Shortcuts & Keymap",
         selectedTheme = selectedTheme,
-        consoleViewModel = consoleViewModel
+        consoleViewModel = consoleViewModel,
+        icon = icon
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(16.dp),

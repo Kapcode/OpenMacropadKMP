@@ -1,6 +1,7 @@
 package switchdektoptocompose.ui
 
 import switchdektoptocompose.viewmodel.SettingsViewModel
+import switchdektoptocompose.viewmodel.LayoutViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
@@ -16,6 +17,7 @@ class DesktopWindowState(
     val windowState: WindowState,
     private val scope: CoroutineScope,
     private val settingsViewModel: SettingsViewModel,
+    private val layoutViewModel: LayoutViewModel,
     private val onTrayMinimize: () -> Unit = {}
 ) {
     var isWindowVisible by mutableStateOf(true)
@@ -29,14 +31,87 @@ class DesktopWindowState(
     var showShortcutsDialog by mutableStateOf(false)
     var showPushSettingsDialog by mutableStateOf(false)
     var showSettingsDialog by mutableStateOf(false)
+    var showNewEventDialog by mutableStateOf(false)
+    var showRecordDialog by mutableStateOf(false)
+    var showUpdateConfirmDialog by mutableStateOf(false)
+    var showMarketplace by mutableStateOf(false)
+    var showLoggingWarning by mutableStateOf(false)
+    var showAppInfo by mutableStateOf(false)
 
     // Secondary window states
     val shortcutsWindowState = WindowState(size = DpSize(500.dp, 550.dp))
     val pushSettingsWindowState = WindowState(size = DpSize(500.dp, 600.dp))
     val settingsWindowState = WindowState(size = DpSize(600.dp, 700.dp))
+    val marketplaceWindowState = WindowState(size = DpSize(900.dp, 700.dp))
 
     init {
         applyInitialPlacement()
+        scope.launch {
+            layoutViewModel.showUpdateConfirmDialog.collect { show ->
+                showUpdateConfirmDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showExitDialog.collect { show ->
+                showExitDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showShortcutsDialog.collect { show ->
+                if (show) {
+                    shortcutsWindowState.position = calculateCenteredWindowPosition(shortcutsWindowState.size)
+                    shortcutsWindowState.isMinimized = false
+                }
+                showShortcutsDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showPushSettingsDialog.collect { show ->
+                if (show) {
+                    pushSettingsWindowState.position = calculateCenteredWindowPosition(pushSettingsWindowState.size)
+                    pushSettingsWindowState.isMinimized = false
+                }
+                showPushSettingsDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showSettingsDialog.collect { show ->
+                if (show) {
+                    settingsWindowState.position = calculateCenteredWindowPosition(settingsWindowState.size)
+                    settingsWindowState.isMinimized = false
+                }
+                showSettingsDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showMarketplace.collect { show ->
+                if (show) {
+                    marketplaceWindowState.position = calculateCenteredWindowPosition(marketplaceWindowState.size)
+                    marketplaceWindowState.isMinimized = false
+                }
+                showMarketplace = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showNewEventDialog.collect { show ->
+                showNewEventDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showRecordDialog.collect { show ->
+                showRecordDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showLoggingWarning.collect { show ->
+                showLoggingWarning = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.showAppInfo.collect { show ->
+                showAppInfo = show
+            }
+        }
     }
 
     private fun applyInitialPlacement() {
@@ -80,28 +155,43 @@ class DesktopWindowState(
     }
 
     fun toggleShortcuts(show: Boolean = !showShortcutsDialog) {
-        if (show) {
-            shortcutsWindowState.position = calculateCenteredWindowPosition(shortcutsWindowState.size)
-        }
-        showShortcutsDialog = show
+        layoutViewModel.setShowShortcutsDialog(show)
     }
 
     fun togglePushSettings(show: Boolean = !showPushSettingsDialog) {
-        if (show) {
-            pushSettingsWindowState.position = calculateCenteredWindowPosition(pushSettingsWindowState.size)
-        }
-        showPushSettingsDialog = show
+        layoutViewModel.setShowPushSettingsDialog(show)
     }
 
     fun toggleSettings(show: Boolean = !showSettingsDialog) {
-        if (show) {
-            settingsWindowState.position = calculateCenteredWindowPosition(settingsWindowState.size)
-        }
-        showSettingsDialog = show
+        layoutViewModel.setShowSettingsDialog(show)
+    }
+
+    fun toggleMarketplace(show: Boolean = !showMarketplace) {
+        layoutViewModel.setShowMarketplace(show)
+    }
+
+    fun toggleNewEventDialog(show: Boolean = !showNewEventDialog) {
+        layoutViewModel.setShowNewEventDialog(show)
+    }
+
+    fun toggleRecordDialog(show: Boolean = !showRecordDialog) {
+        layoutViewModel.setShowRecordDialog(show)
+    }
+
+    fun toggleUpdateConfirmDialog(show: Boolean = !showUpdateConfirmDialog) {
+        layoutViewModel.setShowUpdateConfirmDialog(show)
     }
 
     fun toggleExitDialog(show: Boolean = !showExitDialog) {
-        showExitDialog = show
+        layoutViewModel.setShowExitDialog(show)
+    }
+
+    fun toggleLoggingWarning(show: Boolean = !showLoggingWarning) {
+        layoutViewModel.setShowLoggingWarning(show)
+    }
+
+    fun toggleAppInfo(show: Boolean = !showAppInfo) {
+        layoutViewModel.setShowAppInfo(show)
     }
 
     fun toggleWindow() {
@@ -243,9 +333,10 @@ fun rememberDesktopWindowState(
     windowState: WindowState = rememberWindowState(placement = WindowPlacement.Maximized),
     scope: CoroutineScope = rememberCoroutineScope(),
     settingsViewModel: SettingsViewModel,
+    layoutViewModel: LayoutViewModel,
     onTrayMinimize: () -> Unit = {}
 ): DesktopWindowState {
-    return remember(windowState, scope, settingsViewModel, onTrayMinimize) {
-        DesktopWindowState(windowState, scope, settingsViewModel, onTrayMinimize)
+    return remember(windowState, scope, settingsViewModel, layoutViewModel, onTrayMinimize) {
+        DesktopWindowState(windowState, scope, settingsViewModel, layoutViewModel, onTrayMinimize)
     }
 }

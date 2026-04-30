@@ -1,17 +1,26 @@
 package switchdektoptocompose
 
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import switchdektoptocompose.di.ViewModelFactory
 import switchdektoptocompose.logic.InspectorManager
 import switchdektoptocompose.logic.TriggerListener
 import switchdektoptocompose.ui.DesktopApp
 import switchdektoptocompose.ui.DesktopWindowState
+import switchdektoptocompose.ui.MarketplaceScreen
 import switchdektoptocompose.ui.rememberDesktopWindowState
 import javax.swing.UIManager
 
@@ -30,10 +39,13 @@ fun main(args: Array<String>) = application {
     val desktopViewModel = viewModels.desktopViewModel
     val desktopWindowState = rememberDesktopWindowState(
         settingsViewModel = viewModels.settingsViewModel,
+        layoutViewModel = viewModels.layoutViewModel,
         onTrayMinimize = { desktopViewModel.rejectAllPendingDevices() }
     )
     
     val settingsViewModel = viewModels.settingsViewModel
+    val serverViewModel = viewModels.serverViewModel
+    val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val consoleViewModel = viewModels.consoleViewModel
     val inspectorViewModel = viewModels.inspectorViewModel
     val macroManagerViewModel = viewModels.macroManagerViewModel
@@ -44,21 +56,21 @@ fun main(args: Array<String>) = application {
     }
     
     // Pass listener back to serverViewModel
-    remember(triggerListener, viewModels.serverViewModel) {
-        viewModels.serverViewModel.triggerListener = triggerListener
+    remember(triggerListener, serverViewModel) {
+        serverViewModel.triggerListener = triggerListener
         Unit
     }
     val inspectorManager = remember { 
         InspectorManager(
             inspectorViewModel, 
             consoleViewModel,
-            viewModels.serverViewModel.processWatcher
+            serverViewModel.processWatcher
         ) 
     }
 
     val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
     val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
-    val icon = painterResource("macropadIcon512.png")
+    val icon = painterResource("macropadIcon64.png")
 
     // Update triggers in the application scope so they stay active even when window is hidden
     val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
@@ -84,18 +96,87 @@ fun main(args: Array<String>) = application {
         desktopViewModel.startServer()
         triggerListener.startListening()
         inspectorManager.startListening()
-        viewModels.serverViewModel.controllerManager?.start()
+        serverViewModel.controllerManager?.start()
         onDispose {
             desktopViewModel.shutdown()
             triggerListener.shutdown()
             inspectorManager.stopListening()
-            viewModels.serverViewModel.controllerManager?.stop()
+            serverViewModel.controllerManager?.stop()
         }
     }
     
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
     val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+
+    val activeToast by macroManagerViewModel.activeToast.collectAsState()
+    val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
+    val pendingUpdate by clientCommunicationViewModel.pendingUpdate.collectAsState()
+    val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
+    val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
+    val triggerPendingConfirmation by macroManagerViewModel.triggerPendingConfirmation.collectAsState()
+    val serverError by serverViewModel.serverError.collectAsState()
+    val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
+
+    LaunchedEffect(selectedTheme) {
+        val laf = if (selectedTheme == "Dark Blue") com.formdev.flatlaf.FlatDarkLaf::class.java.name else com.formdev.flatlaf.FlatLightLaf::class.java.name
+        UIManager.setLookAndFeel(laf)
+        for (window in java.awt.Window.getWindows()) {
+            javax.swing.SwingUtilities.updateComponentTreeUI(window)
+        }
+    }
+
+    activeToast?.let { toastMsg ->
+        Window(
+            onCloseRequest = {},
+            state = rememberWindowState(
+                position = WindowPosition(Alignment.BottomCenter),
+                width = 400.dp,
+                height = 64.dp
+            ),
+            title = "Toast",
+            transparent = true,
+            undecorated = true,
+            alwaysOnTop = true,
+            focusable = false,
+            resizable = false,
+            icon = icon
+        ) {
+            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.8f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = toastMsg,
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    if (desktopWindowState.showMarketplace) {
+        Window(
+            onCloseRequest = { desktopWindowState.toggleMarketplace(false) },
+            state = desktopWindowState.marketplaceWindowState,
+            title = "Marketplace",
+            icon = icon
+        ) {
+            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+                MarketplaceScreen(
+                    viewModel = viewModels.marketplaceViewModel,
+                    onBack = { desktopWindowState.toggleMarketplace(false) }
+                )
+            }
+        }
+    }
     
     Tray(
         icon = icon,
@@ -137,7 +218,8 @@ fun main(args: Array<String>) = application {
             consoleViewModel = consoleViewModel,
             selectedTheme = selectedTheme,
             onDismissRequest = { desktopWindowState.showShortcutsDialog = false },
-            windowState = desktopWindowState.shortcutsWindowState
+            windowState = desktopWindowState.shortcutsWindowState,
+            icon = icon
         )
     }
 
@@ -147,7 +229,8 @@ fun main(args: Array<String>) = application {
             consoleViewModel = consoleViewModel,
             selectedTheme = selectedTheme,
             onDismissRequest = { desktopWindowState.showPushSettingsDialog = false },
-            windowState = desktopWindowState.pushSettingsWindowState
+            windowState = desktopWindowState.pushSettingsWindowState,
+            icon = icon
         )
     }
 
@@ -160,7 +243,182 @@ fun main(args: Array<String>) = application {
             onDismissRequest = { desktopWindowState.showSettingsDialog = false },
             onShowShortcutsRequest = { desktopWindowState.toggleShortcuts(true) },
             onShowPushSettingsRequest = { desktopWindowState.togglePushSettings(true) },
-            windowState = desktopWindowState.settingsWindowState
+            windowState = desktopWindowState.settingsWindowState,
+            icon = icon
+        )
+    }
+
+    if (desktopWindowState.showExitDialog) {
+        switchdektoptocompose.ui.ExitConfirmDialog(
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onExitNow = { exitApplication() },
+            onExitToTray = {
+                desktopWindowState.toggleExitDialog(false)
+                desktopWindowState.animateToTray()
+            },
+            onDismiss = {
+                desktopWindowState.toggleExitDialog(false)
+            }
+        )
+    }
+
+    if (showLoggingWarning) {
+        switchdektoptocompose.ui.LoggingToFileWarningDialog(
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { consoleViewModel.confirmLoggingToFile() },
+            onDismiss = { consoleViewModel.dismissLoggingWarning() }
+        )
+    }
+
+    if (desktopWindowState.showUpdateConfirmDialog) {
+        pendingUpdate?.let { update ->
+            switchdektoptocompose.ui.UpdateConfirmDialog(
+                selectedTheme = selectedTheme,
+                consoleViewModel = consoleViewModel,
+                clientName = update.clientName,
+                isSimulation = update.isSimulation,
+                onAccept = { clientCommunicationViewModel.approveUpdate() },
+                onReject = { clientCommunicationViewModel.rejectUpdate() }
+            )
+        }
+    }
+
+    filePendingDeletion?.let { file ->
+        switchdektoptocompose.ui.ConfirmDeleteDialog(
+            file = file,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { macroManagerViewModel.confirmDeletion() },
+            onDismiss = { macroManagerViewModel.cancelDeletion() }
+        )
+    }
+
+    filesPendingDeletion?.let { files ->
+        switchdektoptocompose.ui.ConfirmDeleteMultipleDialog(
+            files = files,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { macroManagerViewModel.confirmMultipleDeletion() },
+            onDismiss = { macroManagerViewModel.cancelMultipleDeletion() }
+        )
+    }
+
+    if (desktopWindowState.showNewEventDialog) {
+        switchdektoptocompose.ui.NewEventDialog(
+            viewModel = viewModels.newEventViewModel,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onDismissRequest = { desktopWindowState.toggleNewEventDialog(false) },
+            onAddEvent = {
+                val newEventViewModel = viewModels.newEventViewModel
+                val isTrigger = newEventViewModel.isTriggerEvent.value
+                val isEdit = newEventViewModel.isEditMode.value
+                val editIndex = newEventViewModel.editingIndex.value
+
+                if (isTrigger) {
+                    val allowedClients = if (newEventViewModel.isAllTrustedSelected.value) {
+                        "ALL_TRUSTED"
+                    } else {
+                        (newEventViewModel.selectedClients.value +
+                                newEventViewModel.allowedClientsText.value.split(',').filter { it.isNotBlank() })
+                            .joinToString(",")
+                    }
+
+                    macroTimelineViewModel.addOrUpdateTrigger(
+                        keyName = newEventViewModel.triggerKeysText.value,
+                        allowedClients = allowedClients,
+                        triggerType = newEventViewModel.triggerType.value,
+                        holdDurationMs = newEventViewModel.holdDurationMs.value.toLongOrNull() ?: 500,
+                        multiTapCount = newEventViewModel.multiTapCount.value.toIntOrNull() ?: 2,
+                        tapWindowMs = newEventViewModel.tapWindowMs.value.toLongOrNull() ?: 300,
+                        sequenceWindowMs = newEventViewModel.sequenceWindowMs.value.toLongOrNull() ?: 1000,
+                        confirmationRequired = newEventViewModel.confirmationRequired.value
+                    )
+                } else {
+                    val events = newEventViewModel.createEvents()
+                    if (isEdit && editIndex != -1) {
+                        events.firstOrNull()?.let {
+                            macroTimelineViewModel.updateEvent(editIndex, it)
+                        }
+                    } else {
+                        macroTimelineViewModel.addEvents(events)
+                    }
+                }
+                desktopWindowState.toggleNewEventDialog(false)
+            }
+        )
+    }
+
+    if (desktopWindowState.showRecordDialog) {
+        switchdektoptocompose.ui.RecordMacroDialog(
+            viewModel = viewModels.recordMacroViewModel,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onDismissRequest = { desktopWindowState.toggleRecordDialog(false) },
+            onStartRecording = {
+                macroManagerViewModel.startRecording(viewModels.recordMacroViewModel)
+                desktopWindowState.toggleRecordDialog(false)
+            }
+        )
+    }
+
+    if (pendingPairingRequests.isNotEmpty()) {
+        switchdektoptocompose.ui.PairingRequestDialog(
+            requests = pendingPairingRequests,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            pairingViewModel = viewModels.pairingViewModel,
+            isAlwaysAllowAvailable = !allowOnceOnly,
+            onApprove = { id, name, persistent -> desktopViewModel.approveDevice(id, name, persistent) },
+            onDeny = { id -> desktopViewModel.rejectDevice(id) },
+            onBan = { id, name -> desktopViewModel.banDevice(id, name) },
+            onCancelAll = { desktopViewModel.rejectAllPendingDevices() }
+        )
+    }
+
+    serverError?.let { error ->
+        switchdektoptocompose.ui.ServerErrorDialog(
+            error = error,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onResetIdentity = {
+                desktopViewModel.clearServerError()
+                desktopViewModel.startServer(forceRecreateKeystore = true)
+            },
+            onDismiss = { desktopViewModel.clearServerError() }
+        )
+    }
+
+    triggerPendingConfirmation?.let { trigger ->
+        AlertDialog(
+            onDismissRequest = { macroManagerViewModel.cancelTrigger() },
+            title = { Text("Confirm Trigger") },
+            text = {
+                Column {
+                    Text("The following macro was triggered:")
+                    Text(
+                        trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Trigger Keys: ${trigger.keyCodes}")
+                    Text("Do you want to execute it?")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { macroManagerViewModel.confirmTrigger() }) {
+                    Text("Execute")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { macroManagerViewModel.cancelTrigger() }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 

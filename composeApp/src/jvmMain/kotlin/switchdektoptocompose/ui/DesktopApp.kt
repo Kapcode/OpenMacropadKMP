@@ -1,5 +1,6 @@
 package switchdektoptocompose.ui
 
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,13 +46,14 @@ import switchdektoptocompose.di.ViewModelFactory
 @Composable
 fun DesktopAppPreview() {
     val viewModels = ViewModelFactory.createViewModels()
-    val desktopWindowState = rememberDesktopWindowState(settingsViewModel = viewModels.settingsViewModel)
+    val desktopWindowState = rememberDesktopWindowState(
+        settingsViewModel = viewModels.settingsViewModel,
+        layoutViewModel = viewModels.layoutViewModel
+    )
 
     DesktopApp(
         viewModels = viewModels,
-        desktopWindowState = desktopWindowState,
-        showSettingsDialog = false,
-        onShowSettingsDialogChange = {}
+        desktopWindowState = desktopWindowState
     )
 }
 
@@ -60,15 +62,7 @@ fun DesktopAppPreview() {
 fun DesktopApp(
     viewModels: DesktopViewModels,
     desktopWindowState: DesktopWindowState,
-    onExit: () -> Unit = {},
-    showExitDialog: Boolean = false,
-    onShowExitDialogChange: (Boolean) -> Unit = {},
-    showSettingsDialog: Boolean = false,
-    onShowSettingsDialogChange: (Boolean) -> Unit = {},
-    showShortcutsDialog: Boolean = false,
-    onShowShortcutsDialogChange: (Boolean) -> Unit = {},
-    showPushSettingsDialog: Boolean = false,
-    onShowPushSettingsDialogChange: (Boolean) -> Unit = {}
+    onExit: () -> Unit = {}
 ) {
     val desktopViewModel = viewModels.desktopViewModel
     val serverViewModel = viewModels.serverViewModel
@@ -81,7 +75,6 @@ fun DesktopApp(
     val settingsViewModel = viewModels.settingsViewModel
     val macroTimelineViewModel = viewModels.macroTimelineViewModel
     val newEventViewModel = viewModels.newEventViewModel
-    val marketplaceViewModel = viewModels.marketplaceViewModel
     val layoutViewModel = viewModels.layoutViewModel
 
     val mainTab by layoutViewModel.mainTab.collectAsState()
@@ -91,49 +84,6 @@ fun DesktopApp(
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val activeToast by macroManagerViewModel.activeToast.collectAsState()
-
-    activeToast?.let { toastMsg ->
-        Window(
-            onCloseRequest = {},
-            state = rememberWindowState(
-                position = WindowPosition(Alignment.BottomCenter),
-                width = 400.dp,
-                height = 64.dp
-            ),
-            title = "Toast",
-            transparent = true,
-            undecorated = true,
-            alwaysOnTop = true,
-            focusable = false,
-            resizable = false
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.Black.copy(alpha = 0.8f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = toastMsg,
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-            }
-        }
-    }
-
-    LaunchedEffect(selectedTheme) {
-        val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else FlatLightLaf::class.java.name
-        UIManager.setLookAndFeel(laf)
-        for (window in java.awt.Window.getWindows()) {
-            SwingUtilities.updateComponentTreeUI(window)
-        }
-    }
-    
     val logs by consoleViewModel.logMessages.collectAsState()
     LaunchedEffect(logs) {
         if (logs.isNotEmpty()) {
@@ -145,10 +95,8 @@ fun DesktopApp(
     }
 
 
-    val connectedDevices by clientCommunicationViewModel.connectedDevices.collectAsState()
-    val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
     val isServerRunning by serverViewModel.isServerRunning.collectAsState()
-    val serverError by serverViewModel.serverError.collectAsState()
+    val connectedDevices by clientCommunicationViewModel.connectedDevices.collectAsState()
     val serverIpAddress by serverViewModel.serverIpAddress.collectAsState()
     val encryptionEnabled by serverViewModel.encryptionEnabled.collectAsState()
     val isMacroExecutionEnabled by clientCommunicationViewModel.isMacroExecutionEnabled.collectAsState()
@@ -159,210 +107,12 @@ fun DesktopApp(
     val serverPort by settingsViewModel.serverPort.collectAsState()
     val secureServerPort by settingsViewModel.secureServerPort.collectAsState()
     val currentPort = if (encryptionEnabled) secureServerPort else serverPort
-    val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
-    val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
     val eStopKey by settingsViewModel.eStopKey.collectAsState()
-    val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
     
     val tooltipXOffset by settingsViewModel.tooltipXOffset.collectAsState()
     val tooltipYOffset by settingsViewModel.tooltipYOffset.collectAsState()
 
-    val showNewEventDialog by layoutViewModel.showNewEventDialog.collectAsState()
-    val showRecordDialog by layoutViewModel.showRecordDialog.collectAsState()
-    val showExitDialogInternal by layoutViewModel.showExitDialogInternal.collectAsState()
-    val showUpdateConfirmDialog by layoutViewModel.showUpdateConfirmDialog.collectAsState()
-    val showMarketplace by layoutViewModel.showMarketplace.collectAsState()
-    val showExitDialogResolved = showExitDialog || showExitDialogInternal
-
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
-    val pendingUpdate by clientCommunicationViewModel.pendingUpdate.collectAsState()
-
-    if (showMarketplace) {
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            MarketplaceScreen(
-                viewModel = marketplaceViewModel,
-                onBack = { layoutViewModel.setShowMarketplace(false) }
-            )
-        }
-        return
-    }
-
-    if (showExitDialogResolved) {
-        ExitConfirmDialog(
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onExitNow = onExit,
-            onExitToTray = {
-                onShowExitDialogChange(false)
-                layoutViewModel.setShowExitDialogInternal(false)
-                desktopWindowState.animateToTray()
-            },
-            onDismiss = {
-                onShowExitDialogChange(false)
-                layoutViewModel.setShowExitDialogInternal(false)
-            }
-        )
-    }
-
-
-    if (showLoggingWarning) {
-        LoggingToFileWarningDialog(
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onConfirm = { consoleViewModel.confirmLoggingToFile() },
-            onDismiss = { consoleViewModel.dismissLoggingWarning() }
-        )
-    }
-
-    if (showUpdateConfirmDialog) {
-        pendingUpdate?.let { update ->
-            UpdateConfirmDialog(
-                selectedTheme = selectedTheme,
-                consoleViewModel = consoleViewModel,
-                clientName = update.clientName,
-                isSimulation = update.isSimulation,
-                onAccept = { clientCommunicationViewModel.approveUpdate() },
-                onReject = { clientCommunicationViewModel.rejectUpdate() }
-            )
-        }
-    }
-
-    filePendingDeletion?.let { file ->
-        ConfirmDeleteDialog(
-            file = file,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onConfirm = { macroManagerViewModel.confirmDeletion() },
-            onDismiss = { macroManagerViewModel.cancelDeletion() }
-        )
-    }
-    filesPendingDeletion?.let { files ->
-        ConfirmDeleteMultipleDialog(
-            files = files,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onConfirm = { macroManagerViewModel.confirmMultipleDeletion() },
-            onDismiss = { macroManagerViewModel.cancelMultipleDeletion() }
-        )
-    }
-    if (showNewEventDialog) {
-        NewEventDialog(
-            viewModel = newEventViewModel,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onDismissRequest = { layoutViewModel.setShowNewEventDialog(false) },
-            onAddEvent = {
-                val isTrigger = newEventViewModel.isTriggerEvent.value
-                val isEdit = newEventViewModel.isEditMode.value
-                val editIndex = newEventViewModel.editingIndex.value
-
-                if (isTrigger) {
-                    val allowedClients = if (newEventViewModel.isAllTrustedSelected.value) {
-                        "ALL_TRUSTED"
-                    } else {
-                        (newEventViewModel.selectedClients.value + 
-                            newEventViewModel.allowedClientsText.value.split(',').filter { it.isNotBlank() })
-                            .joinToString(",")
-                    }
-                        
-                    macroTimelineViewModel.addOrUpdateTrigger(
-                        keyName = newEventViewModel.triggerKeysText.value,
-                        allowedClients = allowedClients,
-                        triggerType = newEventViewModel.triggerType.value,
-                        holdDurationMs = newEventViewModel.holdDurationMs.value.toLongOrNull() ?: 500,
-                        multiTapCount = newEventViewModel.multiTapCount.value.toIntOrNull() ?: 2,
-                        tapWindowMs = newEventViewModel.tapWindowMs.value.toLongOrNull() ?: 300,
-                        sequenceWindowMs = newEventViewModel.sequenceWindowMs.value.toLongOrNull() ?: 1000,
-                        confirmationRequired = newEventViewModel.confirmationRequired.value
-                    )
-                } else {
-                    val events = newEventViewModel.createEvents()
-                    if (isEdit && editIndex != -1) {
-                        events.firstOrNull()?.let { 
-                            macroTimelineViewModel.updateEvent(editIndex, it)
-                        }
-                    } else {
-                        macroTimelineViewModel.addEvents(events)
-                    }
-                }
-                layoutViewModel.setShowNewEventDialog(false)
-            }
-        )
-    }
-    
-    if (showRecordDialog) {
-        RecordMacroDialog(
-            viewModel = recordMacroViewModel,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onDismissRequest = { layoutViewModel.setShowRecordDialog(false) },
-            onStartRecording = {
-                macroManagerViewModel.startRecording(recordMacroViewModel)
-                layoutViewModel.setShowRecordDialog(false)
-            }
-        )
-    }
-
-    if (pendingPairingRequests.isNotEmpty()) {
-        PairingRequestDialog(
-            requests = pendingPairingRequests,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            pairingViewModel = viewModels.pairingViewModel,
-            isAlwaysAllowAvailable = !allowOnceOnly,
-            onApprove = { id, name, persistent -> desktopViewModel.approveDevice(id, name, persistent) },
-            onDeny = { id -> desktopViewModel.rejectDevice(id) },
-            onBan = { id, name -> desktopViewModel.banDevice(id, name) },
-            onCancelAll = { desktopViewModel.rejectAllPendingDevices() }
-        )
-    }
-
-    serverError?.let { error ->
-        ServerErrorDialog(
-            error = error,
-            selectedTheme = selectedTheme,
-            consoleViewModel = consoleViewModel,
-            onResetIdentity = {
-                desktopViewModel.clearServerError()
-                desktopViewModel.startServer(forceRecreateKeystore = true)
-            },
-            onDismiss = { desktopViewModel.clearServerError() }
-        )
-    }
-
-    val triggerPendingConfirmation by macroManagerViewModel.triggerPendingConfirmation.collectAsState()
-    triggerPendingConfirmation?.let { trigger ->
-        AlertDialog(
-            onDismissRequest = { macroManagerViewModel.cancelTrigger() },
-            title = { Text("Confirm Trigger") },
-            text = { 
-                Column {
-                    Text("The following macro was triggered:")
-                    Text(
-                        trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Trigger Keys: ${trigger.keyCodes}")
-                    Text("Do you want to execute it?")
-                }
-            },
-            confirmButton = {
-                Button(onClick = { macroManagerViewModel.confirmTrigger() }) {
-                    Text("Execute")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { macroManagerViewModel.cancelTrigger() }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-
 
     AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
         CompositionLocalProvider(
@@ -410,11 +160,11 @@ fun DesktopApp(
                             selectedTheme = selectedTheme,
                             exitBehavior = exitBehavior,
                             eStopKey = eStopKey,
-                            onShowSettings = { onShowSettingsDialogChange(true) },
-                            onShowShortcuts = { onShowShortcutsDialogChange(true) },
-                            onShowPushSettings = { onShowPushSettingsDialogChange(true) },
+                            onShowSettings = { desktopWindowState.toggleSettings(true) },
+                            onShowShortcuts = { desktopWindowState.toggleShortcuts(true) },
+                            onShowPushSettings = { desktopWindowState.togglePushSettings(true) },
                             onExit = onExit,
-                            onShowExitDialog = { layoutViewModel.setShowExitDialogInternal(true) }
+                            onShowExitDialog = { desktopWindowState.toggleExitDialog(true) }
                         )
                     },
                     second = {
@@ -456,7 +206,7 @@ fun DesktopApp(
                                                 viewModel = inspectorViewModel, 
                                                 macroManagerViewModel = macroManagerViewModel,
                                                 onOpenVariableSettings = {
-                                                    onShowSettingsDialogChange(true)
+                                                    desktopWindowState.toggleSettings(true)
                                                 }
                                             )
                                         }
@@ -498,22 +248,22 @@ fun DesktopApp(
                                             selectedTheme = selectedTheme,
                                             onAddEventClicked = {
                                                 newEventViewModel.reset()
-                                                layoutViewModel.setShowNewEventDialog(true)
+                                                desktopWindowState.toggleNewEventDialog(true)
                                             },
                                             onRecordMacroClicked = {
                                                 recordMacroViewModel.reset()
-                                                layoutViewModel.setShowRecordDialog(true)
+                                                desktopWindowState.toggleRecordDialog(true)
                                             },
                                             onEditEventClicked = { event, index ->
                                                 newEventViewModel.loadFromEvent(event, index)
-                                                layoutViewModel.setShowNewEventDialog(true)
+                                                desktopWindowState.toggleNewEventDialog(true)
                                             },
                                             onEditTriggerClicked = { trigger ->
                                                 newEventViewModel.loadFromTrigger(trigger)
-                                                layoutViewModel.setShowNewEventDialog(true)
+                                                desktopWindowState.toggleNewEventDialog(true)
                                             },
                                             onMarketplaceClicked = {
-                                                layoutViewModel.setShowMarketplace(true)
+                                                desktopWindowState.toggleMarketplace(true)
                                             }
                                         )
                                     }
