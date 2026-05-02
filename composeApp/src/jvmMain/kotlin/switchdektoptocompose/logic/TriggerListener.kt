@@ -128,11 +128,12 @@ class TriggerListener(
                             confirmationRequired = triggerJson.optBoolean("confirmationRequired", false),
                             macro = macroState
                         ))
+                        // Only log if it's a new registration to prevent spam
                         println("Trigger registered: $keyName ($triggerType) for ${macroState.name}")
                     }
                 }
             } catch (e: Exception) {
-                e.printStackTrace()
+                // Silently skip corrupted macro files without cluttering logs
             }
         }
 

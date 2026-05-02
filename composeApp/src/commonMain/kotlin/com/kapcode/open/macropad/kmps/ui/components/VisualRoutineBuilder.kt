@@ -442,12 +442,12 @@ fun ActionItem(
                     var typeExpanded by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = { typeExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(action.type)
+                            Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(type = "PRESS")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(type = "RELEASE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("TYPE (Sequence)") }, onClick = { onChange(action.copy(type = "TYPE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("TYPE (Sequence)") }, onClick = { onChange(action.copy(actionType = "TYPE")); typeExpanded = false })
                         }
                     }
                 }
@@ -457,11 +457,11 @@ fun ActionItem(
                     var typeExpanded by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = { typeExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(action.type)
+                            Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("MOVE") }, onClick = { onChange(action.copy(type = "MOVE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(type = "CLICK")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("MOVE") }, onClick = { onChange(action.copy(actionType = "MOVE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -474,12 +474,12 @@ fun ActionItem(
                     var typeExpanded by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = { typeExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text(action.type)
+                            Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(type = "PRESS")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(type = "RELEASE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(type = "CLICK")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
                         }
                     }
                 }
@@ -515,11 +515,11 @@ fun ActionItem(
                         var typeExpanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.weight(1f)) {
                             OutlinedButton(onClick = { typeExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text(action.type)
+                                Text(action.actionType)
                             }
                             DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                                DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(type = "PRESS")); typeExpanded = false })
-                                DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(type = "RELEASE")); typeExpanded = false })
+                                DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                                DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
                             }
                         }
                     }

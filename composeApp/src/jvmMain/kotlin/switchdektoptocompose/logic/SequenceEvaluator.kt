@@ -14,6 +14,7 @@ data class UnifiedTrigger(
     val tapCount: Int = 0,
     val windowMs: Long = 0,
     val confirmationRequired: Boolean = false,
+    val targetProcess: String? = null,
     val routine: AutomationRoutine? = null,
     val macro: MacroFileState? = null
 )

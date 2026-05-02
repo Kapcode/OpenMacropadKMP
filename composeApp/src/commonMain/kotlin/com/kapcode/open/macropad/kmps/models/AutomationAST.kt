@@ -4,6 +4,7 @@ package com.kapcode.open.macropad.kmps.models
 
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
@@ -79,46 +80,58 @@ sealed class AutomationCondition {
 }
 
 @Serializable
-@JsonClassDiscriminator("kind")
+@JsonClassDiscriminator("type")
 sealed class AutomationAction {
     @Serializable
+    @SerialName("MacroAction")
     data class MacroAction(val macroId: String) : AutomationAction()
     
     @Serializable
+    @SerialName("ScriptAction")
     data class ScriptAction(val script: String) : AutomationAction()
     
     @Serializable
+    @SerialName("LayerShift")
     data class LayerShift(val layerId: String, val isMomentary: Boolean) : AutomationAction()
     
     @Serializable
-    data class KeyEvent(val keyName: String, val type: String) : AutomationAction() // type: "PRESS", "RELEASE", "TYPE"
+    @SerialName("KeyEvent")
+    data class KeyEvent(val keyName: String, val actionType: String) : AutomationAction() // type: "PRESS", "RELEASE", "TYPE"
     
     @Serializable
-    data class MouseEvent(@Serializable(with = FlexibleStringSerializer::class) val x: String, @Serializable(with = FlexibleStringSerializer::class) val y: String, val type: String, val isAnimated: Boolean = false) : AutomationAction() // type: "MOVE", "CLICK"
+    @SerialName("MouseEvent")
+    data class MouseEvent(@Serializable(with = FlexibleStringSerializer::class) val x: String, @Serializable(with = FlexibleStringSerializer::class) val y: String, val actionType: String, val isAnimated: Boolean = false) : AutomationAction() // type: "MOVE", "CLICK"
     
     @Serializable
-    data class MouseButtonEvent(@Serializable(with = FlexibleStringSerializer::class) val buttonNumber: String, val type: String) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
+    @SerialName("MouseButtonEvent")
+    data class MouseButtonEvent(@Serializable(with = FlexibleStringSerializer::class) val buttonNumber: String, val actionType: String) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
     
     @Serializable
+    @SerialName("ScrollEvent")
     data class ScrollEvent(@Serializable(with = FlexibleStringSerializer::class) val amount: String) : AutomationAction()
     
     @Serializable
+    @SerialName("DelayEvent")
     data class DelayEvent(@Serializable(with = FlexibleStringSerializer::class) val durationMs: String) : AutomationAction()
 
     @Serializable
+    @SerialName("SetAutoDelay")
     data class SetAutoDelay(@Serializable(with = FlexibleStringSerializer::class) val delayMs: String) : AutomationAction()
     
     @Serializable
+    @SerialName("SetVariable")
     data class SetVariable(val name: String, val value: String) : AutomationAction()
 
     @Serializable
+    @SerialName("MouseKeyboard")
     data class MouseKeyboard(
-        val type: String,
+        val actionType: String,
         val parameters: Map<String, String>
     ) : AutomationAction()
 
     @Serializable
-    data class ControllerButton(val button: String, val controllerIndex: String = "0", val type: String = "PRESS") : AutomationAction()
+    @SerialName("ControllerButton")
+    data class ControllerButton(val button: String, val controllerIndex: String = "0", val actionType: String = "PRESS") : AutomationAction()
 }
 
 @Serializable
@@ -132,5 +145,6 @@ data class AutomationRoutine(
     val id: String,
     val name: String,
     val triggers: List<AutomationTrigger> = emptyList(), // Support multiple triggers
-    val logicBlocks: List<LogicBlock> = emptyList()
+    val logicBlocks: List<LogicBlock> = emptyList(),
+    val targetProcess: String? = null
 )

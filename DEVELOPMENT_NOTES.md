@@ -479,6 +479,16 @@ Automated macros could cause loss of system control if they ran too long or went
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 
+## 49. JVM Directory Selection Implementation
+
+**Problem:**
+The `pickDirectory` function was missing an `actual` implementation in the JVM module, causing compilation errors when the common code attempted to trigger a directory picker.
+
+**Solution:**
+*   **Swing Integration**: Implemented `pickDirectory` using `javax.swing.JFileChooser` within a `SwingUtilities.invokeLater` block to ensure thread safety with the Swing Event Dispatch Thread (EDT).
+*   **Directory Only Mode**: Configured `JFileChooser` with `fileSelectionMode = JFileChooser.DIRECTORIES_ONLY` to restrict the user's selection to folders.
+*   **Result Handling**: Used `showOpenDialog` to capture the user's choice and returned the absolute path of the selected directory, or `null` if the operation was cancelled.
+
 ## 42. Advanced Automation & Scripting Suite (Phase 6)
 
 ### Challenge: GraalVM Dependency Bloat

@@ -2,13 +2,23 @@ package com.kapcode.open.macropad.kmps.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.FolderOpen
+import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -16,19 +26,58 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun GeneralSettingsSection(viewModel: SettingsViewModel) {
     val currentTheme by viewModel.theme.collectAsState()
     val analyticsEnabled by viewModel.analyticsEnabled.collectAsState()
     val enableToasts by viewModel.enableToasts.collectAsState()
     val enableBackgroundToasts by viewModel.enableBackgroundToasts.collectAsState()
+    val macroDirectory by viewModel.macroDirectory.collectAsState()
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
 
     Column {
+        Text("Directory Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Column(Modifier.padding(horizontal = 16.dp)) {
+            OutlinedTextField(
+                value = macroDirectory.ifEmpty { "No directory selected" },
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = true,
+                label = { Text("Macro Storage Path") },
+                trailingIcon = {
+                    Row {
+                        IconButton(onClick = {
+                            if (macroDirectory.isNotEmpty()) {
+                                scope.launch {
+                                    clipboard.copyToClipboard(macroDirectory)
+                                }
+                            }
+                        }) {
+                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                        }
+                        IconButton(onClick = { viewModel.onOpenFolder() }) {
+                            Icon(Icons.Default.FolderOpen, contentDescription = "Open Folder")
+                        }
+                    }
+                },
+                isError = macroDirectory.isEmpty()
+            )
+        }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+
         Text("Theme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Column(Modifier.selectableGroup()) {
             AppTheme.entries.forEach { theme ->

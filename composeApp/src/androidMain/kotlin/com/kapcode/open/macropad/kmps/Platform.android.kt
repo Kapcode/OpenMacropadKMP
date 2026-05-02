@@ -7,3 +7,30 @@ class AndroidPlatform : Platform {
 }
 
 actual fun getPlatform(): Platform = AndroidPlatform()
+
+actual fun openFolder(path: String) {
+    // No-op for Android
+}
+
+object DirectoryPicker {
+    private var callback: ((String?) -> Unit)? = null
+    private var launcher: (() -> Unit)? = null
+
+    fun register(launcher: () -> Unit) {
+        this.launcher = launcher
+    }
+
+    fun pickDirectory(onResult: (String?) -> Unit) {
+        this.callback = onResult
+        launcher?.invoke()
+    }
+
+    fun onResult(uri: String?) {
+        callback?.invoke(uri)
+        callback = null
+    }
+}
+
+actual fun pickDirectory(onResult: (String?) -> Unit) {
+    DirectoryPicker.pickDirectory(onResult)
+}

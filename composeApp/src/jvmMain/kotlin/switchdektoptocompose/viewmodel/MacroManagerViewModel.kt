@@ -144,8 +144,12 @@ class MacroManagerViewModel(
         ignoreUnknownKeys = true 
         prettyPrint = true
         prettyPrintIndent = "    "
+        classDiscriminator = "type"
     }
-    private val json = Json { ignoreUnknownKeys = true }
+    private val json = Json { 
+        ignoreUnknownKeys = true 
+        classDiscriminator = "type"
+    }
     private val variables = mutableMapOf<String, String>()
     private val variableCache = mutableMapOf<String, String>() // Per-pulse cache
     private val lastTriggeredRoutine = mutableMapOf<String, Boolean>()
@@ -426,7 +430,7 @@ class MacroManagerViewModel(
     }
 
     private suspend fun executeKeyEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.KeyEvent) {
-        if (action.type == "TYPE") {
+        if (action.actionType == "TYPE") {
             action.keyName.forEach { char ->
                 macroPlayer.play(listOf(
                     MacroEventState.KeyEvent(char.toString(), KeyAction.PRESS),
@@ -434,18 +438,18 @@ class MacroManagerViewModel(
                 ))
             }
         } else {
-            val keyAction = if (action.type == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
+            val keyAction = if (action.actionType == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
             macroPlayer.play(listOf(MacroEventState.KeyEvent(action.keyName, keyAction)))
         }
     }
 
     private suspend fun executeMouseEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.MouseEvent) {
-        val mouseAction = if (action.type == "MOVE") MouseAction.MOVE else MouseAction.CLICK
+        val mouseAction = if (action.actionType == "MOVE") MouseAction.MOVE else MouseAction.CLICK
         macroPlayer.play(listOf(MacroEventState.MouseEvent(resolveToInt(action.x), resolveToInt(action.y), mouseAction, action.isAnimated)))
     }
 
     private suspend fun executeMouseButtonEvent(action: com.kapcode.open.macropad.kmps.models.AutomationAction.MouseButtonEvent) {
-        val keyAction = if (action.type == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
+        val keyAction = if (action.actionType == "PRESS") KeyAction.PRESS else KeyAction.RELEASE
         macroPlayer.play(listOf(MacroEventState.MouseButtonEvent(resolveToInt(action.buttonNumber), keyAction)))
     }
 

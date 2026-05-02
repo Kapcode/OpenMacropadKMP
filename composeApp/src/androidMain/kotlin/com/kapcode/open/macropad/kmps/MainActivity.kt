@@ -8,6 +8,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
@@ -85,6 +86,10 @@ class MainActivity : ComponentActivity() {
     
     private lateinit var slamFireManager: SlamFireManager
 
+    private val dirPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        DirectoryPicker.onResult(uri?.toString())
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -118,6 +123,10 @@ class MainActivity : ComponentActivity() {
             } else {
                 onOkayPressed?.invoke()
             }
+        }
+
+        DirectoryPicker.register {
+            dirPickerLauncher.launch(null)
         }
         
         setContent {
