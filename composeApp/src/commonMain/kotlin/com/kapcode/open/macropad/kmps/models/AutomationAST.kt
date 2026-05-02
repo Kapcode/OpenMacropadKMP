@@ -1,5 +1,8 @@
+@file:OptIn(ExperimentalSerializationApi::class)
+
 package com.kapcode.open.macropad.kmps.models
 
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.descriptors.PrimitiveKind
@@ -7,6 +10,7 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
+import kotlinx.serialization.json.JsonClassDiscriminator
 import kotlinx.serialization.json.JsonDecoder
 import kotlinx.serialization.json.JsonPrimitive
 
@@ -75,6 +79,7 @@ sealed class AutomationCondition {
 }
 
 @Serializable
+@JsonClassDiscriminator("kind")
 sealed class AutomationAction {
     @Serializable
     data class MacroAction(val macroId: String) : AutomationAction()

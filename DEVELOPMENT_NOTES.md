@@ -628,3 +628,11 @@ Automated macros could cause loss of system control if they ran too long or went
     - **High-Frequency Polling**: Implemented a dedicated `ControllerManager` that polls the gamepad state at ~60fps using a coroutine-based loop (`Dispatchers.Default`).
     - **State Flow**: Exposed `isConnected` and `activeButton` states via `StateFlow` to ensure the UI and Macro Manager can react instantly to hardware changes.
     - **Macro Mapping**: Integrated with `MacroManagerViewModel` to allow gamepad buttons to trigger macros directly, bypassing the standard keyboard/mouse event loop for lower overhead.
+
+## 48. Automation Serialization & Polymorphism
+
+### Challenge: Overlapping Property Names in Sealed Classes
+- **Problem**: In `AutomationAction`, several subclasses (like `KeyEvent`, `MouseEvent`, and `MouseButtonEvent`) use a property named `type`. This caused an `IllegalStateException` during `kotlinx.serialization` because `type` is the default class discriminator used for polymorphic serialization of sealed classes.
+- **Solution**:
+    - **Custom Discriminator**: Applied `@JsonClassDiscriminator("kind")` to the `AutomationAction` sealed class. This moves the polymorphism metadata to a new JSON field (`kind`), freeing up the `type` property for use by the data models.
+    - **Experimental API Opt-In**: Added `@file:OptIn(ExperimentalSerializationApi::class)` to `AutomationAST.kt` to enable the use of the custom discriminator annotation.
