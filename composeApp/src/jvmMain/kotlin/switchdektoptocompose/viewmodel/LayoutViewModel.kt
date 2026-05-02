@@ -25,8 +25,6 @@ class LayoutViewModel(private val settingsViewModel: SettingsViewModel) {
     private val _showShortcutsDialog = MutableStateFlow(false)
     val showShortcutsDialog = _showShortcutsDialog.asStateFlow()
 
-    private val _showPushSettingsDialog = MutableStateFlow(false)
-    val showPushSettingsDialog = _showPushSettingsDialog.asStateFlow()
 
     private val _showSettingsDialog = MutableStateFlow(false)
     val showSettingsDialog = _showSettingsDialog.asStateFlow()
@@ -66,9 +64,6 @@ class LayoutViewModel(private val settingsViewModel: SettingsViewModel) {
         _showShortcutsDialog.value = show
     }
 
-    fun setShowPushSettingsDialog(show: Boolean) {
-        _showPushSettingsDialog.value = show
-    }
 
     fun setShowSettingsDialog(show: Boolean) {
         _showSettingsDialog.value = show

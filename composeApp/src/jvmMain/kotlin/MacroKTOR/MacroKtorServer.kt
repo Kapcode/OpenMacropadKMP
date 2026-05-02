@@ -406,17 +406,6 @@ class MacroKtorServer(
                     platform = "$os ($arch)",
                     serverId = KeystoreUtils.getCertificateFingerprint(KeystoreUtils.getOrCreateKeystore(File(System.getProperty("user.home"), ".openmacropad")))
                 ).toBytes()))
-
-                // Push current global settings to the newly authenticated client
-                val settingsMap = mapOf(
-                    "theme" to appSettings.clientTheme,
-                    "analyticsEnabled" to appSettings.clientAnalyticsEnabled.toString(),
-                    "slamFireEnabled" to appSettings.clientSlamFireEnabled.toString(),
-                    "slamFireAction" to appSettings.clientSlamFireAction
-                )
-                client.session.send(Frame.Binary(true, DataModel(
-                    messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
-                ).toBytes()))
             } else {
                 logger.warn("Authentication failed for {}", client.id)
                 client.session.close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Authentication failed"))
@@ -474,21 +463,5 @@ class MacroKtorServer(
     suspend fun sendToAll(dataModel: DataModel) {
         val bytes = dataModel.toBytes()
         clients.values.forEach { it.session.send(Frame.Binary(true, bytes)) }
-    }
-
-    fun pushSettingsToClients(theme: String, analyticsEnabled: Boolean, slamFireEnabled: Boolean, slamFireAction: String, toastDurationMs: Long) {
-        serverScope.launch {
-            val settingsMap = mapOf(
-                "theme" to theme,
-                "analyticsEnabled" to analyticsEnabled.toString(),
-                "slamFireEnabled" to slamFireEnabled.toString(),
-                "slamFireAction" to slamFireAction,
-                "toastDurationMs" to toastDurationMs.toString()
-            )
-            val message = DataModel(
-                messageType = MessageType.Control(ControlCommand.PUSH_SETTINGS, settingsMap)
-            )
-            sendToAll(message)
-        }
     }
 }

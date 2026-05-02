@@ -66,13 +66,6 @@ class ClientCommunicationViewModel(
     fun setMacroExecutionEnabled(enabled: Boolean) {
         _isMacroExecutionEnabled.value = enabled
         consoleViewModel.addLog(LogLevel.Info, "Macro execution ${if (enabled) "enabled" else "disabled"}")
-        
-        viewModelScope.launch {
-            serverViewModel.server.sendToAll(controlMessage(
-                ControlCommand.PUSH_SETTINGS,
-                parameters = mapOf("macroExecutionEnabled" to enabled.toString())
-            ))
-        }
     }
 
     private fun updateHistoryState() {

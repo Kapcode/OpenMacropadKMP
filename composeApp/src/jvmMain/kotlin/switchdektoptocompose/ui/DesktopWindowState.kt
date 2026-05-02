@@ -29,7 +29,6 @@ class DesktopWindowState(
     // Centralized dialog visibility states
     var showExitDialog by mutableStateOf(false)
     var showShortcutsDialog by mutableStateOf(false)
-    var showPushSettingsDialog by mutableStateOf(false)
     var showSettingsDialog by mutableStateOf(false)
     var showNewEventDialog by mutableStateOf(false)
     var showRecordDialog by mutableStateOf(false)
@@ -40,7 +39,6 @@ class DesktopWindowState(
 
     // Secondary window states
     val shortcutsWindowState = WindowState(size = DpSize(500.dp, 550.dp))
-    val pushSettingsWindowState = WindowState(size = DpSize(500.dp, 600.dp))
     val settingsWindowState = WindowState(size = DpSize(600.dp, 700.dp))
     val marketplaceWindowState = WindowState(size = DpSize(900.dp, 700.dp))
 
@@ -63,15 +61,6 @@ class DesktopWindowState(
                     shortcutsWindowState.isMinimized = false
                 }
                 showShortcutsDialog = show
-            }
-        }
-        scope.launch {
-            layoutViewModel.showPushSettingsDialog.collect { show ->
-                if (show) {
-                    pushSettingsWindowState.position = calculateCenteredWindowPosition(pushSettingsWindowState.size)
-                    pushSettingsWindowState.isMinimized = false
-                }
-                showPushSettingsDialog = show
             }
         }
         scope.launch {
@@ -156,10 +145,6 @@ class DesktopWindowState(
 
     fun toggleShortcuts(show: Boolean = !showShortcutsDialog) {
         layoutViewModel.setShowShortcutsDialog(show)
-    }
-
-    fun togglePushSettings(show: Boolean = !showPushSettingsDialog) {
-        layoutViewModel.setShowPushSettingsDialog(show)
     }
 
     fun toggleSettings(show: Boolean = !showSettingsDialog) {

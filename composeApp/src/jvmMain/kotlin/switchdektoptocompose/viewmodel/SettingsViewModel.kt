@@ -233,35 +233,24 @@ class SettingsViewModel {
     fun setClientTheme(theme: String) {
         _clientTheme.value = theme
         AppSettings.clientTheme = theme
-        pushSettingsToClients()
     }
 
     fun setClientAnalyticsEnabled(enabled: Boolean) {
         _clientAnalyticsEnabled.value = enabled
         AppSettings.clientAnalyticsEnabled = enabled
-        pushSettingsToClients()
     }
 
     fun setClientSlamFireEnabled(enabled: Boolean) {
         _clientSlamFireEnabled.value = enabled
         AppSettings.clientSlamFireEnabled = enabled
-        pushSettingsToClients()
     }
 
     fun setClientSlamFireAction(action: String) {
         _clientSlamFireAction.value = action
         AppSettings.clientSlamFireAction = action
-        pushSettingsToClients()
     }
 
-    private var _pushSettingsCallback: (() -> Unit)? = null
-    fun setPushSettingsCallback(callback: () -> Unit) {
-        _pushSettingsCallback = callback
-    }
 
-    private fun pushSettingsToClients() {
-        _pushSettingsCallback?.invoke()
-    }
 
     fun setCopyConsoleOutputShortcut(shortcut: String) {
         _copyConsoleOutputShortcut.value = shortcut

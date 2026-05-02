@@ -40,7 +40,6 @@ class ClientRepository(private val context: Context) {
         onExecutionStart: (String) -> Unit,
         onExecutionComplete: (String) -> Unit,
         onExecutionFailed: (String, String) -> Unit,
-        onSettingsPushed: (Map<String, String>) -> Unit,
         onPacksReceived: (List<MacroPack>) -> Unit,
         onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit,
         onNotificationReceived: (String) -> Unit
@@ -162,9 +161,6 @@ class ClientRepository(private val context: Context) {
                                                 val reason = params["reason"] ?: "Device is banned"
                                                 onUpdate("Banned", initialServerName, reason, null)
                                                 this@launch.cancel()
-                                            }
-                                            ControlCommand.PUSH_SETTINGS -> {
-                                                onSettingsPushed(params)
                                             }
                                             ControlCommand.MARKETPLACE_LIST -> {
                                                 // We'll handle this in onData for now since it might be a large JSON blob

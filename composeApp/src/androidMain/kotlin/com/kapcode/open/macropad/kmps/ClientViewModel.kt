@@ -112,17 +112,6 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
                 onExecutionFailedToast("Macro '$macro' failed: $error")
             },
-            onSettingsPushed = { params ->
-                params["theme"]?.let { themeStr ->
-                    try {
-                        settingsViewModel.setTheme(AppTheme.valueOf(themeStr))
-                    } catch (e: Exception) {}
-                }
-                params["analyticsEnabled"]?.let { settingsViewModel.setAnalyticsEnabled(it.toBoolean()) }
-                params["slamFireEnabled"]?.let { settingsViewModel.setSlamFireEnabled(it.toBoolean()) }
-                params["macroExecutionEnabled"]?.let { setMacroExecutionEnabled(it.toBoolean()) }
-                params["toastDurationMs"]?.let { settingsViewModel.setToastDurationMs(it.toLong()) }
-            },
             onPacksReceived = { packs ->
                 setInstalledPacks(packs)
             },

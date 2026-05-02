@@ -67,16 +67,6 @@ class ServerViewModel(
                 }
             }
         }
-        
-        settingsViewModel.setPushSettingsCallback {
-            server.pushSettingsToClients(
-                theme = settingsViewModel.clientTheme.value,
-                analyticsEnabled = settingsViewModel.clientAnalyticsEnabled.value,
-                slamFireEnabled = settingsViewModel.clientSlamFireEnabled.value,
-                slamFireAction = settingsViewModel.clientSlamFireAction.value,
-                toastDurationMs = settingsViewModel.toastDurationMs.value
-            )
-        }
     }
 
     fun setEncryption(enabled: Boolean) {
