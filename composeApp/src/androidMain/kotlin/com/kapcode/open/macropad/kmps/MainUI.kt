@@ -14,6 +14,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import com.kapcode.open.macropad.kmps.utils.ClipboardManager
+import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -77,9 +80,10 @@ fun MainUI(
     }
 
     AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
-        Scaffold(
-            topBar = {
-                CommonAppBar(
+        CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
+            Scaffold(
+                topBar = {
+                    CommonAppBar(
                     title = if (showSettings) "Settings" else "Open Macropad",
                     onSettingsClick = { showSettings = !showSettings },
                     navigationIcon = {

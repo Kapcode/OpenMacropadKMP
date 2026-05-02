@@ -27,6 +27,14 @@ class SettingsStorage(context: Context) {
         return try { AppTheme.valueOf(name!!) } catch (e: Exception) { AppTheme.DarkBlue }
     }
 
+    fun saveMacroDirectory(path: String) {
+        prefs.edit().putString("macro_directory", path).apply()
+    }
+
+    fun getMacroDirectory(): String {
+        return prefs.getString("macro_directory", "") ?: ""
+    }
+
     fun saveAnalyticsEnabled(enabled: Boolean) {
         prefs.edit().putBoolean("analytics_enabled", enabled).apply()
     }
@@ -152,6 +160,7 @@ class SettingsStorage(context: Context) {
     fun bindViewModel(viewModel: SettingsViewModel, clientViewModel: ClientViewModel, scope: CoroutineScope) {
         // Load initial values
         viewModel.setTheme(getTheme())
+        viewModel.setMacroDirectory(getMacroDirectory())
         viewModel.setAnalyticsEnabled(getAnalyticsEnabled())
         viewModel.setMultiQrEnabled(getMultiQrEnabled())
         viewModel.setSlamFireEnabled(getSlamFireEnabled())
@@ -166,6 +175,7 @@ class SettingsStorage(context: Context) {
 
         // Sync changes back to storage
         viewModel.theme.onEach { saveTheme(it) }.launchIn(scope)
+        viewModel.macroDirectory.onEach { saveMacroDirectory(it) }.launchIn(scope)
         viewModel.analyticsEnabled.onEach { saveAnalyticsEnabled(it) }.launchIn(scope)
         viewModel.multiQrEnabled.onEach { saveMultiQrEnabled(it) }.launchIn(scope)
         viewModel.slamFireEnabled.onEach { saveSlamFireEnabled(it) }.launchIn(scope)

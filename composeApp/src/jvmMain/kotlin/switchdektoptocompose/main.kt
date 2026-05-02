@@ -30,6 +30,17 @@ object AppConfig {
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun main(args: Array<String>) = application {
+    // Suppress specific log spam from AWT/Swing
+    val originalErr = System.err
+    System.setErr(object : java.io.PrintStream(originalErr, true) {
+        override fun println(x: String?) {
+            if (x != null && x.contains("EditorCopyPasteHelperImpl")) {
+                return
+            }
+            super.println(x)
+        }
+    })
+
     AppConfig.isVerboseOutputEnabled = args.contains("-o") || args.contains("-output")
 
     // Set the initial Look and Feel
@@ -97,11 +108,23 @@ fun main(args: Array<String>) = application {
         triggerListener.startListening()
         inspectorManager.startListening()
         serverViewModel.controllerManager?.start()
+
+        val shutdownHook = Thread {
+            serverViewModel.stopServer()
+        }
+        Runtime.getRuntime().addShutdownHook(shutdownHook)
+
         onDispose {
             desktopViewModel.shutdown()
             triggerListener.shutdown()
             inspectorManager.stopListening()
             serverViewModel.controllerManager?.stop()
+            serverViewModel.stopServer()
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook)
+            } catch (e: Exception) {
+                // Ignore, might already be shutting down
+            }
         }
     }
     

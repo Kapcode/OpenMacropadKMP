@@ -1,6 +1,7 @@
 package com.kapcode.open.macropad.kmps.settings
 
 import com.kapcode.open.macropad.kmps.models.TrustedServer
+import com.kapcode.open.macropad.kmps.openFolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -18,6 +19,9 @@ class SettingsViewModel {
 
     private val _theme = MutableStateFlow(AppTheme.DarkBlue) // Default to Dark Blue
     val theme = _theme.asStateFlow()
+
+    private val _macroDirectory = MutableStateFlow("") // Default to empty
+    val macroDirectory = _macroDirectory.asStateFlow()
 
     private val _analyticsEnabled = MutableStateFlow(false) // Default to Opt-in
     val analyticsEnabled = _analyticsEnabled.asStateFlow()
@@ -60,6 +64,14 @@ class SettingsViewModel {
 
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
+    }
+
+    fun setMacroDirectory(path: String) {
+        _macroDirectory.value = path
+    }
+
+    fun onOpenFolder() {
+        openFolder(macroDirectory.value)
     }
 
     fun setAnalyticsEnabled(enabled: Boolean) {

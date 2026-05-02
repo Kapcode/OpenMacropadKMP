@@ -1,5 +1,6 @@
 package switchdektoptocompose.viewmodel
 
+import com.kapcode.open.macropad.kmps.openFolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import switchdektoptocompose.logic.AppSettings
@@ -151,6 +152,10 @@ class SettingsViewModel {
             // Update the UI by updating the StateFlow
             _macroDirectory.value = selectedDirectory
         }
+    }
+
+    fun onOpenFolder() {
+        openFolder(macroDirectory.value)
     }
 
     fun onServerPortChange(port: String) {
