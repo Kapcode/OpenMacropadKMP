@@ -17,11 +17,10 @@ fun ClientSettings(
     clientAnalyticsEnabled: Boolean,
     clientSlamFireEnabled: Boolean,
     clientSlamFireAction: String,
-    settingsViewModel: SettingsViewModel,
-    onShowPushSettingsRequest: () -> Unit
+    settingsViewModel: SettingsViewModel
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text("Connected Clients (Global Push)", style = MaterialTheme.typography.titleMedium)
+        Text("Connected Clients", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(8.dp))
 
         Text("Default Client Theme", style = MaterialTheme.typography.bodyMedium)

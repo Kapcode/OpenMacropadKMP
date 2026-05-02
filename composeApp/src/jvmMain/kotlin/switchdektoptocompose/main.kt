@@ -198,7 +198,6 @@ fun main(args: Array<String>) = application {
             }
             Separator()
             Item("Shortcuts & Keymap", onClick = { desktopWindowState.toggleShortcuts(true) })
-            Item("Bulk Settings Pusher", onClick = { desktopWindowState.togglePushSettings(true) })
             Item("Settings", onClick = { desktopWindowState.toggleSettings(true) })
             Separator()
             Item("Exit", onClick = {
@@ -223,17 +222,6 @@ fun main(args: Array<String>) = application {
         )
     }
 
-    if (desktopWindowState.showPushSettingsDialog) {
-        switchdektoptocompose.ui.PushSettingsDialog(
-            settingsViewModel = settingsViewModel,
-            consoleViewModel = consoleViewModel,
-            selectedTheme = selectedTheme,
-            onDismissRequest = { desktopWindowState.showPushSettingsDialog = false },
-            windowState = desktopWindowState.pushSettingsWindowState,
-            icon = icon
-        )
-    }
-
     if (desktopWindowState.showSettingsDialog) {
         switchdektoptocompose.ui.SettingsDialog(
             desktopViewModel = desktopViewModel,
@@ -242,7 +230,6 @@ fun main(args: Array<String>) = application {
             consoleViewModel = consoleViewModel,
             onDismissRequest = { desktopWindowState.showSettingsDialog = false },
             onShowShortcutsRequest = { desktopWindowState.toggleShortcuts(true) },
-            onShowPushSettingsRequest = { desktopWindowState.togglePushSettings(true) },
             windowState = desktopWindowState.settingsWindowState,
             icon = icon
         )

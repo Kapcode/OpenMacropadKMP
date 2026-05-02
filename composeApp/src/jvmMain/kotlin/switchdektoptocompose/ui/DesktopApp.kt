@@ -162,7 +162,6 @@ fun DesktopApp(
                             eStopKey = eStopKey,
                             onShowSettings = { desktopWindowState.toggleSettings(true) },
                             onShowShortcuts = { desktopWindowState.toggleShortcuts(true) },
-                            onShowPushSettings = { desktopWindowState.togglePushSettings(true) },
                             onExit = onExit,
                             onShowExitDialog = { desktopWindowState.toggleExitDialog(true) }
                         )

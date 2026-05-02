@@ -25,7 +25,6 @@ fun SettingsDialog(
     consoleViewModel: ConsoleViewModel,
     onDismissRequest: () -> Unit,
     onShowShortcutsRequest: () -> Unit = {},
-    onShowPushSettingsRequest: () -> Unit = {},
     initialScrollToSecurity: Boolean = false,
     windowState: WindowState? = null,
     icon: Painter? = null
@@ -107,7 +106,7 @@ fun SettingsDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 UISettings(tooltipXOffset, tooltipYOffset, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel, onShowPushSettingsRequest)
+                ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 VariableSettings(settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -115,7 +114,7 @@ fun SettingsDialog(
                     serverPort, secureServerPort, encryptionEnabled, isServerRunning,
                     defaultPairingModeQr, allowNewConnections, multiQrEnabled, fleetModeEnabled,
                     allowOnceOnly, enableWebsocketPings, settingsViewModel, sharedSettingsViewModel,
-                    serverViewModel, onShowPushSettingsRequest
+                    serverViewModel
                 ) { securitySectionOffset = it }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 DeviceManagement(trustedDevices, bannedDevices, clientCommunicationViewModel)

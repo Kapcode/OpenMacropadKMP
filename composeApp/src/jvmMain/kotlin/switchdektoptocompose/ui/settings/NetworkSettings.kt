@@ -3,7 +3,6 @@ package switchdektoptocompose.ui.settings
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material3.*
 import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
@@ -32,7 +31,6 @@ fun NetworkSettings(
     settingsViewModel: SettingsViewModel,
     sharedSettingsViewModel: SharedSettingsViewModel,
     serverViewModel: ServerViewModel,
-    onShowPushSettingsRequest: () -> Unit,
     onSecuritySectionPositioned: (Float) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -197,19 +195,6 @@ fun NetworkSettings(
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(start = 8.dp)
         )
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Button(
-            onClick = onShowPushSettingsRequest,
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Open Bulk Settings Pusher")
-        }
     }
 }
 

@@ -8,7 +8,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import switchdektoptocompose.ui.components.AppTooltipArea
@@ -39,7 +38,6 @@ fun DesktopTopBar(
     eStopKey: String,
     onShowSettings: () -> Unit,
     onShowShortcuts: () -> Unit,
-    onShowPushSettings: () -> Unit,
     onExit: () -> Unit,
     onShowExitDialog: () -> Unit
 ) {
@@ -82,11 +80,6 @@ fun DesktopTopBar(
                 text = { Text("Shortcuts & Keymap") },
                 onClick = { onShowShortcuts(); menuExpanded = false },
                 leadingIcon = { Icon(Icons.Default.Keyboard, null) }
-            )
-            DropdownMenuItem(
-                text = { Text("Bulk Settings Pusher") },
-                onClick = { onShowPushSettings(); menuExpanded = false },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Send, null) }
             )
             HorizontalDivider()
             DropdownMenuItem(
