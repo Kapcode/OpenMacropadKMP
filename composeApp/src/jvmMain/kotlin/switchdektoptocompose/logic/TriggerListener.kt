@@ -97,7 +97,8 @@ class TriggerListener(
                         windowMs = (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.MultiTap)?.windowMs?.toLongOrNull() 
                             ?: (trigger as? com.kapcode.open.macropad.kmps.models.AutomationTrigger.Sequence)?.windowMs?.toLongOrNull() ?: 0L,
                         confirmationRequired = false, 
-                        routine = routine
+                        routine = routine,
+                        targetProcess = routine.targetProcess
                     ))
                 }
             }
@@ -126,7 +127,8 @@ class TriggerListener(
                             tapCount = triggerJson.optInt("tapCount", 2),
                             windowMs = triggerJson.optLong("windowMs", 300L),
                             confirmationRequired = triggerJson.optBoolean("confirmationRequired", false),
-                            macro = macroState
+                            macro = macroState,
+                            targetProcess = triggerJson.optString("targetProcess", null)
                         ))
                         // Only log if it's a new registration to prevent spam
                         println("Trigger registered: $keyName ($triggerType) for ${macroState.name}")

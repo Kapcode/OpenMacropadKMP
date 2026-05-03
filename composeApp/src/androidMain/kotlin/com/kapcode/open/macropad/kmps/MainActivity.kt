@@ -83,7 +83,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
     private var onOkayPressed: (() -> Unit)? = null
-    
+
     private lateinit var slamFireManager: SlamFireManager
 
     private val dirPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -94,13 +94,13 @@ class MainActivity : ComponentActivity() {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
         clientRepository = ClientRepository(this)
         clientViewModel = ClientViewModel(clientRepository)
 
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
-        
+
         // Move discovery and heavy initialization to immediately after binding ViewModel
         lifecycleScope.launch(Dispatchers.IO) {
             clientDiscovery.start()
@@ -115,7 +115,7 @@ class MainActivity : ComponentActivity() {
             }
             MobileAds.initialize(this@MainActivity)
         }
-        
+
         slamFireManager = SlamFireManager(this, settingsViewModel, lifecycleScope) { isDouble ->
             if (isDouble) {
                 // In MainActivity, we don't really have a 'Cancel' action for double slam
@@ -128,15 +128,15 @@ class MainActivity : ComponentActivity() {
         DirectoryPicker.register {
             dirPickerLauncher.launch(null)
         }
-        
+
         setContent {
             val splashScreenVisible = remember { mutableStateOf(true) }
             var isBlinking by remember { mutableStateOf(false) }
-            
+
             LaunchedEffect(Unit) {
                 // Start blinking immediately as we enter Compose splash
                 isBlinking = true
-                
+
                 delay(1500) // Show the blinking cursor for a moment before entering the app
                 splashScreenVisible.value = false
             }
@@ -225,12 +225,12 @@ class MainActivity : ComponentActivity() {
                     contentDescription = "App Icon",
                     modifier = Modifier.size(192.dp)
                 )
-                
+
                 // Positioned to match the 'top="48dp"' from splash_icon_centered.xml
                 // We adjust for the height of the icon (192/2 = 96dp from center)
                 // In XML: item(192dp) + top(48dp) relative to center
                 Spacer(modifier = Modifier.height(32.dp))
-                
+
                 LoadingIndicator(
                     isBlinking = isBlinking,
                     showText = false

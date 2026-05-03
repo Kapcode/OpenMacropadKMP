@@ -7,7 +7,7 @@ import switchdektoptocompose.logic.AppSettings
 import java.io.File
 import javax.swing.JFileChooser
 
-class SettingsViewModel {
+open class SettingsViewModel {
     // --- StateFlows for UI ---
     private val _macroDirectory = MutableStateFlow(AppSettings.macroDirectory)
     val macroDirectory = _macroDirectory.asStateFlow()
@@ -126,7 +126,7 @@ class SettingsViewModel {
     val mousePollingRate = _mousePollingRate.asStateFlow()
 
     private val _systemPollingRate = MutableStateFlow(AppSettings.systemPollingRate)
-    val systemPollingRate = _systemPollingRate.asStateFlow()
+    open val systemPollingRate = _systemPollingRate.asStateFlow()
 
     private val _controllerNavigationMode = MutableStateFlow(AppSettings.controllerNavigationMode)
     val controllerNavigationMode = _controllerNavigationMode.asStateFlow()

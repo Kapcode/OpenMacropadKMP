@@ -7,7 +7,7 @@ import switchdektoptocompose.model.ActiveProcessInfo
 import java.io.BufferedReader
 import java.io.InputStreamReader
 
-class ProcessWatcher(
+open class ProcessWatcher(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     private val getPollingRate: () -> Long = { 250L }
 ) {
@@ -28,7 +28,7 @@ class ProcessWatcher(
 
     private var watchJob: Job? = null
 
-    fun startWatching() {
+    open fun startWatching() {
         if (watchJob != null) return
         watchJob = scope.launch {
             while (isActive) {
@@ -70,12 +70,12 @@ class ProcessWatcher(
         _focusHistory.value = currentHistory
     }
 
-    fun stopWatching() {
+    open fun stopWatching() {
         watchJob?.cancel()
         watchJob = null
     }
 
-    fun getActiveProcessInfo(): ActiveProcessInfo? {
+    open fun getActiveProcessInfo(): ActiveProcessInfo? {
         val os = System.getProperty("os.name").lowercase()
         return when {
             os.contains("win") -> getWindowsActiveProcessInfo()

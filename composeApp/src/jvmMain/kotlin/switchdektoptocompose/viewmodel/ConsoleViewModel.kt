@@ -10,7 +10,7 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.atomic.AtomicLong
 
-class ConsoleViewModel {
+open class ConsoleViewModel {
     data class LogEntry(
         val id: Long,
         val level: LogLevel,
@@ -139,7 +139,7 @@ class ConsoleViewModel {
         logFile = null
     }
 
-    fun addLog(level: LogLevel, message: String) {
+    open fun addLog(level: LogLevel, message: String) {
         val timestamp = LocalDateTime.now().format(timestampFormatter)
         val formattedLog = "[$timestamp] [$level] $message"
         val entry = LogEntry(

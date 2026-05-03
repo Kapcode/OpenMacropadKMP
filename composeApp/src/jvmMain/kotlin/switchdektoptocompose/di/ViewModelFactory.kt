@@ -123,10 +123,12 @@ object ViewModelFactory {
                 consoleViewModel, 
                 inspectorViewModel,
                 serverViewModel,
-                clientCommunicationViewModel
+                clientCommunicationViewModel,
+                processWatcher
             ) 
         }
 
+        desktopViewModel.macroManagerViewModel = macroManagerViewModel
         clientCommunicationViewModel.macroManagerViewModel = macroManagerViewModel
         clientCommunicationViewModel.serverViewModel = serverViewModel
         clientCommunicationViewModel.layoutViewModel = layoutViewModel

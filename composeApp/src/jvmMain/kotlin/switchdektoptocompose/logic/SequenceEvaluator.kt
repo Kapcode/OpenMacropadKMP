@@ -31,6 +31,8 @@ class SequenceEvaluator(
     private val pendingHoldJobs = ConcurrentHashMap<String, Job>()
     private val evaluatorScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+    var currentProcess: String? = null
+
     fun updateTriggers(triggers: List<UnifiedTrigger>) {
         activeUnifiedTriggers.clear()
         activeUnifiedTriggers.addAll(triggers)
@@ -74,7 +76,7 @@ class SequenceEvaluator(
     }
 
     private fun checkSequences(now: Long) {
-        activeUnifiedTriggers.filter { it.triggerType == TriggerType.SEQUENCE }.forEach { trigger ->
+        activeUnifiedTriggers.filter { it.triggerType == TriggerType.SEQUENCE && isTriggerValid(it) }.forEach { trigger ->
             if (sequenceHistory.takeLast(trigger.keyCodes.size) == trigger.keyCodes) {
                 trigger(trigger)
             }
@@ -82,7 +84,7 @@ class SequenceEvaluator(
     }
 
     private fun checkChordStarts(now: Long) {
-        activeUnifiedTriggers.filter { it.triggerType == TriggerType.HOLD }.forEach { trigger ->
+        activeUnifiedTriggers.filter { it.triggerType == TriggerType.HOLD && isTriggerValid(it) }.forEach { trigger ->
             // If all required keys are pressed and no job is already running for this trigger
             if (pressedKeys.containsAll(trigger.keyCodes) && !pendingHoldJobs.containsKey(trigger.id)) {
                 val job = evaluatorScope.launch {
@@ -98,7 +100,7 @@ class SequenceEvaluator(
     }
 
     private fun checkReleaseAndTapTriggers(keyCode: Int, now: Long) {
-        activeUnifiedTriggers.forEach { trigger ->
+        activeUnifiedTriggers.filter { isTriggerValid(it) }.forEach { trigger ->
             when (trigger.triggerType) {
                 TriggerType.RELEASE -> {
                     if (trigger.keyCodes.size == 1 && trigger.keyCodes[0] == keyCode) {
@@ -120,7 +122,10 @@ class SequenceEvaluator(
         }
     }
 
-    private fun trigger(unified: UnifiedTrigger) {
+    internal fun trigger(unified: UnifiedTrigger) {
+        // Double check process validity at point of execution
+        if (!isTriggerValid(unified)) return
+
         println(">>> TRIGGER MATCHED: ${unified.id} (Keys: ${unified.keyCodes})")
         if (unified.confirmationRequired) {
             evaluatorScope.launch(Dispatchers.Main) {
@@ -129,6 +134,11 @@ class SequenceEvaluator(
         } else {
             execute(unified)
         }
+    }
+
+    private fun isTriggerValid(unified: UnifiedTrigger): Boolean {
+        if (unified.targetProcess == null) return true
+        return unified.targetProcess.equals(currentProcess, ignoreCase = true)
     }
 
     fun execute(unified: UnifiedTrigger) {

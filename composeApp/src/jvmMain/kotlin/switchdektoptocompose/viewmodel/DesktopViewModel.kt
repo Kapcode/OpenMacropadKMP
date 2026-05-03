@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ConnectionHistoryManager
+import switchdektoptocompose.logic.ProcessWatcher
 import switchdektoptocompose.logic.TrustedDeviceManager
 import switchdektoptocompose.model.*
 
@@ -27,12 +28,13 @@ data class DesktopUiState(
  * The primary ViewModel for coordinating the desktop application.
  * Now refactored to delegate to ServerViewModel and ClientCommunicationViewModel.
  */
-class DesktopViewModel(
+open class DesktopViewModel(
     val settingsViewModel: SettingsViewModel,
     val consoleViewModel: ConsoleViewModel,
     val inspectorViewModel: InspectorViewModel,
     val serverViewModel: ServerViewModel,
-    val clientCommunicationViewModel: ClientCommunicationViewModel
+    val clientCommunicationViewModel: ClientCommunicationViewModel,
+    val processWatcher: ProcessWatcher
 ) {
     lateinit var macroManagerViewModel: MacroManagerViewModel
     private val viewModelScope = CoroutineScope(Dispatchers.Main)

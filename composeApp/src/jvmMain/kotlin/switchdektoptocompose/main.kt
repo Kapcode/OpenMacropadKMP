@@ -91,6 +91,12 @@ fun main(args: Array<String>) = application {
     val stopKeyShortcut by settingsViewModel.stopKeyShortcut.collectAsState()
     val inspectKeyShortcut by settingsViewModel.inspectKeyShortcut.collectAsState()
 
+    val activeProcess by serverViewModel.processWatcher.activeProcess.collectAsState()
+
+    LaunchedEffect(activeProcess) {
+        triggerListener.evaluator.currentProcess = activeProcess
+    }
+
     LaunchedEffect(macroFiles, macroPacks, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
         val routines = macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }
         triggerListener.updateActiveTriggers(
