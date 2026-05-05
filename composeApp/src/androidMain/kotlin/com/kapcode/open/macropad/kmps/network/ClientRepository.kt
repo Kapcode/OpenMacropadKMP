@@ -186,15 +186,6 @@ class ClientRepository(private val context: Context) {
                                                 val platform = params["platform"] ?: "Unknown"
                                                 Log.i("ClientRepository", "Connected to Server $version on $platform")
                                             }
-                                            ControlCommand.UPGRADE_RESPONSE -> {
-                                                val success = params["success"]?.toBoolean() ?: false
-                                                val message = params["message"] ?: "No message"
-                                                if (success) {
-                                                    Log.i("ClientRepository", "Server Upgrade Success: $message")
-                                                } else {
-                                                    Log.e("ClientRepository", "Server Upgrade Failed: $message")
-                                                }
-                                            }
                                             else -> {}
                                         }
                                     },

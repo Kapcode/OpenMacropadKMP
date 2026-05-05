@@ -1,11 +1,13 @@
 package com.kapcode.open.macropad.kmps
 
-interface Platform {
-    val name: String
-}
-
-expect fun getPlatform(): Platform
-
 expect fun openFolder(path: String)
 
-expect fun pickDirectory(onResult: (String?) -> Unit)
+expect fun generateUuid(): String
+
+expect fun currentTimeMillis(): Long
+
+expect object CryptoUtils {
+    fun encrypt(data: ByteArray, key: ByteArray): ByteArray
+    fun decrypt(encryptedData: ByteArray, key: ByteArray): ByteArray
+    fun generateKey(): ByteArray
+}

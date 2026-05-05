@@ -40,6 +40,7 @@ class ServerDiscoveryAnnouncer {
                         try {
                             socket?.send(packet)
                         } catch (e: Exception) {
+                            if (e is CancellationException) throw e
                             if (isActive) {
                                 System.err.println("Error sending discovery packet: ${e.message}")
                             }
@@ -48,6 +49,7 @@ class ServerDiscoveryAnnouncer {
                     delay(2000) // Match ClientDiscovery.RATE_LIMIT_MS (2s) for faster discovery
                 }
             } catch (e: Exception) {
+                if (e is CancellationException) throw e
                 System.err.println("Failed to start discovery announcer: ${e.message}")
             } finally {
                 socket?.close()

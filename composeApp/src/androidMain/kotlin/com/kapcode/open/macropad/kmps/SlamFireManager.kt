@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.view.KeyEvent
+import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
 import kotlinx.coroutines.*
@@ -15,7 +16,7 @@ class SlamFireManager(
     private val settingsViewModel: SettingsViewModel,
     private val scope: CoroutineScope,
     private val onSlam: (isDouble: Boolean) -> Unit
-) : SensorEventListener {
+) : SensorEventListener, HardwareTriggerManager {
 
     private val sensorManager = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
     private val proximitySensor: Sensor? = sensorManager.getDefaultSensor(Sensor.TYPE_PROXIMITY)
@@ -24,17 +25,17 @@ class SlamFireManager(
     private var triggerPending = false
     private var isHandlingSlam = false
 
-    fun start() {
+    override fun start() {
         proximitySensor?.let {
             sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
         }
     }
 
-    fun stop() {
+    override fun stop() {
         sensorManager.unregisterListener(this)
     }
 
-    fun handleKeyDown(keyCode: Int): Boolean {
+    override fun handleKeyDown(keyCode: Int): Boolean {
         if (settingsViewModel.slamFireEnabled.value) {
             val trigger = settingsViewModel.slamFireTrigger.value
             val isMatch = when (trigger) {

@@ -113,7 +113,6 @@ fun main(args: Array<String>) = application {
         desktopViewModel.startServer()
         triggerListener.startListening()
         inspectorManager.startListening()
-        serverViewModel.controllerManager?.start()
 
         val shutdownHook = Thread {
             serverViewModel.stopServer()
@@ -124,7 +123,6 @@ fun main(args: Array<String>) = application {
             desktopViewModel.shutdown()
             triggerListener.shutdown()
             inspectorManager.stopListening()
-            serverViewModel.controllerManager?.stop()
             serverViewModel.stopServer()
             try {
                 Runtime.getRuntime().removeShutdownHook(shutdownHook)
@@ -231,7 +229,7 @@ fun main(args: Array<String>) = application {
             Separator()
             Item("Exit", onClick = {
                 if (exitBehavior == "ASK") {
-                    desktopWindowState.showExitDialog = true
+                    desktopWindowState.toggleExitDialog(true)
                     desktopWindowState.showWindow()
                 } else {
                     exitApplication()
@@ -446,7 +444,7 @@ fun main(args: Array<String>) = application {
                 "TRAY" -> desktopWindowState.animateToTray()
                 "EXIT" -> exitApplication()
                 else -> {
-                    desktopWindowState.showExitDialog = true
+                    desktopWindowState.toggleExitDialog(true)
                 }
             }
         },

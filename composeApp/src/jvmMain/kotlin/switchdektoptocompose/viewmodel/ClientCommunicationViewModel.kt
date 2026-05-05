@@ -240,16 +240,16 @@ class ClientCommunicationViewModel(
                 withContext(Dispatchers.Main) {
                     if (result.isSuccess) {
                         consoleViewModel.addLog(LogLevel.Info, result.getOrThrow())
-                        serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(true, result.getOrThrow()))
+                        serverViewModel.server.sendToClient(update.clientId, responseMessage(true, result.getOrThrow()))
                     } else {
                         consoleViewModel.addLog(LogLevel.Error, "Update failed: ${result.exceptionOrNull()?.message}")
-                        serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "Update failed: ${result.exceptionOrNull()?.message}"))
+                        serverViewModel.server.sendToClient(update.clientId, responseMessage(false, "Update failed: ${result.exceptionOrNull()?.message}"))
                     }
                 }
             } else {
                 withContext(Dispatchers.Main) {
                     consoleViewModel.addLog(LogLevel.Error, "Update hash verification failed! Expected: ${update.hash}")
-                    serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "Hash mismatch. Update aborted."))
+                    serverViewModel.server.sendToClient(update.clientId, responseMessage(false, "Hash mismatch. Update aborted."))
                 }
             }
             tempFile.delete()
@@ -262,7 +262,7 @@ class ClientCommunicationViewModel(
         layoutViewModel.setShowUpdateConfirmDialog(false)
         
         viewModelScope.launch {
-            serverViewModel.server.sendToClient(update.clientId, upgradeResponseMessage(false, "User rejected update."))
+            serverViewModel.server.sendToClient(update.clientId, responseMessage(false, "User rejected update."))
         }
         consoleViewModel.addLog(LogLevel.Warn, "Update request from ${update.clientName} was rejected by user.")
     }

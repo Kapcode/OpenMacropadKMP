@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import com.kapcode.open.macropad.kmps.utils.ClipboardManager
 import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
+import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -29,6 +30,7 @@ import kotlinx.coroutines.delay
 fun MainUI(
     settingsViewModel: SettingsViewModel,
     clientDiscovery: ClientDiscovery,
+    hardwareTriggerManager: HardwareTriggerManager? = null,
     onLaunchClient: (ServerInfo, String) -> Unit,
     onOkayTriggerSet: (() -> Unit) -> Unit
 ) {
@@ -127,6 +129,7 @@ fun MainUI(
                     }
                     App(
                         modifier = Modifier.padding(innerPadding),
+                        hardwareTriggerManager = hardwareTriggerManager,
                         scanServers = {
                             clientDiscovery.foundServers.value = emptyList()
                             clientDiscovery.start()

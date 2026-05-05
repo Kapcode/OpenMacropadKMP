@@ -25,7 +25,8 @@ fun ExitConfirmDialog(
         state = rememberWindowState(width = 450.dp, height = 250.dp),
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel,
-        resizable = false
+        resizable = false,
+        alwaysOnTop = true
     ) {
         Column(
             modifier = Modifier.fillMaxSize().padding(24.dp),

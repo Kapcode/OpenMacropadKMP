@@ -2,14 +2,12 @@ package com.kapcode.open.macropad.kmps
 
 import java.awt.Desktop
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.SwingUtilities
-
-class JVMPlatform: Platform {
-    override val name: String = "Java ${System.getProperty("java.version")}"
-}
-
-actual fun getPlatform(): Platform = JVMPlatform()
+import java.security.SecureRandom
+import java.util.*
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
 
 actual fun openFolder(path: String) {
     if (Desktop.isDesktopSupported()) {
@@ -21,17 +19,44 @@ actual fun openFolder(path: String) {
     }
 }
 
-actual fun pickDirectory(onResult: (String?) -> Unit) {
-    SwingUtilities.invokeLater {
-        val fileChooser = JFileChooser().apply {
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            dialogTitle = "Select Directory"
-        }
-        val result = fileChooser.showOpenDialog(null)
-        if (result == JFileChooser.APPROVE_OPTION) {
-            onResult(fileChooser.selectedFile.absolutePath)
-        } else {
-            onResult(null)
-        }
+actual fun generateUuid(): String = UUID.randomUUID().toString()
+
+actual fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+actual object CryptoUtils {
+    private const val ALGORITHM = "AES"
+    private const val TRANSFORMATION = "AES/GCM/NoPadding"
+    private const val GCM_TAG_LENGTH = 128
+    private const val GCM_IV_LENGTH = 12
+
+    actual fun encrypt(data: ByteArray, key: ByteArray): ByteArray {
+        val secretKey = SecretKeySpec(key, ALGORITHM)
+        val iv = ByteArray(GCM_IV_LENGTH)
+        SecureRandom().nextBytes(iv)
+
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec)
+
+        val ciphertext = cipher.doFinal(data)
+        return iv + ciphertext
+    }
+
+    actual fun decrypt(encryptedData: ByteArray, key: ByteArray): ByteArray {
+        val secretKey = SecretKeySpec(key, ALGORITHM)
+        val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
+        val ciphertext = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
+
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
+
+        return cipher.doFinal(ciphertext)
+    }
+
+    actual fun generateKey(): ByteArray {
+        val keyGenerator = KeyGenerator.getInstance(ALGORITHM)
+        keyGenerator.init(256)
+        return keyGenerator.generateKey().encoded
     }
 }

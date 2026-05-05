@@ -86,10 +86,6 @@ class MainActivity : ComponentActivity() {
 
     private lateinit var slamFireManager: SlamFireManager
 
-    private val dirPickerLauncher = registerForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
-        DirectoryPicker.onResult(uri?.toString())
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -125,10 +121,6 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        DirectoryPicker.register {
-            dirPickerLauncher.launch(null)
-        }
-
         setContent {
             val splashScreenVisible = remember { mutableStateOf(true) }
             var isBlinking by remember { mutableStateOf(false) }
@@ -155,6 +147,7 @@ class MainActivity : ComponentActivity() {
                     MainUI(
                         settingsViewModel = settingsViewModel,
                         clientDiscovery = clientDiscovery,
+                        hardwareTriggerManager = slamFireManager,
                         onLaunchClient = { serverInfo: ServerInfo, deviceName: String ->
                             launchClient(serverInfo, deviceName)
                         },
@@ -188,22 +181,6 @@ class MainActivity : ComponentActivity() {
             return true
         }
         return super.onKeyDown(keyCode, event)
-    }
-
-    override fun onResume() {
-        super.onResume()
-        slamFireManager.start()
-        // Discovery is now started early in onCreate, so we don't need to trigger it here
-        // unless it was explicitly stopped.
-        if (!clientDiscovery.isDiscovering()) {
-            clientDiscovery.start()
-        }
-    }
-
-    override fun onPause() {
-        super.onPause()
-        slamFireManager.stop()
-        // clientDiscovery is lazy, only stop if it was initialized
     }
 
     @Composable

@@ -1,13 +1,10 @@
 package com.kapcode.open.macropad.kmps.network.sockets.model
 
+import com.kapcode.open.macropad.kmps.generateUuid
+import com.kapcode.open.macropad.kmps.currentTimeMillis
 import com.kapcode.open.macropad.kmps.models.AutomationRoutine
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
-import java.util.*
-import javax.crypto.*
-import javax.crypto.spec.GCMParameterSpec
-import javax.crypto.spec.SecretKeySpec
-import java.security.*
 
 /**
  * Sealed class representing different types of messages that can be sent
@@ -21,7 +18,10 @@ sealed class MessageType {
     
     @Serializable
     @SerialName("command")
-    data class Command(val command: String, val parameters: Map<String, String> = emptyMap()) : MessageType()
+    data class Command(
+        val command: String,
+        val parameters: Map<String, String> = emptyMap(),
+    ) : MessageType()
 
     @Serializable
     @SerialName("automation_routine")
@@ -36,14 +36,35 @@ sealed class MessageType {
     data class SystemQuery(val query: String) : MessageType()
     
     @Serializable
+    @SerialName("sync_state")
+    data class SyncState(
+        val activeRewardSessionId: String?,
+        val expirationTimestamp: Long?,
+        val isPremium: Boolean = false
+    ) : MessageType()
+
+    @Serializable
+    @SerialName("claim_session")
+    data class ClaimSession(val deviceId: String) : MessageType()
+
+    @Serializable
+    @SerialName("session_claimed")
+    data class SessionClaimed(
+        val sessionId: String,
+        val expirationTimestamp: Long
+    ) : MessageType()
+
+    @Serializable
     @SerialName("data")
-    data class Data(val key: String, val value: ByteArray) : MessageType() {
+    data class Data(
+        val key: String,
+        val value: ByteArray,
+    ) : MessageType() {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
-            if (other !is Data) return false
-            if (key != other.key) return false
-            if (!value.contentEquals(other.value)) return false
-            return true
+            return other is Data &&
+                key == other.key &&
+                value.contentEquals(other.value)
         }
 
         override fun hashCode(): Int {
@@ -55,15 +76,22 @@ sealed class MessageType {
     
     @Serializable
     @SerialName("response")
-    data class Response(val success: Boolean, val message: String, val data: String? = null) : MessageType()
+    data class Response(
+        val success: Boolean,
+        val message: String,
+        val data: String? = null,
+    ) : MessageType()
     
     @Serializable
     @SerialName("control")
-    data class Control(val command: ControlCommand, val parameters: Map<String, String> = emptyMap()) : MessageType()
+    data class Control(
+        val command: ControlCommand,
+        val parameters: Map<String, String> = emptyMap(),
+    ) : MessageType()
     
     @Serializable
     @SerialName("heartbeat")
-    data class Heartbeat(val timestamp: Long = System.currentTimeMillis()) : MessageType()
+    data class Heartbeat(val timestamp: Long = currentTimeMillis()) : MessageType()
 }
 
 /**
@@ -86,9 +114,6 @@ enum class ControlCommand {
     EXECUTION_FAILED,
     MARKETPLACE_LIST,
     SERVER_INFO,
-    UPGRADE_SERVER,
-    UPGRADE_RESPONSE,
-    TEST_UPGRADE
 }
 
 /**
@@ -96,15 +121,15 @@ enum class ControlCommand {
  */
 @Serializable
 data class DataModel(
-    val id: String = UUID.randomUUID().toString(),
-    val timestamp: Long = System.currentTimeMillis(),
+    val id: String = generateUuid(),
+    val timestamp: Long = currentTimeMillis(),
     val messageType: MessageType,
     val metadata: Map<String, String> = emptyMap(),
-    val priority: Priority = Priority.NORMAL
+    val priority: Priority = Priority.NORMAL,
 ) {
 
     enum class Priority {
-        LOW, NORMAL, HIGH, CRITICAL
+        LOW, NORMAL, HIGH, CRITICAL,
     }
 
     companion object {
@@ -113,57 +138,11 @@ data class DataModel(
             encodeDefaults = true
         }
 
-        private const val ALGORITHM = "AES"
-        private const val TRANSFORMATION = "AES/GCM/NoPadding"
-        private const val GCM_TAG_LENGTH = 128
-        private const val GCM_IV_LENGTH = 12
-
-        /**
-         * Generate a new AES key for encryption
-         */
-        fun generateKey(keySize: Int = 256): SecretKey {
-            val keyGenerator = KeyGenerator.getInstance(ALGORITHM)
-            keyGenerator.init(keySize)
-            return keyGenerator.generateKey()
-        }
-
-        /**
-         * Deserialize an encrypted DataModel
-         */
-        fun fromEncryptedBytes(encryptedData: ByteArray, key: SecretKey): DataModel {
-            val decryptedBytes = decrypt(encryptedData, key)
-            return fromBytes(decryptedBytes)
-        }
-
         /**
          * Deserialize a DataModel from bytes (JSON)
          */
         fun fromBytes(bytes: ByteArray): DataModel {
             return json.decodeFromString(bytes.decodeToString())
-        }
-
-        /**
-         * Decrypt data using AES-GCM
-         */
-        private fun decrypt(encryptedData: ByteArray, key: SecretKey): ByteArray {
-            // Extract IV from the beginning of encrypted data
-            val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
-            val ciphertext = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
-
-            val cipher = Cipher.getInstance(TRANSFORMATION)
-            val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-            cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec)
-
-            return cipher.doFinal(ciphertext)
-        }
-
-        /**
-         * Generate random IV
-         */
-        fun generateIv(): ByteArray {
-            val iv = ByteArray(GCM_IV_LENGTH)
-            SecureRandom().nextBytes(iv)
-            return iv
         }
     }
 
@@ -172,42 +151,6 @@ data class DataModel(
      */
     fun toBytes(): ByteArray {
         return json.encodeToString(this).encodeToByteArray()
-    }
-
-    /**
-     * Encrypt and serialize the DataModel for transmission
-     */
-    fun toEncryptedBytes(key: SecretKey): ByteArray {
-        val dataBytes = toBytes()
-        return encrypt(dataBytes, key)
-    }
-
-    /**
-     * Encrypt data using AES-GCM
-     * Returns: IV (12 bytes) + Ciphertext (with authentication tag)
-     */
-    private fun encrypt(data: ByteArray, key: SecretKey): ByteArray {
-        // Generate random IV
-        val iv = generateIv()
-
-        val cipher = Cipher.getInstance(TRANSFORMATION)
-        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
-        cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec)
-
-        val ciphertext = cipher.doFinal(data)
-
-        // Prepend IV to ciphertext
-        return iv + ciphertext
-    }
-
-    /**
-     * Create a response DataModel based on this message
-     */
-    fun createResponse(success: Boolean, message: String, data: String? = null): DataModel {
-        return DataModel(
-            messageType = MessageType.Response(success, message, data),
-            metadata = mapOf("responseToId" to id)
-        )
     }
 
     override fun toString(): String {
@@ -245,6 +188,18 @@ class DataModelBuilder {
 
     fun heartbeat() = apply { this.messageType = MessageType.Heartbeat() }
     
+    fun syncState(activeRewardSessionId: String?, expirationTimestamp: Long?, isPremium: Boolean = false) = apply {
+        this.messageType = MessageType.SyncState(activeRewardSessionId, expirationTimestamp, isPremium)
+    }
+
+    fun claimSession(deviceId: String) = apply {
+        this.messageType = MessageType.ClaimSession(deviceId)
+    }
+
+    fun sessionClaimed(sessionId: String, expirationTimestamp: Long) = apply {
+        this.messageType = MessageType.SessionClaimed(sessionId, expirationTimestamp)
+    }
+
     fun systemQuery(query: String) = apply { this.messageType = MessageType.SystemQuery(query) }
 
     fun addMetadata(key: String, value: String) = apply { this.metadata[key] = value }
@@ -254,14 +209,12 @@ class DataModelBuilder {
     fun priority(priority: DataModel.Priority) = apply { this.priority = priority }
     
     fun id(id: String) = apply { this.id = id }
-    
-    fun timestamp(timestamp: Long) = apply { this.timestamp = timestamp }
 
     fun build(): DataModel {
         val type = messageType ?: throw IllegalStateException("MessageType must be set")
         return DataModel(
-            id = id ?: UUID.randomUUID().toString(),
-            timestamp = timestamp ?: System.currentTimeMillis(),
+            id = id ?: generateUuid(),
+            timestamp = timestamp ?: currentTimeMillis(),
             messageType = type,
             metadata = metadata,
             priority = priority

@@ -24,7 +24,7 @@ fun AppDialog(
     onCloseRequest: () -> Unit,
     state: WindowState = rememberWindowState(),
     resizable: Boolean = false,
-    alwaysOnTop: Boolean = true,
+    alwaysOnTop: Boolean = false,
     selectedTheme: String,
     closeOnMinimize: Boolean = true,
     consoleViewModel: ConsoleViewModel? = null,

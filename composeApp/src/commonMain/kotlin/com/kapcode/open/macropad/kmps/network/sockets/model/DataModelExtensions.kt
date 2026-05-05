@@ -111,6 +111,21 @@ fun disconnectMessage(reason: String? = null): DataModel =
     )
 
 // Update System builders
+fun syncStateMessage(activeRewardSessionId: String?, expirationTimestamp: Long?, isPremium: Boolean): DataModel =
+    DataModelBuilder()
+        .syncState(activeRewardSessionId, expirationTimestamp, isPremium)
+        .build()
+
+fun claimSessionMessage(deviceId: String): DataModel =
+    DataModelBuilder()
+        .claimSession(deviceId)
+        .build()
+
+fun sessionClaimedMessage(sessionId: String, expirationTimestamp: Long): DataModel =
+    DataModelBuilder()
+        .sessionClaimed(sessionId, expirationTimestamp)
+        .build()
+
 fun serverInfoMessage(version: String, platform: String, serverId: String): DataModel =
     controlMessage(
         ControlCommand.SERVER_INFO,
@@ -126,12 +141,6 @@ fun upgradeServerMessage(jarBytes: ByteArray, hash: String): DataModel =
         .data("upgrade_jar", jarBytes)
         .addMetadata("hash", hash)
         .build()
-
-fun upgradeResponseMessage(success: Boolean, message: String): DataModel =
-    controlMessage(
-        ControlCommand.UPGRADE_RESPONSE,
-        parameters = mapOf("success" to success.toString(), "message" to message)
-    )
 
 fun testUpgradeMessage(dummyData: ByteArray, hash: String): DataModel =
     DataModelBuilder()
@@ -168,7 +177,10 @@ inline fun DataModel.handle(
     onHeartbeat: (Long) -> Unit = {},
     onAutomationRoutine: (com.kapcode.open.macropad.kmps.models.AutomationRoutine) -> Unit = {},
     onLayerUpdate: (String) -> Unit = {},
-    onSystemQuery: (String) -> Unit = {}
+    onSystemQuery: (String) -> Unit = {},
+    onSyncState: (String?, Long?, Boolean) -> Unit = { _, _, _ -> },
+    onClaimSession: (String) -> Unit = {},
+    onSessionClaimed: (String, Long) -> Unit = { _, _ -> }
 ) {
     when (val msg = this.messageType) {
         is MessageType.Text -> onText(msg.content)
@@ -180,6 +192,9 @@ inline fun DataModel.handle(
         is MessageType.AutomationRoutineMsg -> onAutomationRoutine(msg.routine)
         is MessageType.LayerUpdate -> onLayerUpdate(msg.activeLayerId)
         is MessageType.SystemQuery -> onSystemQuery(msg.query)
+        is MessageType.SyncState -> onSyncState(msg.activeRewardSessionId, msg.expirationTimestamp, msg.isPremium)
+        is MessageType.ClaimSession -> onClaimSession(msg.deviceId)
+        is MessageType.SessionClaimed -> onSessionClaimed(msg.sessionId, msg.expirationTimestamp)
     }
 }
 
@@ -195,7 +210,10 @@ inline fun DataModel.process(
     onHeartbeat: (Long, DataModel) -> Unit = { _, _ -> },
     onAutomationRoutine: (com.kapcode.open.macropad.kmps.models.AutomationRoutine, DataModel) -> Unit = { _, _ -> },
     onLayerUpdate: (String, DataModel) -> Unit = { _, _ -> },
-    onSystemQuery: (String, DataModel) -> Unit = { _, _ -> }
+    onSystemQuery: (String, DataModel) -> Unit = { _, _ -> },
+    onSyncState: (String?, Long?, Boolean, DataModel) -> Unit = { _, _, _, _ -> },
+    onClaimSession: (String, DataModel) -> Unit = { _, _ -> },
+    onSessionClaimed: (String, Long, DataModel) -> Unit = { _, _, _ -> }
 ) {
     when (val msg = this.messageType) {
         is MessageType.Text -> onText(msg.content, this)
@@ -207,5 +225,8 @@ inline fun DataModel.process(
         is MessageType.AutomationRoutineMsg -> onAutomationRoutine(msg.routine, this)
         is MessageType.LayerUpdate -> onLayerUpdate(msg.activeLayerId, this)
         is MessageType.SystemQuery -> onSystemQuery(msg.query, this)
+        is MessageType.SyncState -> onSyncState(msg.activeRewardSessionId, msg.expirationTimestamp, msg.isPremium, this)
+        is MessageType.ClaimSession -> onClaimSession(msg.deviceId, this)
+        is MessageType.SessionClaimed -> onSessionClaimed(msg.sessionId, msg.expirationTimestamp, this)
     }
 }

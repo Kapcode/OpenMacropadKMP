@@ -13,17 +13,26 @@ import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
+import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 fun App(
     modifier: Modifier = Modifier,
+    hardwareTriggerManager: HardwareTriggerManager? = null,
     scanServers: () -> Unit,
     stopScanning: () -> Unit,
     foundServers: List<ServerInfo>,
     isScanning: Boolean = false,
     onConnectClick: (serverInfo: ServerInfo, deviceName: String) -> Unit
 ) {
+    DisposableEffect(hardwareTriggerManager) {
+        hardwareTriggerManager?.start()
+        onDispose {
+            hardwareTriggerManager?.stop()
+        }
+    }
+
     var deviceName by remember { mutableStateOf("${DeviceInfo.name}-${DeviceInfo.uniqueId}") }
     var manualIpAddress by remember { mutableStateOf("") }
     var isManualSecure by remember { mutableStateOf(true) }

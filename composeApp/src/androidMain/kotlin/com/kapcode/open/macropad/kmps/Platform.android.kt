@@ -1,36 +1,54 @@
 package com.kapcode.open.macropad.kmps
 
-import android.os.Build
-
-class AndroidPlatform : Platform {
-    override val name: String = "Android ${Build.VERSION.SDK_INT}"
-}
-
-actual fun getPlatform(): Platform = AndroidPlatform()
+import java.util.UUID
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import java.security.SecureRandom
 
 actual fun openFolder(path: String) {
     // No-op for Android
 }
 
-object DirectoryPicker {
-    private var callback: ((String?) -> Unit)? = null
-    private var launcher: (() -> Unit)? = null
+actual fun generateUuid(): String = UUID.randomUUID().toString()
 
-    fun register(launcher: () -> Unit) {
-        this.launcher = launcher
+actual fun currentTimeMillis(): Long = System.currentTimeMillis()
+
+actual object CryptoUtils {
+    private const val ALGORITHM = "AES"
+    private const val TRANSFORMATION = "AES/GCM/NoPadding"
+    private const val GCM_TAG_LENGTH = 128
+    private const val GCM_IV_LENGTH = 12
+
+    actual fun encrypt(data: ByteArray, key: ByteArray): ByteArray {
+        val secretKey = SecretKeySpec(key, ALGORITHM)
+        val iv = ByteArray(GCM_IV_LENGTH)
+        SecureRandom().nextBytes(iv)
+
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+        cipher.init(Cipher.ENCRYPT_MODE, secretKey, gcmSpec)
+
+        val ciphertext = cipher.doFinal(data)
+        return iv + ciphertext
     }
 
-    fun pickDirectory(onResult: (String?) -> Unit) {
-        this.callback = onResult
-        launcher?.invoke()
+    actual fun decrypt(encryptedData: ByteArray, key: ByteArray): ByteArray {
+        val secretKey = SecretKeySpec(key, ALGORITHM)
+        val iv = encryptedData.copyOfRange(0, GCM_IV_LENGTH)
+        val ciphertext = encryptedData.copyOfRange(GCM_IV_LENGTH, encryptedData.size)
+
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        val gcmSpec = GCMParameterSpec(GCM_TAG_LENGTH, iv)
+        cipher.init(Cipher.DECRYPT_MODE, secretKey, gcmSpec)
+
+        return cipher.doFinal(ciphertext)
     }
 
-    fun onResult(uri: String?) {
-        callback?.invoke(uri)
-        callback = null
+    actual fun generateKey(): ByteArray {
+        val keyGenerator = KeyGenerator.getInstance(ALGORITHM)
+        keyGenerator.init(256)
+        return keyGenerator.generateKey().encoded
     }
-}
-
-actual fun pickDirectory(onResult: (String?) -> Unit) {
-    DirectoryPicker.pickDirectory(onResult)
 }
