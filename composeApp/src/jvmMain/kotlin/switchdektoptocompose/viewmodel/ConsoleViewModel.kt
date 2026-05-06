@@ -48,6 +48,10 @@ open class ConsoleViewModel {
         _selectionEndId.value = null
     }
 
+    fun getConsoleLogs(): String {
+        return allLogs.joinToString("\n") { it.formatted }
+    }
+
     fun getSelectedText(): String {
         val startId = _selectionStartId.value ?: return ""
         val endId = _selectionEndId.value ?: return ""

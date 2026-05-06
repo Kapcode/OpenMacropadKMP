@@ -3,7 +3,6 @@ package switchdektoptocompose.logic
 import com.kapcode.open.macropad.kmps.models.*
 import kotlinx.coroutines.*
 import switchdektoptocompose.model.*
-import switchdektoptocompose.viewmodel.DesktopViewModel
 import java.util.concurrent.ConcurrentHashMap
 
 data class UnifiedTrigger(
@@ -20,7 +19,7 @@ data class UnifiedTrigger(
 )
 
 class SequenceEvaluator(
-    private val viewModel: DesktopViewModel,
+    private val bridge: TriggerBridge,
     private val onTriggerRoutine: (AutomationRoutine) -> Unit,
     private val onTriggerMacro: (MacroFileState) -> Unit
 ) {
@@ -129,7 +128,7 @@ class SequenceEvaluator(
         println(">>> TRIGGER MATCHED: ${unified.id} (Keys: ${unified.keyCodes})")
         if (unified.confirmationRequired) {
             evaluatorScope.launch(Dispatchers.Main) {
-                viewModel.macroManagerViewModel.showTriggerConfirmation(unified)
+                bridge.showTriggerConfirmation(unified)
             }
         } else {
             execute(unified)

@@ -37,15 +37,13 @@ class SequenceEvaluatorTest {
 
     class FakeDesktopViewModel(
         settings: SettingsViewModel,
-        console: ConsoleViewModel,
-        processWatcher: ProcessWatcher
+        console: ConsoleViewModel
     ) : DesktopViewModel(
         settings,
         console,
         InspectorViewModel(),
         ServerViewModel(settings, console),
-        ClientCommunicationViewModel(settings),
-        processWatcher
+        ClientCommunicationViewModel(settings)
     )
 
     private lateinit var settingsViewModel: FakeSettingsViewModel
@@ -62,7 +60,7 @@ class SequenceEvaluatorTest {
         settingsViewModel = FakeSettingsViewModel()
         consoleViewModel = FakeConsoleViewModel()
         processWatcher = FakeProcessWatcher()
-        desktopViewModel = FakeDesktopViewModel(settingsViewModel, consoleViewModel, processWatcher)
+        desktopViewModel = FakeDesktopViewModel(settingsViewModel, consoleViewModel)
         
         macroManagerViewModel = MacroManagerViewModel(
             settingsViewModel,

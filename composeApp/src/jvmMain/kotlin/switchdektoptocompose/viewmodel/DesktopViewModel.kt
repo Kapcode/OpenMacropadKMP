@@ -1,17 +1,15 @@
 package switchdektoptocompose.viewmodel
 
-import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ConnectionHistoryManager
-import switchdektoptocompose.logic.ProcessWatcher
-import switchdektoptocompose.logic.TrustedDeviceManager
+import switchdektoptocompose.logic.TriggerBridge
+import switchdektoptocompose.logic.UnifiedTrigger
 import switchdektoptocompose.model.*
+import java.awt.Toolkit
+import java.awt.datatransfer.StringSelection
 
 /**
  * The UI state for the desktop application.
@@ -33,9 +31,8 @@ open class DesktopViewModel(
     val consoleViewModel: ConsoleViewModel,
     val inspectorViewModel: InspectorViewModel,
     val serverViewModel: ServerViewModel,
-    val clientCommunicationViewModel: ClientCommunicationViewModel,
-    val processWatcher: ProcessWatcher
-) {
+    val clientCommunicationViewModel: ClientCommunicationViewModel
+) : TriggerBridge {
     lateinit var macroManagerViewModel: MacroManagerViewModel
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
@@ -55,9 +52,11 @@ open class DesktopViewModel(
 
     fun setMacroExecutionEnabled(enabled: Boolean) = clientCommunicationViewModel.setMacroExecutionEnabled(enabled)
     
-    fun stopAllMacros() {
+    override fun stopAllMacros() {
         consoleViewModel.addLog(LogLevel.Warn, "E-STOP ACTIVATED - Stopping all macros")
-        macroManagerViewModel.cancelAllMacros()
+        if (::macroManagerViewModel.isInitialized) {
+            macroManagerViewModel.cancelAllMacros()
+        }
         if (settingsViewModel.hardEstop.value) {
             setMacroExecutionEnabled(false)
         }
@@ -91,5 +90,39 @@ open class DesktopViewModel(
 
     fun shutdown() {
         serverViewModel.stopServer()
+    }
+
+    // TriggerBridge Implementation
+    override fun addLog(level: LogLevel, msg: String) {
+        consoleViewModel.addLog(level, msg)
+    }
+
+    override fun cancelAllMacros() {
+        if (::macroManagerViewModel.isInitialized) {
+            macroManagerViewModel.cancelAllMacros()
+        }
+    }
+
+    override fun toggleInspector() {
+        // No-op - uiEvents removed as it was unused
+    }
+
+    override fun showTriggerConfirmation(unified: UnifiedTrigger) {
+        // No-op - uiEvents removed as it was unused
+    }
+
+    override fun isMacroExecutionEnabled(): Boolean {
+        return clientCommunicationViewModel.isMacroExecutionEnabled.value
+    }
+
+    override fun getConsoleLogs(): String {
+        return consoleViewModel.getConsoleLogs()
+    }
+
+    override fun copyLogsToClipboard() {
+        val logs = getConsoleLogs()
+        val selection = StringSelection(logs)
+        Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+        addLog(LogLevel.Info, "Logs copied to clipboard")
     }
 }

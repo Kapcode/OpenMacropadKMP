@@ -123,8 +123,7 @@ object ViewModelFactory {
                 consoleViewModel, 
                 inspectorViewModel,
                 serverViewModel,
-                clientCommunicationViewModel,
-                processWatcher
+                clientCommunicationViewModel
             ) 
         }
 
