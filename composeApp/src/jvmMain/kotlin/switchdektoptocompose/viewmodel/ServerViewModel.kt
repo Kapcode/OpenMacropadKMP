@@ -1,6 +1,6 @@
 package switchdektoptocompose.viewmodel
 
-import MacroKTOR.MacroKtorServer
+import switchdektoptocompose.network.MacroKtorServer
 import androidx.compose.runtime.mutableStateOf
 import com.kapcode.open.macropad.kmps.network.sockets.model.DataModel
 import com.kapcode.open.macropad.kmps.network.sockets.model.activeProcessMessage

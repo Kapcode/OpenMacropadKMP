@@ -62,6 +62,7 @@ import openmacropadkmp.composeapp.generated.resources.Res
 import openmacropadkmp.composeapp.generated.resources.macropadIcon512
 import org.jetbrains.compose.resources.painterResource
 
+import com.kapcode.open.macropad.kmps.IdentityManager
 import android.view.KeyEvent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -243,9 +244,12 @@ fun AppAndroidPreview() {
     )
     AppTheme {
         App(
+            modifier = Modifier,
+            hardwareTriggerManager = null,
             scanServers = {},
             stopScanning = {},
             foundServers = sampleServers,
+            isScanning = false,
             onConnectClick = { _, _ -> }
         )
     }

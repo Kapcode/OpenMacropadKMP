@@ -36,7 +36,7 @@ class TriggerListener(
     private val listenerScope = CoroutineScope(Dispatchers.Default)
 
     init {
-        val logger = java.util.logging.Logger.getLogger(GlobalScreen::class.java.getPackage().name)
+        val logger = java.util.logging.Logger.getLogger("com.github.kwhat.jnativehook")
         logger.level = java.util.logging.Level.WARNING // Reduce logging level to avoid spam
         logger.useParentHandlers = false
 

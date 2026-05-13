@@ -1,4 +1,4 @@
-rootProject.name = "OpenMacropadKMP"
+rootProject.name = "openmacropadkmp"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

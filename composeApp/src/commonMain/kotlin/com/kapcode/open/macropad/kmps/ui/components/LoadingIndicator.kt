@@ -81,35 +81,35 @@ fun BlinkingCursor(isBlinking: Boolean = true) {
 }
 
 @Composable
+private fun Dot(infiniteTransition: androidx.compose.animation.core.InfiniteTransition, delayMillis: Int) {
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.4f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(600, delayMillis = delayMillis, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "dotScale"
+    )
+    Box(
+        modifier = Modifier
+            .size(10.dp)
+            .alpha(scale)
+            .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
+    )
+}
+
+@Composable
 fun ThreeDotsLoading(modifier: Modifier = Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "dots")
     
-    @Composable
-    fun Dot(delayMillis: Int) {
-        val scale by infiniteTransition.animateFloat(
-            initialValue = 0.4f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(600, delayMillis = delayMillis, easing = LinearOutSlowInEasing),
-                repeatMode = RepeatMode.Reverse
-            ),
-            label = "dotScale"
-        )
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .alpha(scale)
-                .background(color = MaterialTheme.colorScheme.primary, shape = CircleShape)
-        )
-    }
-
     Row(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Dot(0)
-        Dot(200)
-        Dot(400)
+        Dot(infiniteTransition, 0)
+        Dot(infiniteTransition, 200)
+        Dot(infiniteTransition, 400)
     }
 }

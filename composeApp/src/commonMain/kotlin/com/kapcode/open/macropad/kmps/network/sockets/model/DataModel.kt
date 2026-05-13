@@ -154,7 +154,7 @@ data class DataModel(
     }
 
     override fun toString(): String {
-        return "DataModel(id=$id, timestamp=$timestamp, type=${messageType::class.simpleName}, priority=$priority)"
+        return "DataModel(id=$id, timestamp=$timestamp, type=$messageType, priority=$priority)"
     }
 }
 

@@ -3,53 +3,20 @@
 package com.kapcode.open.macropad.kmps.models
 
 import kotlinx.serialization.ExperimentalSerializationApi
-import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.descriptors.PrimitiveKind
-import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
-import kotlinx.serialization.descriptors.SerialDescriptor
-import kotlinx.serialization.encoding.Decoder
-import kotlinx.serialization.encoding.Encoder
 import kotlinx.serialization.json.JsonClassDiscriminator
-import kotlinx.serialization.json.JsonDecoder
-import kotlinx.serialization.json.JsonPrimitive
-
-/**
- * A serializer that can read both JSON strings and JSON numbers as a Kotlin String.
- * This ensures backward compatibility when a field changes from Int/Long to String.
- */
-object FlexibleStringSerializer : KSerializer<String> {
-    override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("FlexibleString", PrimitiveKind.STRING)
-
-    override fun deserialize(decoder: Decoder): String {
-        return if (decoder is JsonDecoder) {
-            val element = decoder.decodeJsonElement()
-            if (element is JsonPrimitive) {
-                element.content
-            } else {
-                element.toString()
-            }
-        } else {
-            decoder.decodeString()
-        }
-    }
-
-    override fun serialize(encoder: Encoder, value: String) {
-        encoder.encodeString(value)
-    }
-}
 
 @Serializable
 sealed class AutomationTrigger {
     @Serializable
-    data class KeyHold(val keyName: String, @Serializable(with = FlexibleStringSerializer::class) val durationMs: String) : AutomationTrigger()
+    data class KeyHold(val keyName: String, val durationMs: String) : AutomationTrigger()
     
     @Serializable
-    data class MultiTap(val keyName: String, @Serializable(with = FlexibleStringSerializer::class) val tapCount: String, @Serializable(with = FlexibleStringSerializer::class) val windowMs: String) : AutomationTrigger()
+    data class MultiTap(val keyName: String, val tapCount: String, val windowMs: String) : AutomationTrigger()
     
     @Serializable
-    data class Sequence(val keys: List<String>, @Serializable(with = FlexibleStringSerializer::class) val windowMs: String) : AutomationTrigger()
+    data class Sequence(val keys: List<String>, val windowMs: String) : AutomationTrigger()
     
     @Serializable
     data class OnConditionMet(val condition: AutomationCondition) : AutomationTrigger()
@@ -100,23 +67,23 @@ sealed class AutomationAction {
     
     @Serializable
     @SerialName("MouseEvent")
-    data class MouseEvent(@Serializable(with = FlexibleStringSerializer::class) val x: String, @Serializable(with = FlexibleStringSerializer::class) val y: String, val actionType: String, val isAnimated: Boolean = false) : AutomationAction() // type: "MOVE", "CLICK"
+    data class MouseEvent(val x: String, val y: String, val actionType: String, val isAnimated: Boolean = false) : AutomationAction() // type: "MOVE", "CLICK"
     
     @Serializable
     @SerialName("MouseButtonEvent")
-    data class MouseButtonEvent(@Serializable(with = FlexibleStringSerializer::class) val buttonNumber: String, val actionType: String) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
+    data class MouseButtonEvent(val buttonNumber: String, val actionType: String) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
     
     @Serializable
     @SerialName("ScrollEvent")
-    data class ScrollEvent(@Serializable(with = FlexibleStringSerializer::class) val amount: String) : AutomationAction()
+    data class ScrollEvent(val amount: String) : AutomationAction()
     
     @Serializable
     @SerialName("DelayEvent")
-    data class DelayEvent(@Serializable(with = FlexibleStringSerializer::class) val durationMs: String) : AutomationAction()
+    data class DelayEvent(val durationMs: String) : AutomationAction()
 
     @Serializable
     @SerialName("SetAutoDelay")
-    data class SetAutoDelay(@Serializable(with = FlexibleStringSerializer::class) val delayMs: String) : AutomationAction()
+    data class SetAutoDelay(val delayMs: String) : AutomationAction()
     
     @Serializable
     @SerialName("SetVariable")
