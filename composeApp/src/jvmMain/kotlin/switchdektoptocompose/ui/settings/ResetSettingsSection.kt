@@ -23,6 +23,7 @@ fun ResetSettingsSection(
     var resetPacks by remember { mutableStateOf(false) }
     var resetPaired by remember { mutableStateOf(false) }
     var resetBanned by remember { mutableStateOf(false) }
+    var resetPro by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
     var confirmText by remember { mutableStateOf("") }
 
@@ -48,6 +49,7 @@ fun ResetSettingsSection(
                     if (resetPacks) Text("• All Macro Packs", style = MaterialTheme.typography.bodyMedium)
                     if (resetPaired) Text("• All Paired Devices (Unpair)", style = MaterialTheme.typography.bodyMedium)
                     if (resetBanned) Text("• All Banned Devices (Unban)", style = MaterialTheme.typography.bodyMedium)
+                    if (resetPro) Text("• Global Pro Status Revocation", style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.height(16.dp))
                     Text(
                         "This action is permanent and cannot be undone. Please type 'Delete' below to confirm:",
@@ -79,6 +81,9 @@ fun ResetSettingsSection(
                         if (resetBanned) {
                             settingsViewModel.resetBannedDevices()
                             clientCommunicationViewModel.unbanAllDevices()
+                        }
+                        if (resetPro) {
+                            settingsViewModel.revokeProStatus()
                         }
                         
                         resetSettings = false
@@ -137,12 +142,16 @@ fun ResetSettingsSection(
                     Checkbox(checked = resetBanned, onCheckedChange = { resetBanned = it })
                     Text("Clear All Banned Devices (Reset Strikes)")
                 }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(checked = resetPro, onCheckedChange = { resetPro = it })
+                    Text("Revoke Global Pro Status (Shared 12h Timer)")
+                }
                 
                 Spacer(Modifier.height(16.dp))
                 
                 Button(
                     onClick = { showConfirmDialog = true },
-                    enabled = resetSettings || resetMacros || resetPacks || resetPaired || resetBanned,
+                    enabled = resetSettings || resetMacros || resetPacks || resetPaired || resetBanned || resetPro,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     modifier = Modifier.fillMaxWidth()
                 ) {

@@ -2,6 +2,7 @@ package com.kapcode.open.macropad.kmps.ui.components
 
 import android.app.Activity
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Adjust
@@ -21,20 +23,16 @@ import androidx.compose.material.icons.filled.AutoMode
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CurrencyExchange
+import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.MonetizationOn
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TimerOff
-import androidx.compose.material3.CenterAlignedTopAppBar
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
@@ -68,18 +66,23 @@ fun CommonAppBar(
     onAutoFocusToggle: (Boolean) -> Unit = {},
     isCoordinateCaptureActive: Boolean = false,
     onCoordinateCaptureToggle: (Boolean) -> Unit = {},
+    isPro: Boolean = false,
+    isServerPro: Boolean = false,
+    serverProTimeRemaining: Long = 0,
+    onProPurchaseClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as Activity
     val tokenManager = remember { TokenManager.getInstance(context) }
     val tokenBalance by tokenManager.tokenBalance.collectAsState()
-    var showGetTokensDialog by remember { mutableStateOf(false) }
+    var showProPurchaseDialog by remember { mutableStateOf(false) }
 
-    if (showGetTokensDialog) {
-        GetTokensDialog(
-            onDismissRequest = { showGetTokensDialog = false },
-            onConfirm = {
+    if (showProPurchaseDialog) {
+        ProPurchaseDialog(
+            onDismissRequest = { showProPurchaseDialog = false },
+            isPro = isPro || isServerPro,
+            onWatchAd = {
                 loadRewardedAd(
                     context,
                     onAdLoaded = { ad ->
@@ -91,19 +94,61 @@ fun CommonAppBar(
                         Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
                     }
                 )
-                showGetTokensDialog = false
+                showProPurchaseDialog = false
+            },
+            onPurchaseSubscription = {
+                Toast.makeText(context, "Subscription billing coming soon!", Toast.LENGTH_SHORT).show()
+            },
+            onPurchaseOneTime = {
+                // For now, this just toggles the Pro status as a simulation
+                // In a real app, this would trigger a Play Store purchase flow
+                Toast.makeText(context, "Simulating Pro Pass purchase...", Toast.LENGTH_SHORT).show()
+                onProPurchaseClick?.invoke()
+                showProPurchaseDialog = false
             }
         )
     }
 
+    val titleContent = @Composable {
+        if (title == "Settings") {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { showProPurchaseDialog = true }
+            ) {
+                if (isPro) {
+                    Icon(Icons.Default.Star, null, tint = GoldCurrencyColor, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Pro Active", style = MaterialTheme.typography.titleMedium, color = GoldCurrencyColor, fontWeight = FontWeight.Bold)
+                } else if (isServerPro) {
+                    val hours = serverProTimeRemaining / (1000 * 60 * 60)
+                    val minutes = (serverProTimeRemaining / (1000 * 60)) % 60
+                    Icon(Icons.Default.Dns, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Server Pro (${hours}h ${minutes}m)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                } else {
+                    OutlinedCard(
+                        onClick = { showProPurchaseDialog = true },
+                        shape = RoundedCornerShape(4.dp),
+                        colors = CardDefaults.outlinedCardColors(contentColor = MaterialTheme.colorScheme.primary),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(
+                            "BUY PRO",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Black
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     if (isQrScannerActive) {
         CenterAlignedTopAppBar(
-            title = {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(title, style = MaterialTheme.typography.titleMedium)
-                    Text("QR Scanner", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
-                }
-            },
+            title = titleContent,
             navigationIcon = {
                 IconButton(onClick = onCloseScanner) {
                     Icon(imageVector = Icons.Default.Close, contentDescription = "Close Scanner")
@@ -162,7 +207,7 @@ fun CommonAppBar(
                 Spacer(modifier = Modifier.width(8.dp))
                 // Optionally show tokens even in QR mode if there's space
                 Row(
-                    modifier = Modifier.clickable { showGetTokensDialog = true },
+                    modifier = Modifier.clickable { showProPurchaseDialog = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -182,14 +227,7 @@ fun CommonAppBar(
         )
     } else {
         TopAppBar(
-            title = {
-                Text(
-                    text = title,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleMedium
-                )
-            },
+            title = titleContent,
             navigationIcon = navigationIcon,
             actions = {
                 if (currency > 0) {
@@ -213,7 +251,7 @@ fun CommonAppBar(
                     }
                 }
                 Row(
-                    modifier = Modifier.clickable { showGetTokensDialog = true },
+                    modifier = Modifier.clickable { showProPurchaseDialog = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(

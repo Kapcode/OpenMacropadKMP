@@ -46,6 +46,7 @@ data class ClientUiState(
     val currentTab: Int = 0, // 0: My Dashboard, 1: Active Pack, 2: Marketplace
     val isEditMode: Boolean = false,
     val isCoordinateCaptureActive: Boolean = false,
+    val isPro: Boolean = false,
     val serverHistory: List<TrustedServer> = emptyList()
 )
 
@@ -84,6 +85,11 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                         lastConnectedTimestamp = System.currentTimeMillis()
                     )
                     settingsViewModel.updateServerHistory(server)
+                    
+                    // Sync Pro status to server
+                    if (uiState.value.isPro) {
+                        repository.sendPremiumSync(true)
+                    }
                 }
             },
             onMacrosReceived = { macros ->
@@ -97,9 +103,12 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             },
             onExecutionStart = { macro ->
                 onMacroExecutionStart(macro)
-                if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
-                    repository.sendData("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toString())
-                    repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
+                if (!isProActive) {
+                    if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+                        repository.sendData("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toString())
+                        repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                    }
                 }
             },
             onExecutionComplete = { macro ->
@@ -107,9 +116,12 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             },
             onExecutionFailed = { macro, error ->
                 onMacroExecutionFailed(macro)
-                tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
-                repository.sendData("currency_spent", (-BillingConstants.TOKENS_PER_MACRO_PRESS).toString())
-                repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
+                if (!isProActive) {
+                    tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                    repository.sendData("currency_spent", (-BillingConstants.TOKENS_PER_MACRO_PRESS).toString())
+                    repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                }
                 onExecutionFailedToast("Macro '$macro' failed: $error")
             },
             onPacksReceived = { packs ->
@@ -117,6 +129,12 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             },
             onMarketplaceItemsReceived = { items ->
                 setMarketplaceItems(items)
+            },
+            onSyncState = { _, expiration, isPremium ->
+                // This updates the global server pro status
+                val now = System.currentTimeMillis()
+                val remaining = if (expiration != null) (expiration - now).coerceAtLeast(0L) else 0L
+                settingsViewModel.setServerProStatus(isPremium, remaining)
             },
             onNotificationReceived = { message ->
                 if (settingsViewModel.enableToasts.value) {
@@ -211,6 +229,10 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         _uiState.update { it.copy(currency = amount) }
     }
 
+    fun syncCurrency(balance: Long) {
+        repository.sendData("currency_update", balance.toString())
+    }
+
     fun setMacroExecutionEnabled(enabled: Boolean) {
         _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
     }
@@ -268,6 +290,10 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setCoordinateCaptureActive(active: Boolean) {
         _uiState.update { it.copy(isCoordinateCaptureActive = active) }
+    }
+
+    fun setIsPro(pro: Boolean) {
+        _uiState.update { it.copy(isPro = pro) }
     }
 
     fun setDashboardMacros(widgets: List<GridWidget>) {

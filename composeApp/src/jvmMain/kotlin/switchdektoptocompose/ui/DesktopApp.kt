@@ -97,6 +97,8 @@ fun DesktopApp(
 
 
     val isServerRunning by serverViewModel.isServerRunning.collectAsState()
+    val isProAccessActive by serverViewModel.isProAccessActive.collectAsState()
+    val proAccessTimeRemaining by serverViewModel.proAccessTimeRemaining.collectAsState()
     val connectedDevices by clientCommunicationViewModel.connectedDevices.collectAsState()
     val serverIpAddress by serverViewModel.serverIpAddress.collectAsState()
     val encryptionEnabled by serverViewModel.encryptionEnabled.collectAsState()
@@ -151,6 +153,8 @@ fun DesktopApp(
                             desktopViewModel = desktopViewModel,
                             settingsViewModel = settingsViewModel,
                             isServerRunning = isServerRunning,
+                            isProAccessActive = isProAccessActive,
+                            proAccessTimeRemaining = proAccessTimeRemaining,
                             connectedDevicesCount = connectedDevices.size,
                             isMacroExecutionEnabled = isMacroExecutionEnabled,
                             serverIpAddress = serverIpAddress,

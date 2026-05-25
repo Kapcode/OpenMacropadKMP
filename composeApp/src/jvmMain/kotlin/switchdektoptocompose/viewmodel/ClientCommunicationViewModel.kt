@@ -12,6 +12,7 @@ import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.TrustedDeviceManager
 import switchdektoptocompose.logic.PairingBanManager
+import switchdektoptocompose.logic.ProAccessManager
 import switchdektoptocompose.model.ClientInfo
 import switchdektoptocompose.model.LogLevel
 import java.io.File
@@ -60,6 +61,20 @@ class ClientCommunicationViewModel(
 
     init {
         updateHistoryState()
+        
+        viewModelScope.launch {
+            ProAccessManager.isProAccessActive.collect { active ->
+                broadcastProStatus()
+            }
+        }
+    }
+
+    private fun broadcastProStatus() {
+        val expiry = AppSettings.globalProExpiry
+        val isActive = ProAccessManager.isProAccessActive.value
+        viewModelScope.launch {
+            serverViewModel.sendToAll(syncStateMessage(null, expiry, isActive))
+        }
     }
 
     fun setMacroExecutionEnabled(enabled: Boolean) {
@@ -83,6 +98,9 @@ class ClientCommunicationViewModel(
         ConnectionHistoryManager.logEvent(clientId, clientName, "Connected")
         updateHistoryState()
         consoleViewModel.addLog(LogLevel.Info, "Client connected: $clientName ($clientId)")
+        
+        // Broadcast Pro status to the new client
+        broadcastProStatus()
     }
 
     fun onClientDisconnected(clientId: String) {
@@ -273,7 +291,8 @@ class ClientCommunicationViewModel(
                         _connectedDevices.update { devices ->
                             devices.map { if (it.id == clientId) it.copy(currency = amount) else it }
                         }
-                        consoleViewModel.addLog(LogLevel.Verbose, "Currency update from $clientId: $amount")
+                        // Use Info level for currency sync to help verify it's working
+                        consoleViewModel.addLog(LogLevel.Info, "Token balance sync from $clientId: $amount")
                     } catch (e: Exception) {
                         consoleViewModel.addLog(LogLevel.Error, "Invalid currency update from $clientId")
                     }
@@ -286,6 +305,12 @@ class ClientCommunicationViewModel(
                     } catch (e: Exception) {
                         consoleViewModel.addLog(LogLevel.Error, "Invalid currency spent from $clientId")
                     }
+                }
+            },
+            onSyncState = { sessionId, expiration, isPremium ->
+                if (isPremium) {
+                    consoleViewModel.addLog(LogLevel.Info, "Pro Access triggered by client $clientId")
+                    ProAccessManager.triggerProAccess()
                 }
             },
             onControl = { cmd, params ->

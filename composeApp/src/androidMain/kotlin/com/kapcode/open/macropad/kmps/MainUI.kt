@@ -86,17 +86,19 @@ fun MainUI(
             Scaffold(
                 topBar = {
                     CommonAppBar(
-                    title = if (showSettings) "Settings" else "Open Macropad",
-                    onSettingsClick = { showSettings = !showSettings },
-                    navigationIcon = {
-                        if (showSettings) {
-                            IconButton(onClick = { showSettings = false }) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        title = if (showSettings) "Settings" else "Open Macropad",
+                        onSettingsClick = { showSettings = !showSettings },
+                        navigationIcon = {
+                            if (showSettings) {
+                                IconButton(onClick = { showSettings = false }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
                             }
-                        }
-                    }
-                )
-            },
+                        },
+                        isPro = settingsViewModel.isPro.collectAsState().value,
+                        onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) }
+                    )
+                },
             bottomBar = { 
                 val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                 val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE

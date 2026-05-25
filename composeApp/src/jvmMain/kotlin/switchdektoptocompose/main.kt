@@ -32,9 +32,14 @@ object AppConfig {
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
-fun main(args: Array<String>) = application {
-    // Suppress specific log spam from AWT/Swing
-    val originalErr = System.err
+fun main(args: Array<String>) {
+    // Attempt to fix graphics context issues by providing a fallback to software rendering if OpenGL fails.
+    // This addresses the "Failed to create Skia OpenGL context" and "Can't wrap nullptr" errors.
+    System.setProperty("skiko.renderApi", "SOFTWARE")
+    
+    application {
+        // Suppress specific log spam from AWT/Swing
+        val originalErr = System.err
     System.setErr(object : java.io.PrintStream(originalErr, true) {
         override fun println(x: String?) {
             if (x != null && x.contains("EditorCopyPasteHelperImpl")) {
@@ -136,7 +141,6 @@ fun main(args: Array<String>) = application {
     }
     
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
-    val clickTrayToToggle by settingsViewModel.clickTrayToToggle.collectAsState()
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
 
     val activeToast by macroManagerViewModel.activeToast.collectAsState()
@@ -237,16 +241,10 @@ fun main(args: Array<String>) = application {
         icon = icon,
         tooltip = "Open Macropad Server (Right-click for menu)",
         onAction = { 
-            if (clickTrayToToggle) {
-                desktopWindowState.toggleWindow()
-            }
+            desktopWindowState.toggleWindow()
         },
         menu = {
-            if (desktopWindowState.isWindowVisible && !desktopWindowState.windowState.isMinimized) {
-                Item("Hide to Tray", onClick = { desktopWindowState.animateToTray() })
-            } else {
-                Item("Show Main Window", onClick = { desktopWindowState.showWindow() })
-            }
+            Item("Show / Hide Window", onClick = { desktopWindowState.toggleWindow() })
             if (pendingPairingRequests.isNotEmpty()) {
                 Separator()
                 Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
@@ -489,4 +487,5 @@ fun main(args: Array<String>) = application {
             onExit = ::exitApplication
         )
     }
+}
 }

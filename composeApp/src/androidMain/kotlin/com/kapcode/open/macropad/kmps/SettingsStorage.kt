@@ -108,6 +108,14 @@ class SettingsStorage(context: Context) {
         return prefs.getBoolean("enable_background_toasts", true)
     }
 
+    fun saveProEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean("pro_enabled", enabled).apply()
+    }
+
+    fun getProEnabled(): Boolean {
+        return prefs.getBoolean("pro_enabled", false)
+    }
+
     fun saveDashboardMacros(widgets: List<GridWidget>) {
         val json = Json.encodeToString(widgets)
         prefs.edit().putString("dashboard_widgets", json).apply()
@@ -171,6 +179,8 @@ class SettingsStorage(context: Context) {
         viewModel.setEnableToasts(getToastsEnabled())
         viewModel.setEnableBackgroundToasts(getBackgroundToastsEnabled())
         viewModel.setServerHistory(getServerHistory())
+        viewModel.setIsPro(getProEnabled())
+        clientViewModel.setIsPro(getProEnabled())
         clientViewModel.setDashboardMacros(getDashboardMacros())
 
         // Sync changes back to storage
@@ -185,10 +195,21 @@ class SettingsStorage(context: Context) {
         viewModel.slamFireDoubleThreshold.onEach { saveSlamFireDoubleThreshold(it) }.launchIn(scope)
         viewModel.enableToasts.onEach { saveToastsEnabled(it) }.launchIn(scope)
         viewModel.enableBackgroundToasts.onEach { saveBackgroundToastsEnabled(it) }.launchIn(scope)
+        viewModel.isPro.onEach { 
+            saveProEnabled(it)
+            clientViewModel.setIsPro(it)
+        }.launchIn(scope)
+        
         viewModel.serverHistory.onEach { 
             saveServerHistory(it)
             clientViewModel.setServerHistory(it)
         }.launchIn(scope)
+
+        clientViewModel.uiState
+            .map { it.isPro }
+            .distinctUntilChanged()
+            .onEach { viewModel.setIsPro(it) }
+            .launchIn(scope)
 
         clientViewModel.uiState
             .map { it.dashboardMacros }

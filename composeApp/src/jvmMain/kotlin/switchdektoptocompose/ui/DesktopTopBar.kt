@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
@@ -16,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import switchdektoptocompose.viewmodel.DesktopViewModel
 import switchdektoptocompose.viewmodel.SettingsViewModel
@@ -26,6 +28,8 @@ fun DesktopTopBar(
     desktopViewModel: DesktopViewModel,
     settingsViewModel: SettingsViewModel,
     isServerRunning: Boolean,
+    isProAccessActive: Boolean = false,
+    proAccessTimeRemaining: Long = 0L,
     connectedDevicesCount: Int,
     isMacroExecutionEnabled: Boolean,
     serverIpAddress: String,
@@ -106,6 +110,28 @@ fun DesktopTopBar(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Status: ${if (isServerRunning) "Running" else "Stopped"}", color = statusColor, style = MaterialTheme.typography.bodySmall)
+
+                    if (isProAccessActive) {
+                        val hours = proAccessTimeRemaining / (1000 * 60 * 60)
+                        val minutes = (proAccessTimeRemaining / (1000 * 60)) % 60
+                        
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            ),
+                            shape = RoundedCornerShape(4.dp),
+                            modifier = Modifier.padding(start = 12.dp)
+                        ) {
+                            Text(
+                                "PRO ${hours}h ${minutes}m",
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     Spacer(Modifier.width(12.dp))
                     Text("Connected: $connectedDevicesCount", style = MaterialTheme.typography.bodySmall)
                     Spacer(Modifier.width(12.dp))

@@ -42,6 +42,7 @@ class ClientRepository(private val context: Context) {
         onExecutionFailed: (String, String) -> Unit,
         onPacksReceived: (List<MacroPack>) -> Unit,
         onMarketplaceItemsReceived: (List<MarketplaceItem>) -> Unit,
+        onSyncState: (String?, Long?, Boolean) -> Unit = { _, _, _ -> },
         onNotificationReceived: (String) -> Unit
     ) {
         clientJob?.cancel()
@@ -144,11 +145,14 @@ class ClientRepository(private val context: Context) {
                                                 Log.i("ClientRepository", "Pairing approved!")
                                                 onUpdate("Connected", initialServerName ?: ipAddress, null, null)
                                                 
-                                                // Trigger macro fetch immediately upon approval
+                                                // Trigger macro fetch and currency sync immediately upon approval
                                                 scope.launch {
                                                     delay(100) // Small delay to let server state settle
-                                                    Log.d("ClientRepository", "Requesting macros after approval/auth")
+                                                    Log.d("ClientRepository", "Requesting macros and syncing currency after approval/auth")
                                                     this@ClientRepository.client?.send(textMessage("getMacros").toBytes())
+                                                    
+                                                    val tm = TokenManager.getInstance(context)
+                                                    this@ClientRepository.client?.send(dataMessage("currency_update", tm.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
@@ -245,7 +249,8 @@ class ClientRepository(private val context: Context) {
                                                 }
                                             }
                                         }
-                                    }
+                                    },
+                                    onSyncState = onSyncState
                                 )
                             } catch (e: Exception) {
                                 Log.e("ClientRepository", "Error parsing DataModel", e)
@@ -341,6 +346,12 @@ class ClientRepository(private val context: Context) {
     fun sendData(key: String, value: String) {
         scope.launch {
             client?.send(dataMessage(key, value.encodeToByteArray()).toBytes())
+        }
+    }
+
+    fun sendPremiumSync(isPremium: Boolean) {
+        scope.launch {
+            client?.send(syncStateMessage(null, null, isPremium).toBytes())
         }
     }
 

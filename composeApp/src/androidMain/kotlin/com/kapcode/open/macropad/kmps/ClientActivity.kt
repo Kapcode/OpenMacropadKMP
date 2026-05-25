@@ -207,6 +207,10 @@ class ClientActivity : ComponentActivity() {
                     )
                 }
 
+                LaunchedEffect(tokenBalance) {
+                    clientViewModel.syncCurrency(tokenBalance.toLong())
+                }
+
                 ClientScreen(
                     uiState = uiState,
                     settingsViewModel = settingsViewModel,

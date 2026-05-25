@@ -62,6 +62,15 @@ class SettingsViewModel {
     private val _serverHistory = MutableStateFlow<List<TrustedServer>>(emptyList())
     val serverHistory = _serverHistory.asStateFlow()
 
+    private val _isServerProActive = MutableStateFlow(false)
+    val isServerProActive = _isServerProActive.asStateFlow()
+
+    private val _serverProTimeRemaining = MutableStateFlow(0L)
+    val serverProTimeRemaining = _serverProTimeRemaining.asStateFlow()
+
+    private val _isPro = MutableStateFlow(false)
+    val isPro = _isPro.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -124,6 +133,15 @@ class SettingsViewModel {
 
     fun setServerHistory(history: List<TrustedServer>) {
         _serverHistory.value = history.sortedByDescending { it.lastConnectedTimestamp }
+    }
+
+    fun setServerProStatus(isActive: Boolean, timeRemaining: Long) {
+        _isServerProActive.value = isActive
+        _serverProTimeRemaining.value = timeRemaining
+    }
+
+    fun setIsPro(pro: Boolean) {
+        _isPro.value = pro
     }
 
     fun updateServerHistory(server: TrustedServer) {

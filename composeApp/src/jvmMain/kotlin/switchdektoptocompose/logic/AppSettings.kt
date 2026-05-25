@@ -34,6 +34,7 @@ object AppSettings {
     private const val PAIRING_BAN_DURATION_MINUTES_KEY = "pairingBanDurationMinutes"
     private const val PAIRING_STRIKE_LIMIT_KEY = "pairingStrikeLimit"
     private const val TOTAL_CURRENCY_SPENT_KEY = "totalCurrencySpent"
+    private const val GLOBAL_PRO_EXPIRY_KEY = "globalProExpiry"
 
     // Connected Clients Settings
     private const val CLIENT_THEME_KEY = "clientTheme"
@@ -198,6 +199,13 @@ object AppSettings {
         get() = properties.getProperty(TOTAL_CURRENCY_SPENT_KEY, "0").toLongOrNull() ?: 0L
         set(value) {
             properties.setProperty(TOTAL_CURRENCY_SPENT_KEY, value.toString())
+            save()
+        }
+
+    var globalProExpiry: Long
+        get() = properties.getProperty(GLOBAL_PRO_EXPIRY_KEY, "0").toLongOrNull() ?: 0L
+        set(value) {
+            properties.setProperty(GLOBAL_PRO_EXPIRY_KEY, value.toString())
             save()
         }
 

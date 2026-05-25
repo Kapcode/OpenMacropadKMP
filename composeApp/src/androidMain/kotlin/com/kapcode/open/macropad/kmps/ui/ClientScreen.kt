@@ -191,6 +191,10 @@ fun ClientScreen(
                 onCloseScanner = { onQrScannerToggle(false) },
                 isCoordinateCaptureActive = uiState.isCoordinateCaptureActive,
                 onCoordinateCaptureToggle = { clientViewModel.setCoordinateCaptureActive(it) },
+                isPro = settingsViewModel.isPro.collectAsState().value,
+                isServerPro = settingsViewModel.isServerProActive.collectAsState().value,
+                serverProTimeRemaining = settingsViewModel.serverProTimeRemaining.collectAsState().value,
+                onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) },
                 navigationIcon = {
                     if (showSettings) {
                         IconButton(onClick = { showSettings = false }) {
@@ -435,6 +439,8 @@ fun ClientScreen(
                                         } else {
                                             MarketplaceScreen(
                                                 items = uiState.marketplaceItems,
+                                                isPro = uiState.isPro,
+                                                onProToggle = { clientViewModel.setIsPro(it) },
                                                 onDownload = { clientViewModel.downloadMarketplaceItem(it) }
                                             )
                                         }

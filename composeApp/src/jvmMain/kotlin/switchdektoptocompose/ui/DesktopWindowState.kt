@@ -201,10 +201,18 @@ class DesktopWindowState(
     }
 
     fun toggleWindow() {
-        if (isWindowVisible && !windowState.isMinimized && !isTransitioning) {
-            animateToTray()
-        } else {
+        // If the window is hidden, or minimized, or we're not currently the active application
+        // then show and bring to front.
+        if (!isWindowVisible || windowState.isMinimized) {
             showWindow()
+        } else {
+            // Check if our window is actually the active one in the OS
+            val isActive = java.awt.Window.getWindows().any { it.isFocused || it.isActive }
+            if (!isActive) {
+                showWindow() // Bring to front if not active
+            } else {
+                animateToTray() // Hide if already active and visible
+            }
         }
     }
 

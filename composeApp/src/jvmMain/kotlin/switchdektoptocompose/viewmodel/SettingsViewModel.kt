@@ -462,4 +462,8 @@ open class SettingsViewModel {
         switchdektoptocompose.logic.TrustedDeviceManager.unbanAllDevices()
         switchdektoptocompose.logic.PairingBanManager.clearAllBans()
     }
+
+    fun revokeProStatus() {
+        switchdektoptocompose.logic.ProAccessManager.revokeProAccess()
+    }
 }

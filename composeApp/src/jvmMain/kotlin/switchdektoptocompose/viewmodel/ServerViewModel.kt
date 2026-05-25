@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ProcessWatcher
+import switchdektoptocompose.logic.ProAccessManager
 import switchdektoptocompose.logic.ServerDiscoveryAnnouncer
 import switchdektoptocompose.logic.TrustedDeviceManager
 import switchdektoptocompose.model.LogLevel
@@ -43,6 +44,9 @@ class ServerViewModel(
 
     private val _encryptionEnabled = MutableStateFlow(true)
     val encryptionEnabled = _encryptionEnabled.asStateFlow()
+
+    val isProAccessActive = ProAccessManager.isProAccessActive
+    val proAccessTimeRemaining = ProAccessManager.proAccessTimeRemaining
 
     val server = MacroKtorServer(
         appSettings = AppSettings,

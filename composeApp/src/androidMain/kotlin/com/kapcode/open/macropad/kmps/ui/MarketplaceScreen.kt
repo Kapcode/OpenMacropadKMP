@@ -20,6 +20,8 @@ import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 @Composable
 fun MarketplaceScreen(
     items: List<MarketplaceItem>,
+    isPro: Boolean,
+    onProToggle: (Boolean) -> Unit,
     onDownload: (MarketplaceItem) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -32,6 +34,8 @@ fun MarketplaceScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
+        ProAccessSection(isPro = isPro, onProToggle = onProToggle)
+        
         SearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
@@ -48,6 +52,41 @@ fun MarketplaceScreen(
             items(filteredItems) { item ->
                 MarketplaceItemCard(item = item, onDownload = { onDownload(item) })
             }
+        }
+    }
+}
+
+@Composable
+fun ProAccessSection(
+    isPro: Boolean,
+    onProToggle: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPro) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = if (isPro) "Pro Access Active" else "Go Pro",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = if (isPro) "12-hour global server access enabled." else "Unlock global server access for 12 hours.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            
+            Switch(
+                checked = isPro,
+                onCheckedChange = onProToggle
+            )
         }
     }
 }
