@@ -37,6 +37,7 @@ fun DesktopTopBar(
     exitBehavior: String,
     eStopKey: String,
     onShowSettings: () -> Unit,
+    onShowSettingsScrollToSecurity: () -> Unit = {},
     onShowShortcuts: () -> Unit,
     onExit: () -> Unit,
     onShowExitDialog: () -> Unit
@@ -127,7 +128,7 @@ fun DesktopTopBar(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), MaterialTheme.shapes.small)
                             .clickable {
-                                onShowSettings()
+                                onShowSettingsScrollToSecurity()
                             }
                             .padding(horizontal = 4.dp, vertical = 2.dp),
                         verticalAlignment = Alignment.CenterVertically

@@ -56,6 +56,7 @@ class RecordMacroViewModel(
         isAllTrustedSelected
     ) { params: Array<Any?> ->
         val name = params[0] as String
+        @Suppress("UNCHECKED_CAST")
         val existingMacros = params[1] as List<MacroFileState>
         val triggerKeys = params[2] as String
         val trigger = params[3] as TriggerType

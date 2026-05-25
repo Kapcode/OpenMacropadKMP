@@ -82,11 +82,12 @@ fun DesktopApp(
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
+    val enableToasts by settingsViewModel.enableToasts.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     val logs by consoleViewModel.logMessages.collectAsState()
-    LaunchedEffect(logs) {
-        if (logs.isNotEmpty()) {
+    LaunchedEffect(logs, enableToasts) {
+        if (enableToasts && logs.isNotEmpty()) {
             val lastLog = logs.last()
             if (lastLog.formatted.contains("MACRO FINISHED") || lastLog.formatted.contains("MACRO CANCELLED") || lastLog.formatted.contains("E-STOP") || lastLog.formatted.contains("DIALOG CLOSED")) {
                  snackbarHostState.showSnackbar(lastLog.formatted)
@@ -161,6 +162,7 @@ fun DesktopApp(
                             exitBehavior = exitBehavior,
                             eStopKey = eStopKey,
                             onShowSettings = { desktopWindowState.toggleSettings(true) },
+                            onShowSettingsScrollToSecurity = { desktopWindowState.toggleSettings(show = true, scrollToSecurity = true) },
                             onShowShortcuts = { desktopWindowState.toggleShortcuts(true) },
                             onExit = onExit,
                             onShowExitDialog = { desktopWindowState.toggleExitDialog(true) }
@@ -205,7 +207,7 @@ fun DesktopApp(
                                                 viewModel = inspectorViewModel, 
                                                 macroManagerViewModel = macroManagerViewModel,
                                                 onOpenVariableSettings = {
-                                                    desktopWindowState.toggleSettings(true)
+                                                    desktopWindowState.toggleSettings(show = true, scrollToVariables = true)
                                                 }
                                             )
                                         }

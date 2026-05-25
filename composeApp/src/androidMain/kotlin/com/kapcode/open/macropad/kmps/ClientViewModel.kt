@@ -134,7 +134,18 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         repository.sendMacro(macroName)
     }
 
+    private var lastPairingCodeAttemptTime = 0L
+    private var lastPairingCodeAttemptValue: String? = null
+
     fun submitPairingCode(code: String) {
+        val now = System.currentTimeMillis()
+        // Debounce: Ignore identical codes within 2 seconds
+        if (code == lastPairingCodeAttemptValue && now - lastPairingCodeAttemptTime < 2000) {
+            return
+        }
+        
+        lastPairingCodeAttemptTime = now
+        lastPairingCodeAttemptValue = code
         repository.submitPairingCode(code)
     }
 

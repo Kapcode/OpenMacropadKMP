@@ -31,6 +31,8 @@ object AppSettings {
     private const val ENABLE_WEBSOCKET_PINGS_KEY = "enableWebsocketPings"
     private const val FLEET_GRID_VISIBILITY_KEY = "fleetGridVisibility"
     private const val DEFAULT_PAIRING_MODE_QR_KEY = "defaultPairingModeQr"
+    private const val PAIRING_BAN_DURATION_MINUTES_KEY = "pairingBanDurationMinutes"
+    private const val PAIRING_STRIKE_LIMIT_KEY = "pairingStrikeLimit"
     private const val TOTAL_CURRENCY_SPENT_KEY = "totalCurrencySpent"
 
     // Connected Clients Settings
@@ -175,6 +177,20 @@ object AppSettings {
         get() = properties.getProperty(DEFAULT_PAIRING_MODE_QR_KEY, "true").toBoolean()
         set(value) {
             properties.setProperty(DEFAULT_PAIRING_MODE_QR_KEY, value.toString())
+            save()
+        }
+
+    var pairingBanDurationMinutes: Int
+        get() = properties.getProperty(PAIRING_BAN_DURATION_MINUTES_KEY, "15").toIntOrNull() ?: 15
+        set(value) {
+            properties.setProperty(PAIRING_BAN_DURATION_MINUTES_KEY, value.toString())
+            save()
+        }
+
+    var pairingStrikeLimit: Int
+        get() = properties.getProperty(PAIRING_STRIKE_LIMIT_KEY, "6").toIntOrNull() ?: 6
+        set(value) {
+            properties.setProperty(PAIRING_STRIKE_LIMIT_KEY, value.toString())
             save()
         }
 
@@ -379,6 +395,11 @@ object AppSettings {
             properties.setProperty(CONTROLLER_NAVIGATION_MODE_KEY, value)
             save()
         }
+
+    fun clearAll() {
+        properties.clear()
+        save()
+    }
 
     private fun save() {
         FileOutputStream(configFile).use { properties.store(it, "OpenMacropadServer Settings") }

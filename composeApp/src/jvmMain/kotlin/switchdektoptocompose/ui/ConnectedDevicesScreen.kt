@@ -13,10 +13,14 @@ import androidx.compose.material3.*
 import switchdektoptocompose.ui.components.AppTooltipArea
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,7 +28,7 @@ import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.model.ClientInfo
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun ConnectedDevicesScreen(
     devices: List<ClientInfo>,
@@ -38,7 +42,8 @@ fun ConnectedDevicesScreen(
     onClearHistory: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
     
     val connectedIds = remember(devices) { devices.map { it.id }.toSet() }
     val offlineTrustedDevices = remember(trustedDevices, connectedIds) {
@@ -91,7 +96,7 @@ fun ConnectedDevicesScreen(
                                 items.add(ContextMenuItem("Revoke Trust (Unpair)") { onUnpair(device.id) })
                             }
                             items.add(ContextMenuItem("Ban Device") { onBan(device) })
-                            items.add(ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(device.id)) })
+                            items.add(ContextMenuItem("Copy ID") { scope.launch { clipboard.setClipEntry(ClipEntry(AnnotatedString(device.id))) } })
                             items
                         }
                     ) {
@@ -110,7 +115,7 @@ fun ConnectedDevicesScreen(
                                         name = device.name,
                                         ipAddressPort = device.id,
                                         onClick = {
-                                            clipboardManager.setText(AnnotatedString("${device.name} (${device.id})"))
+                                            scope.launch { clipboard.setClipEntry(ClipEntry(AnnotatedString("${device.name} (${device.id})"))) }
                                         }
                                     )
                                 }
@@ -193,7 +198,7 @@ fun ConnectedDevicesScreen(
                             listOf(
                                 ContextMenuItem("Revoke Trust") { onUnpair(id) },
                                 ContextMenuItem("Ban Device") { onBan(ClientInfo(id, name)) },
-                                ContextMenuItem("Copy ID") { clipboardManager.setText(AnnotatedString(id)) }
+                                ContextMenuItem("Copy ID") { scope.launch { clipboard.setClipEntry(ClipEntry(AnnotatedString(id))) } }
                             )
                         }
                     ) {
@@ -269,7 +274,7 @@ fun ConnectedDevicesScreen(
                                     onBan(ClientInfo(id = event.clientId, name = event.clientName)) 
                                 },
                                 ContextMenuItem("Copy ID") { 
-                                    clipboardManager.setText(AnnotatedString(event.clientId)) 
+                                    scope.launch { clipboard.setClipEntry(ClipEntry(AnnotatedString(event.clientId))) }
                                 }
                             )
                         }

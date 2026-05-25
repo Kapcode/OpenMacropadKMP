@@ -47,7 +47,10 @@ fun AppDialog(
             }
         }
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(modifier = Modifier.fillMaxSize()) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background // Explicitly set background color to prevent smearing
+            ) {
                 content()
             }
         }

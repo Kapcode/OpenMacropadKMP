@@ -54,6 +54,12 @@ open class SettingsViewModel {
     private val _defaultPairingModeQr = MutableStateFlow(AppSettings.defaultPairingModeQr)
     val defaultPairingModeQr = _defaultPairingModeQr.asStateFlow()
 
+    private val _pairingBanDurationMinutes = MutableStateFlow(AppSettings.pairingBanDurationMinutes)
+    val pairingBanDurationMinutes = _pairingBanDurationMinutes.asStateFlow()
+
+    private val _pairingStrikeLimit = MutableStateFlow(AppSettings.pairingStrikeLimit)
+    val pairingStrikeLimit = _pairingStrikeLimit.asStateFlow()
+
     // Connected Clients Settings
     private val _clientTheme = MutableStateFlow(AppSettings.clientTheme)
     val clientTheme = _clientTheme.asStateFlow()
@@ -235,6 +241,16 @@ open class SettingsViewModel {
         AppSettings.defaultPairingModeQr = enabled
     }
 
+    fun setPairingBanDurationMinutes(minutes: Int) {
+        _pairingBanDurationMinutes.value = minutes
+        AppSettings.pairingBanDurationMinutes = minutes
+    }
+
+    fun setPairingStrikeLimit(limit: Int) {
+        _pairingStrikeLimit.value = limit
+        AppSettings.pairingStrikeLimit = limit
+    }
+
     fun setClientTheme(theme: String) {
         _clientTheme.value = theme
         AppSettings.clientTheme = theme
@@ -389,5 +405,61 @@ open class SettingsViewModel {
         if (theme in availableThemes) {
             _selectedTheme.value = theme
         }
+    }
+
+    fun resetAllSettings() {
+        AppSettings.clearAll()
+        // Force refresh from disk
+        _macroDirectory.value = AppSettings.macroDirectory
+        _serverPort.value = AppSettings.serverPort
+        _secureServerPort.value = AppSettings.secureServerPort
+        _eStopKey.value = AppSettings.eStopKey
+        _exitBehavior.value = AppSettings.exitBehavior
+        _clickTrayToToggle.value = AppSettings.clickTrayToToggle
+        _animateToTray.value = AppSettings.animateToTray
+        _hardEstop.value = AppSettings.hardEstop
+        _allowNewConnections.value = AppSettings.allowNewConnections
+        _allowOnceOnly.value = AppSettings.allowOnceOnly
+        _fleetModeEnabled.value = AppSettings.fleetModeEnabled
+        _enableWebsocketPings.value = AppSettings.enableWebsocketPings
+        _defaultPairingModeQr.value = AppSettings.defaultPairingModeQr
+        _clientTheme.value = AppSettings.clientTheme
+        _clientAnalyticsEnabled.value = AppSettings.clientAnalyticsEnabled
+        _clientSlamFireEnabled.value = AppSettings.clientSlamFireEnabled
+        _clientSlamFireAction.value = AppSettings.clientSlamFireAction
+        _copyConsoleOutputShortcut.value = AppSettings.copyConsoleOutputShortcut
+        _stopKeyShortcut.value = AppSettings.stopKeyShortcut
+        _inspectKeyShortcut.value = AppSettings.inspectKeyShortcut
+        _splitterSwapModifier.value = AppSettings.splitterSwapModifier
+        _splitterInfoModifier.value = AppSettings.splitterInfoModifier
+        _tooltipXOffset.value = AppSettings.tooltipXOffset
+        _tooltipYOffset.value = AppSettings.tooltipYOffset
+        _enablePackSwitchNotifications.value = AppSettings.enablePackSwitchNotifications
+        _enableToasts.value = AppSettings.enableToasts
+        _enableBackgroundToasts.value = AppSettings.enableBackgroundToasts
+        _enableNetworkToasts.value = AppSettings.enableNetworkToasts
+        _includeWindowNamesInToasts.value = AppSettings.includeWindowNamesInToasts
+        _toastDurationMs.value = AppSettings.toastDurationMs
+        _toastTarget.value = AppSettings.toastTarget
+        _notificationClientIds.value = AppSettings.notificationClientIds.split(",").filter { it.isNotBlank() }.toSet()
+        _windowPlacementMode.value = AppSettings.windowPlacementMode
+        _windowMonitorIndex.value = AppSettings.windowMonitorIndex
+        _windowPollingRate.value = AppSettings.windowPollingRate
+        _mousePollingRate.value = AppSettings.mousePollingRate
+        _systemPollingRate.value = AppSettings.systemPollingRate
+        _controllerNavigationMode.value = AppSettings.controllerNavigationMode
+        _pairingBanDurationMinutes.value = AppSettings.pairingBanDurationMinutes
+        _pairingStrikeLimit.value = AppSettings.pairingStrikeLimit
+    }
+
+    fun resetPairedDevices() {
+        switchdektoptocompose.logic.TrustedDeviceManager.getTrustedDevices().keys.forEach { id ->
+            switchdektoptocompose.logic.TrustedDeviceManager.removeTrustedDevice(id)
+        }
+    }
+
+    fun resetBannedDevices() {
+        switchdektoptocompose.logic.TrustedDeviceManager.unbanAllDevices()
+        switchdektoptocompose.logic.PairingBanManager.clearAllBans()
     }
 }

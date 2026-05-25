@@ -56,6 +56,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
+            implementation("org.jetbrains.compose.ui:ui-tooling-preview:${libs.versions.composeMultiplatform.get()}")
             implementation(libs.compose.splitpane)
             implementation(libs.compose.dnd)
             implementation(libs.androidx.lifecycle.viewmodelCompose)
@@ -139,6 +140,7 @@ android {
         }
         create("debugR8") {
             initWith(getByName("debug"))
+            isDebuggable = false // Fix: R8 optimizations are disabled for debuggable builds
             isMinifyEnabled = true
             isShrinkResources = false // Keeping this false to avoid resource shrinking issues in debug
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -149,6 +151,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+compose.resources {
+    publicResClass = true
 }
 
 dependencies {

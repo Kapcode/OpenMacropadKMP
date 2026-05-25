@@ -235,7 +235,7 @@ class MacroManagerViewModel(
 
         val sampleTrigger = JSONObject(sampleMacroContent).optJSONObject("trigger")
         val sampleAllowedClients = sampleTrigger?.optString("allowedClients", "") ?: ""
-        val sampleMacroIsActive = activeMacrosProps.getProperty("__SAMPLE_MACRO__", "false").toBoolean()
+        val sampleMacroIsActive = activeMacrosProps.getProperty("__SAMPLE_MACRO__", "true").toBoolean()
         val sampleMacro = MacroFileState(
             id = "__SAMPLE_MACRO__",
             file = null,
@@ -830,6 +830,7 @@ class MacroManagerViewModel(
 
     private fun showSystemNotification(message: String) {
         // Update state to show custom toast overlay
+        consoleViewModel.addLog(LogLevel.Verbose, "Showing Global Toast: $message")
         _uiState.update { it.copy(activeToast = message) }
         
         // Auto-hide after duration
@@ -941,5 +942,25 @@ class MacroManagerViewModel(
 
     fun cancelTrigger() {
         _uiState.update { it.copy(triggerPendingConfirmation = null) }
+    }
+
+    fun resetAllMacros() {
+        val macroDir = File(settingsViewModel.macroDirectory.value)
+        if (macroDir.exists() && macroDir.isDirectory) {
+            macroDir.listFiles { _, name ->
+                name.endsWith(".json", ignoreCase = true) || name.endsWith(".js", ignoreCase = true)
+            }?.forEach { it.delete() }
+        }
+        refresh()
+    }
+
+    fun resetAllPacks() {
+        val macroDir = File(settingsViewModel.macroDirectory.value)
+        if (macroDir.exists() && macroDir.isDirectory) {
+            macroDir.listFiles { _, name ->
+                name.endsWith("_pack.json", ignoreCase = true)
+            }?.forEach { it.delete() }
+        }
+        refresh()
     }
 }

@@ -30,10 +30,6 @@ fun SmallPairingLayout(
     val fleetMode by pairingViewModel.fleetModeEnabled.collectAsState()
     val qrBitmaps by pairingViewModel.qrBitmaps.collectAsState()
 
-    LaunchedEffect(requests) {
-        pairingViewModel.updateQrBitmaps(requests)
-    }
-
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -66,7 +62,7 @@ fun SmallPairingLayout(
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            items(requests) { request ->
+            items(requests, key = { it.id }) { request ->
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -79,11 +75,7 @@ fun SmallPairingLayout(
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // Small QR for the specific device
-                        Box(modifier = Modifier.size(150.dp).background(Color.White, MaterialTheme.shapes.small).padding(4.dp)) {
-                            qrBitmaps[request.id]?.let {
-                                androidx.compose.foundation.Image(it, "QR", modifier = Modifier.fillMaxSize())
-                            }
-                        }
+                        QrImage(qrBitmaps[request.id])
                         
                         Column(modifier = Modifier.weight(1f)) {
                             Text(request.name.uppercase(), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)

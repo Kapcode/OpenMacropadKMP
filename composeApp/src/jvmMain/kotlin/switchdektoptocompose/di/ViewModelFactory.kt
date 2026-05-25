@@ -142,7 +142,7 @@ object ViewModelFactory {
         val macroTimelineViewModel = remember { MacroTimelineViewModel(macroEditorViewModel) }
         val recordMacroViewModel = remember { RecordMacroViewModel(macroManagerViewModel, clientCommunicationViewModel) }
         val marketplaceViewModel = remember { MarketplaceViewModel(settingsViewModel, macroManagerViewModel) }
-        val pairingViewModel = remember { PairingViewModel(settingsViewModel) }
+        val pairingViewModel = remember { PairingViewModel(settingsViewModel, clientCommunicationViewModel.pendingPairingRequests) }
 
         // Final wiring
         macroManagerViewModel.onEditMacroRequested = { macroState ->

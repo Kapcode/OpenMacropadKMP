@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.rememberWindowState
+import kotlinx.coroutines.delay
 import switchdektoptocompose.model.ClientInfo
 import switchdektoptocompose.viewmodel.ConsoleViewModel
 import switchdektoptocompose.viewmodel.PairingViewModel
@@ -34,10 +35,16 @@ fun PairingRequestDialog(
     
     // Sync window state if fleetMode changes after initial composition
     LaunchedEffect(fleetMode) {
-        windowState.size = if (fleetMode) {
+        val targetSize = if (fleetMode) {
             androidx.compose.ui.unit.DpSize(1600.dp, 1200.dp)
         } else {
             androidx.compose.ui.unit.DpSize(1000.dp, 800.dp)
+        }
+        
+        if (windowState.size != targetSize) {
+            // Add a very small delay before resizing to let the OS stabilize if just opened
+            delay(50)
+            windowState.size = targetSize
         }
     }
 
@@ -49,10 +56,12 @@ fun PairingRequestDialog(
         consoleViewModel = consoleViewModel,
         resizable = true
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isSmallScreen = maxWidth < 1000.dp || maxHeight < 700.dp
-            
-            if (isSmallScreen || !fleetMode) {
+        // Use the window state size directly instead of reading it during composition to avoid loops
+        val currentWidth = remember(windowState.size) { windowState.size.width }
+        val currentHeight = remember(windowState.size) { windowState.size.height }
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (!fleetMode) {
                 SmallPairingLayout(
                     requests = requests,
                     pairingViewModel = pairingViewModel,
@@ -71,8 +80,8 @@ fun PairingRequestDialog(
                     onBan = onBan,
                     isAlwaysAllowAvailable = isAlwaysAllowAvailable,
                     onClose = onCancelAll,
-                    maxWidth = maxWidth,
-                    maxHeight = maxHeight
+                    maxWidth = currentWidth,
+                    maxHeight = currentHeight
                 )
             }
         }

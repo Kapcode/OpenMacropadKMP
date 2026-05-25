@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.*
 import switchdektoptocompose.ui.components.AppTooltipArea
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -195,6 +195,78 @@ fun NetworkSettings(
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(start = 8.dp)
         )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Pairing Ban Duration ---
+        val banDuration by settingsViewModel.pairingBanDurationMinutes.collectAsState()
+        AppTooltipArea(
+            tooltipText = "Determines how long a device is blocked from pairing after 6 failed PIN attempts."
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Pairing Ban Duration (Minutes)",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = "${banDuration} min",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).widthIn(min = 60.dp)
+                        )
+                    }
+                }
+                Slider(
+                    value = banDuration.toFloat(),
+                    onValueChange = { settingsViewModel.setPairingBanDurationMinutes(it.toInt()) },
+                    valueRange = 1f..60f,
+                    steps = 59,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Pairing Strike Limit ---
+        val strikeLimit by settingsViewModel.pairingStrikeLimit.collectAsState()
+        AppTooltipArea(
+            tooltipText = "Number of failed attempts before a temporary ban is applied. Set to 0 to disable brute-force protection."
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Pairing Strike Limit",
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Surface(
+                        color = MaterialTheme.colorScheme.secondaryContainer,
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text(
+                            text = if (strikeLimit == 0) "None (Disabled)" else "$strikeLimit Strikes",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp).widthIn(min = 100.dp)
+                        )
+                    }
+                }
+                Slider(
+                    value = strikeLimit.toFloat(),
+                    onValueChange = { settingsViewModel.setPairingStrikeLimit(it.toInt()) },
+                    valueRange = 0f..20f,
+                    steps = 20,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 

@@ -14,7 +14,7 @@ import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
 import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun App(

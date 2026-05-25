@@ -21,7 +21,8 @@ import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.*
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Job
@@ -49,7 +50,7 @@ fun Console(
     var containerHeight by remember { mutableStateOf(0) }
     var autoScrollJob by remember { mutableStateOf<Job?>(null) }
     var isDragging by remember { mutableStateOf(false) }
-    val clipboardManager = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
 
     LaunchedEffect(logMessages.size) {
         if (isAutoScrollEnabled && logMessages.isNotEmpty() && !isDragging) {
@@ -121,7 +122,9 @@ fun Console(
                     onClick = {
                         val text = if (hasSelection) viewModel.getSelectedText() else logMessages.joinToString("\n") { it.formatted }
                         if (text.isNotEmpty()) {
-                            clipboardManager.setText(AnnotatedString(text))
+                            scope.launch {
+                                clipboard.setClipEntry(ClipEntry(AnnotatedString(text)))
+                            }
                         }
                     },
                     contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),

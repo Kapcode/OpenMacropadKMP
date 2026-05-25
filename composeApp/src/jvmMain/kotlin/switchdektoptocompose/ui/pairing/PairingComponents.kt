@@ -67,11 +67,38 @@ fun QrItem(request: ClientInfo?, bitmaps: Map<String, ImageBitmap>) {
 
 @Composable
 fun QrImage(bitmap: ImageBitmap?) {
-    Box(modifier = Modifier.size(150.dp)) {
+    Box(
+        modifier = Modifier
+            .size(150.dp)
+            .background(Color.White, MaterialTheme.shapes.small)
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
         if (bitmap != null) {
-            Image(bitmap, "QR", modifier = Modifier.fillMaxSize())
+            Image(
+                bitmap = bitmap,
+                contentDescription = "QR Code",
+                modifier = Modifier.fillMaxSize()
+            )
         } else {
-            Box(Modifier.fillMaxSize().background(Color.LightGray.copy(alpha = 0.1f)))
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "SYNCING QR...",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
         }
     }
 }

@@ -50,7 +50,7 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
         )
 
         // --- Tab Row ---
-        TabRow(selectedTabIndex = selectedTabIndex) {
+        SecondaryTabRow(selectedTabIndex = selectedTabIndex) {
             tabs.forEachIndexed { index, tab ->
                 Tab(
                     selected = selectedTabIndex == index,

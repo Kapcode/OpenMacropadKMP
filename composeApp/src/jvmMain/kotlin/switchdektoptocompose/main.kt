@@ -1,6 +1,7 @@
 package switchdektoptocompose
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -9,7 +10,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import org.jetbrains.compose.resources.painterResource
+import openmacropadkmp.composeapp.generated.resources.Res
+import openmacropadkmp.composeapp.generated.resources.macropadIcon64
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
@@ -81,7 +84,7 @@ fun main(args: Array<String>) = application {
 
     val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
     val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
-    val icon = painterResource("macropadIcon64.png")
+    val icon = painterResource(Res.drawable.macropadIcon64)
 
     // Update triggers in the application scope so they stay active even when window is hidden
     val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
@@ -153,36 +156,61 @@ fun main(args: Array<String>) = application {
         }
     }
 
-    activeToast?.let { toastMsg ->
-        Window(
-            onCloseRequest = {},
-            state = rememberWindowState(
-                position = WindowPosition(Alignment.BottomCenter),
-                width = 400.dp,
-                height = 64.dp
-            ),
-            title = "Toast",
-            transparent = true,
-            undecorated = true,
-            alwaysOnTop = true,
-            focusable = false,
-            resizable = false,
-            icon = icon
-        ) {
-            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+    // Global Toast Window - Single Stable Instance
+    val toastWindowState = rememberWindowState(
+        width = 400.dp,
+        height = 120.dp
+    )
+    
+    // Sync toast window position to Bottom Right (End) manually to ensure reliability
+    LaunchedEffect(activeToast) {
+        if (activeToast != null) {
+            try {
+                val ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                val screen = ge.maximumWindowBounds
+                // Calculate position: Screen Width - Window Width - Margin, Screen Height - Window Height - Margin
+                val x = (screen.width - 420).dp
+                val y = (screen.height - 140).dp
+                toastWindowState.position = WindowPosition(x, y)
+            } catch (e: Exception) {
+                toastWindowState.position = WindowPosition(Alignment.BottomEnd)
+            }
+        }
+    }
+
+    Window(
+        visible = activeToast != null,
+        onCloseRequest = {},
+        state = toastWindowState,
+        title = "Notification",
+        transparent = true,
+        undecorated = true,
+        alwaysOnTop = true,
+        focusable = false,
+        resizable = false,
+        icon = icon
+    ) {
+        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                color = Color.Transparent
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(8.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.8f)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.9f))
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = toastMsg,
+                        text = activeToast ?: "",
                         color = Color.White,
                         style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.padding(horizontal = 16.dp)
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
             }
@@ -255,8 +283,11 @@ fun main(args: Array<String>) = application {
             settingsViewModel = settingsViewModel,
             sharedSettingsViewModel = viewModels.sharedSettingsViewModel,
             consoleViewModel = consoleViewModel,
-            onDismissRequest = { desktopWindowState.showSettingsDialog = false },
+            macroManagerViewModel = macroManagerViewModel,
+            onDismissRequest = { desktopWindowState.toggleSettings(false) },
             onShowShortcutsRequest = { desktopWindowState.toggleShortcuts(true) },
+            initialScrollToVariables = desktopWindowState.scrollToVariables,
+            initialScrollToSecurity = desktopWindowState.scrollToSecurity,
             windowState = desktopWindowState.settingsWindowState,
             icon = icon
         )

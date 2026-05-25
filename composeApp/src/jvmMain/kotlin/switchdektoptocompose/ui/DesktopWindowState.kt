@@ -5,6 +5,7 @@ import switchdektoptocompose.viewmodel.LayoutViewModel
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
 import androidx.compose.ui.window.WindowPlacement
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.WindowState
@@ -30,6 +31,8 @@ class DesktopWindowState(
     var showExitDialog by mutableStateOf(false)
     var showShortcutsDialog by mutableStateOf(false)
     var showSettingsDialog by mutableStateOf(false)
+    var scrollToVariables by mutableStateOf(false)
+    var scrollToSecurity by mutableStateOf(false)
     var showNewEventDialog by mutableStateOf(false)
     var showRecordDialog by mutableStateOf(false)
     var showUpdateConfirmDialog by mutableStateOf(false)
@@ -70,6 +73,16 @@ class DesktopWindowState(
                     settingsWindowState.isMinimized = false
                 }
                 showSettingsDialog = show
+            }
+        }
+        scope.launch {
+            layoutViewModel.scrollToVariables.collect { scroll ->
+                scrollToVariables = scroll
+            }
+        }
+        scope.launch {
+            layoutViewModel.scrollToSecurity.collect { scroll ->
+                scrollToSecurity = scroll
             }
         }
         scope.launch {
@@ -135,10 +148,13 @@ class DesktopWindowState(
 
     fun calculateCenteredWindowPosition(dialogSize: DpSize): WindowPosition {
         val mainPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
-        val mainSize = windowState.size
+        
+        // Handle unspecified or zero sizes gracefully to avoid smearing/jitter during init
+        val mainWidth = if (windowState.size.width.isSpecified && windowState.size.width > 0.dp) windowState.size.width else 1200.dp
+        val mainHeight = if (windowState.size.height.isSpecified && windowState.size.height > 0.dp) windowState.size.height else 800.dp
 
-        val centerX = mainPos.x + (mainSize.width - dialogSize.width) / 2
-        val centerY = mainPos.y + (mainSize.height - dialogSize.height) / 2
+        val centerX = mainPos.x + (mainWidth - dialogSize.width) / 2
+        val centerY = mainPos.y + (mainHeight - dialogSize.height) / 2
 
         return WindowPosition(centerX, centerY)
     }
@@ -147,8 +163,13 @@ class DesktopWindowState(
         layoutViewModel.setShowShortcutsDialog(show)
     }
 
-    fun toggleSettings(show: Boolean = !showSettingsDialog) {
-        layoutViewModel.setShowSettingsDialog(show)
+    fun toggleSettings(show: Boolean = !showSettingsDialog, scrollToVariables: Boolean = false, scrollToSecurity: Boolean = false) {
+        if (!show) {
+            // Clear scroll flags when closing to ensure next open is fresh
+            layoutViewModel.setShowSettingsDialog(false, scrollToVariables = false, scrollToSecurity = false)
+        } else {
+            layoutViewModel.setShowSettingsDialog(show, scrollToVariables, scrollToSecurity)
+        }
     }
 
     fun toggleMarketplace(show: Boolean = !showMarketplace) {

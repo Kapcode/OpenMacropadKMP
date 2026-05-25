@@ -4,12 +4,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import switchdektoptocompose.model.ClientInfo
 import switchdektoptocompose.utils.QrCodeGenerator
 
 class PairingViewModel(
-    private val settingsViewModel: SettingsViewModel
+    private val settingsViewModel: SettingsViewModel,
+    private val pendingPairingRequests: StateFlow<List<ClientInfo>>
 ) {
     private val _gridRows = MutableStateFlow(1)
     val gridRows = _gridRows.asStateFlow()
@@ -23,12 +25,36 @@ class PairingViewModel(
     val fleetModeEnabled = settingsViewModel.fleetModeEnabled
     val fleetGridVisibility = settingsViewModel.fleetGridVisibility
 
+    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+
+    init {
+        pendingPairingRequests
+            .onEach { updateQrBitmaps(it) }
+            .launchIn(viewModelScope)
+    }
+
+    /**
+     * Updates QR bitmaps for the given requests.
+     * Uses a lock-free approach to ensure we don't regenerate existing bitmaps.
+     */
     fun updateQrBitmaps(requests: List<ClientInfo>) {
-        val currentBitmaps = _qrBitmaps.value
-        val newBitmaps = requests.associate { request ->
-            request.id to (currentBitmaps[request.id] ?: QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400))
+        if (requests.isEmpty()) return
+        
+        viewModelScope.launch {
+            val current = _qrBitmaps.value
+            val needsUpdate = requests.any { !current.containsKey(it.id) }
+            
+            if (needsUpdate) {
+                val updatedMap = current.toMutableMap()
+                requests.forEach { request ->
+                    if (!updatedMap.containsKey(request.id)) {
+                        val qr = QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400)
+                        updatedMap[request.id] = qr
+                    }
+                }
+                _qrBitmaps.value = updatedMap
+            }
         }
-        _qrBitmaps.value = newBitmaps
     }
 
     fun setGridRows(rows: Int) {

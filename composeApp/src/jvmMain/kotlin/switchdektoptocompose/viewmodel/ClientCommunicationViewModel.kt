@@ -1,18 +1,17 @@
 package switchdektoptocompose.viewmodel
 
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
 import switchdektoptocompose.logic.AppSettings
 import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.TrustedDeviceManager
+import switchdektoptocompose.logic.PairingBanManager
 import switchdektoptocompose.model.ClientInfo
 import switchdektoptocompose.model.LogLevel
 import java.io.File
@@ -115,10 +114,6 @@ class ClientCommunicationViewModel(
         ConnectionHistoryManager.logEvent(clientId, clientName, "Pairing Request", metadata = metadata)
         updateHistoryState()
         
-        viewModelScope.launch {
-            serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_PENDING))
-        }
-        
         consoleViewModel.addLog(LogLevel.Warn, "Pairing request from untrusted device: $clientName ($clientId). Displaying verification code and QR.")
     }
 
@@ -136,7 +131,7 @@ class ClientCommunicationViewModel(
 
         val finalPersistent = if (settingsViewModel.allowOnceOnly.value) false else persistent
         if (finalPersistent) {
-            val metadata = serverViewModel.server.getMetadata(clientId) ?: request?.metadata
+            val metadata = serverViewModel.server.getMetadata(clientId) ?: request.metadata
             TrustedDeviceManager.addTrustedDevice(clientId, clientName, metadata)
             _trustedDevices.value = TrustedDeviceManager.getTrustedDevices()
             ConnectionHistoryManager.logEvent(clientId, clientName, "Permanently Approved", metadata = metadata)
@@ -195,14 +190,16 @@ class ClientCommunicationViewModel(
 
     fun unbanDevice(clientId: String) {
         TrustedDeviceManager.unbanDevice(clientId)
+        PairingBanManager.unbanDevice(clientId)
         _bannedDevices.value = TrustedDeviceManager.getBannedDevices()
         consoleViewModel.addLog(LogLevel.Info, "Unbanned device: $clientId")
     }
 
     fun unbanAllDevices() {
         TrustedDeviceManager.unbanAllDevices()
+        PairingBanManager.clearAllBans()
         _bannedDevices.value = TrustedDeviceManager.getBannedDevices()
-        consoleViewModel.addLog(LogLevel.Info, "Unbanned all devices")
+        consoleViewModel.addLog(LogLevel.Info, "Unbanned all devices (including temporary bans)")
     }
 
     fun removeTrustedDevice(clientId: String) {
@@ -297,26 +294,48 @@ class ClientCommunicationViewModel(
                     ControlCommand.PAIRING_RESPONSE -> {
                         val enteredCode = params["code"]
                         val pendingRequest = _pendingPairingRequests.value.find { it.id == clientId }
+                        
                         if (pendingRequest != null) {
-                            if (pendingRequest.verificationCode == enteredCode) {
-                                consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
-                                _pendingPairingRequests.update { requests ->
-                                    requests.map { if (it.id == clientId) it.copy(codeMatched = true) else it }
-                                }
-                                viewModelScope.launch {
-                                    serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_CODE_MATCHED))
-                                }
-                            } else {
-                                val newAttempts = pendingRequest.pairingAttempts + 1
-                                consoleViewModel.addLog(LogLevel.Warn, "Incorrect pairing code entered from $clientId (Attempt $newAttempts/3).")
-                                
-                                if (newAttempts >= 3) {
-                                    consoleViewModel.addLog(LogLevel.Error, "Too many failed pairing attempts from $clientId. Banning device.")
-                                    banDevice(clientId, pendingRequest.name)
-                                    _pendingPairingRequests.update { it.filterNot { req -> req.id == clientId } }
-                                } else {
+                            // 1. Log the attempt at INFO level for visibility
+                            consoleViewModel.addLog(LogLevel.Info, "Pairing attempt from $clientId: enteredCode=$enteredCode, expected=${pendingRequest.verificationCode}")
+                            
+                            // 2. Process only if not already matched and code is valid
+                            if (!pendingRequest.codeMatched && !enteredCode.isNullOrBlank()) {
+                                if (pendingRequest.verificationCode == enteredCode) {
+                                    consoleViewModel.addLog(LogLevel.Info, "Correct pairing code entered for $clientId. Waiting for manual approval.")
                                     _pendingPairingRequests.update { requests ->
-                                        requests.map { if (it.id == clientId) it.copy(pairingAttempts = newAttempts) else it }
+                                        requests.map { if (it.id == clientId) it.copy(codeMatched = true) else it }
+                                    }
+                                    viewModelScope.launch {
+                                        serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.PAIRING_CODE_MATCHED))
+                                    }
+                                } else {
+                                    // FLEET MODE PROTECTION: Check if the code belongs to ANY other pending device
+                                    val otherPendingRequests = _pendingPairingRequests.value.filter { it.id != clientId }
+                                    val matchedOther = otherPendingRequests.any { it.verificationCode == enteredCode }
+                                    
+                                    if (!matchedOther) {
+                                        val newAttempts = pendingRequest.pairingAttempts + 1
+                                        val strikeLimit = settingsViewModel.pairingStrikeLimit.value
+                                        
+                                        consoleViewModel.addLog(LogLevel.Warn, "Incorrect pairing code entered from $clientId (Attempt $newAttempts${if (strikeLimit > 0) "/$strikeLimit" else ""}).")
+                                        
+                                        if (strikeLimit > 0 && newAttempts >= strikeLimit) {
+                                            val duration = settingsViewModel.pairingBanDurationMinutes.value
+                                            consoleViewModel.addLog(LogLevel.Error, "Too many failed pairing attempts from $clientId. Banning device for $duration minutes.")
+                                            PairingBanManager.banDevice(clientId, duration)
+                                            _pendingPairingRequests.update { it.filterNot { req -> req.id == clientId } }
+                                            
+                                            viewModelScope.launch {
+                                                serverViewModel.server.sendToClient(clientId, controlMessage(ControlCommand.BANNED, mapOf("reason" to "Temporary ban for brute-force protection ($duration min).")))
+                                            }
+                                        } else {
+                                            _pendingPairingRequests.update { requests ->
+                                                requests.map { if (it.id == clientId) it.copy(pairingAttempts = newAttempts) else it }
+                                            }
+                                        }
+                                    } else {
+                                        consoleViewModel.addLog(LogLevel.Warn, "Device $clientId submitted code for another pending device. Ignoring attempt without strike (Fleet Mode scan?).")
                                     }
                                 }
                             }

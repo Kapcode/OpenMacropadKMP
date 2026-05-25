@@ -11,6 +11,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
@@ -25,7 +27,9 @@ fun SettingsDialog(
     consoleViewModel: ConsoleViewModel,
     onDismissRequest: () -> Unit,
     onShowShortcutsRequest: () -> Unit = {},
+    macroManagerViewModel: MacroManagerViewModel,
     initialScrollToSecurity: Boolean = false,
+    initialScrollToVariables: Boolean = false,
     windowState: WindowState? = null,
     icon: Painter? = null
 ) {
@@ -70,10 +74,17 @@ fun SettingsDialog(
     // Scroll state management
     val scrollState = rememberScrollState()
     var securitySectionOffset by remember { mutableStateOf(0f) }
+    var variablesSectionOffset by remember { mutableStateOf(0f) }
 
     LaunchedEffect(initialScrollToSecurity, securitySectionOffset) {
         if (initialScrollToSecurity && securitySectionOffset > 0) {
             scrollState.animateScrollTo(securitySectionOffset.toInt())
+        }
+    }
+
+    LaunchedEffect(initialScrollToVariables, variablesSectionOffset) {
+        if (initialScrollToVariables && variablesSectionOffset > 0) {
+            scrollState.animateScrollTo(variablesSectionOffset.toInt())
         }
     }
 
@@ -108,7 +119,9 @@ fun SettingsDialog(
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 ClientSettings(clientTheme, clientAnalyticsEnabled, clientSlamFireEnabled, clientSlamFireAction, settingsViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                VariableSettings(settingsViewModel)
+                Box(modifier = Modifier.onGloballyPositioned { variablesSectionOffset = it.positionInParent().y }) {
+                    VariableSettings(settingsViewModel)
+                }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                 NetworkSettings(
                     serverPort, secureServerPort, encryptionEnabled, isServerRunning,
@@ -116,6 +129,8 @@ fun SettingsDialog(
                     allowOnceOnly, enableWebsocketPings, settingsViewModel, sharedSettingsViewModel,
                     serverViewModel
                 ) { securitySectionOffset = it }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                ResetSettingsSection(settingsViewModel, macroManagerViewModel, clientCommunicationViewModel)
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 DeviceManagement(trustedDevices, bannedDevices, clientCommunicationViewModel)
 

@@ -293,7 +293,7 @@ private fun ActionDropdown(selectedAction: MacroAction, viewModel: NewEventViewM
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                 viewModel.actionOptions.forEach { action ->

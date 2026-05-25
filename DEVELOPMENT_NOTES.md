@@ -479,15 +479,32 @@ Automated macros could cause loss of system control if they ran too long or went
 - [ ] **Macro Templates**: Add predefined templates for popular software (e.g., OBS, Photoshop, VS Code).
 - [ ] **Automatic Updates**: Integrate a background update checker for the desktop client.
 
-## 49. JVM Directory Selection Implementation
+## 50. Compose for Desktop: The "Smeared UI" Glitch
 
-**Problem:**
-The `pickDirectory` function was missing an `actual` implementation in the JVM module, causing compilation errors when the common code attempted to trigger a directory picker.
+### Challenge: Dialogs and Windows Appearing as Transparent "Smeared" Frames
+- **Problem**: Opening dialogs (like Sync or Factory Reset) would occasionally result in a visual mess where the window content didn't render, or trailed behind the cursor as a "smear" of the main window.
+- **Root Causes**:
+    1.  **Missing Solid Background**: In certain JVM environments (especially Linux/X11), Compose for Desktop requires an explicit solid color at the root of a window. Without it, the GPU may not clear the buffer, causing transparency or "ghosting" effects.
+    2.  **Layout Loops**: Reading window dimensions (e.g., `windowState.size`) inside a composition that *also* modifies those dimensions creates a feedback loop, stalling the renderer.
+- **Solution**:
+    *   **Surface Enforcement**: Updated `BaseDialog.kt` to explicitly set `color = MaterialTheme.colorScheme.background` on the root `Surface`.
+    *   **Stable Sizing**: Wrapped window dimension reads in `remember(windowState.size)` to prevent rapid-fire recompositions during window initialization.
+    *   **Safe Resizing**: Added equality checks (`if (windowState.size != targetSize)`) in `LaunchedEffect` blocks to prevent redundant OS-level window resize calls.
 
-**Solution:**
-*   **Swing Integration**: Implemented `pickDirectory` using `javax.swing.JFileChooser` within a `SwingUtilities.invokeLater` block to ensure thread safety with the Swing Event Dispatch Thread (EDT).
-*   **Directory Only Mode**: Configured `JFileChooser` with `fileSelectionMode = JFileChooser.DIRECTORIES_ONLY` to restrict the user's selection to folders.
-*   **Result Handling**: Used `showOpenDialog` to capture the user's choice and returned the absolute path of the selected directory, or `null` if the operation was cancelled.
+## 51. Enhanced Security & Maintenance
+
+### Challenge: Brute-Force PIN Attacks
+- **Problem**: A 6-digit PIN has only 1 million combinations, making it vulnerable to automated guessing if not rate-limited.
+- **Solution**: Implemented a **Timed Ban System** (`PairingBanManager`). 
+    *   Devices are given a configurable "Strike Limit" (default 6).
+    *   Exceeding the limit results in a temporary ban (default 15 mins) where the server rejects all further connection attempts from that ID.
+    *   The server communicates the remaining time to the client, improving user feedback.
+
+### Challenge: "Nuclear" State Recovery
+- **Problem**: Users needed a way to completely clear the server state (macros, packs, or trusted devices) without manually hunting down files in `~/.openmacropad`.
+- **Solution**: Implemented a **Factory Reset** system in `ResetSettingsSection.kt`.
+    *   **Selective Deletion**: Checkboxes allow resetting just settings, just macros/packs, or clearing the entire device trust list.
+    *   **Safety Interlock**: Requires the user to type the case-sensitive word **"Delete"** before the action is executed, preventing accidental data loss.
 
 ## 42. Advanced Automation & Scripting Suite (Phase 6)
 

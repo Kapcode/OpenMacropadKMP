@@ -71,10 +71,6 @@ fun UnifiedPairingLayout(
         }
     }
 
-    LaunchedEffect(requests) {
-        pairingViewModel.updateQrBitmaps(requests)
-    }
-
     // Identify which devices to display across the 6 grids
     val displayRequests = remember(requests, visibleIndices.value, totalGridSize) {
         if (requests.isEmpty()) return@remember emptyList()
@@ -228,7 +224,7 @@ fun UnifiedPairingLayout(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
-                    items(requests) { request ->
+                    items(requests, key = { it.id }) { request ->
                         CompactPairingItem(
                             request = request,
                             onApprove = onApprove,

@@ -29,6 +29,12 @@ class LayoutViewModel(private val settingsViewModel: SettingsViewModel) {
     private val _showSettingsDialog = MutableStateFlow(false)
     val showSettingsDialog = _showSettingsDialog.asStateFlow()
 
+    private val _scrollToVariables = MutableStateFlow(false)
+    val scrollToVariables = _scrollToVariables.asStateFlow()
+
+    private val _scrollToSecurity = MutableStateFlow(false)
+    val scrollToSecurity = _scrollToSecurity.asStateFlow()
+
     private val _showMarketplace = MutableStateFlow(false)
     val showMarketplace = _showMarketplace.asStateFlow()
 
@@ -65,7 +71,9 @@ class LayoutViewModel(private val settingsViewModel: SettingsViewModel) {
     }
 
 
-    fun setShowSettingsDialog(show: Boolean) {
+    fun setShowSettingsDialog(show: Boolean, scrollToVariables: Boolean = false, scrollToSecurity: Boolean = false) {
+        _scrollToVariables.value = scrollToVariables
+        _scrollToSecurity.value = scrollToSecurity
         _showSettingsDialog.value = show
     }
 
