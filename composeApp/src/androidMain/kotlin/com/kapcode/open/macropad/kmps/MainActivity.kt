@@ -83,6 +83,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var clientRepository: ClientRepository
     private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
+    private lateinit var billingManager: BillingManager
     private var onOkayPressed: (() -> Unit)? = null
 
     private lateinit var slamFireManager: SlamFireManager
@@ -97,6 +98,9 @@ class MainActivity : ComponentActivity() {
 
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
+
+        billingManager = BillingManager(this, settingsViewModel, lifecycleScope)
+        billingManager.startConnection()
 
         // Move discovery and heavy initialization to immediately after binding ViewModel
         lifecycleScope.launch(Dispatchers.IO) {
@@ -149,6 +153,7 @@ class MainActivity : ComponentActivity() {
                         settingsViewModel = settingsViewModel,
                         clientDiscovery = clientDiscovery,
                         hardwareTriggerManager = slamFireManager,
+                        billingManager = billingManager,
                         onLaunchClient = { serverInfo: ServerInfo, deviceName: String ->
                             launchClient(serverInfo, deviceName)
                         },

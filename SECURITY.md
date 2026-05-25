@@ -77,10 +77,10 @@ This document outlines the security vulnerabilities identified in OpenMacropadKM
 *   **Description:** Device IDs derived solely from `FINGERPRINT` were found to be unstable across Android OS updates, potentially causing trusted devices to be treated as new, untrusted connections.
 *   **Mitigation:** Implemented a **Stable Hardware Fingerprint** using a concatenated combination of `MANUFACTURER|MODEL|BOARD|HARDWARE`. This provides a consistent identity that survives OS minor/major updates while remaining unique to the physical device.
 
-### 12. Connection Auditing & History
-*   **Status:** ✅ **Fixed**
-*   **Description:** Previously, there was no persistent record of which devices connected to the server, making it difficult to audit past access.
-*   **Mitigation:** Implemented a persistent **Recent Activity** audit trail.
-    - All connection attempts (Success, Failed, Unauthorized) are logged to a persistent store.
-    - The Desktop UI features a "Recent Activity" sidebar that displays the history of device IDs, timestamps, and connection status.
-    - This audit trail is displayed in a `VerticalSplitPane` alongside active sessions, allowing administrators to monitor both live and historical access at a glance.
+### 13. Revenue Model Integrity (Bypassing Ads/Pro)
+*   **Status:** ⚠️ **Partially Mitigated (Accepted Risk)**
+*   **Description:** A local "Developer Mode" exists in the code to bypass Google Play Billing for testing.
+*   **Mitigation:** 
+    - The `isDeveloperMode` flag is **memory-only** and never persisted to the disk or settings file. This ensures it resets on every app launch.
+    - The toggle is not exposed in any production UI.
+    - While a dedicated attacker could use memory manipulation (RAM hacking) to flip this flag, the risk is considered acceptable for the benefit of rapid development and UI testing of monetization features.

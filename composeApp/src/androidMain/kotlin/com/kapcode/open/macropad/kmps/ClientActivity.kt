@@ -94,6 +94,7 @@ class ClientActivity : ComponentActivity() {
     private lateinit var clientRepository: ClientRepository
     private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
+    private lateinit var billingManager: BillingManager
     private lateinit var slamFireManager: SlamFireManager
     private val activityScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
@@ -178,6 +179,9 @@ class ClientActivity : ComponentActivity() {
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, activityScope)
 
+        billingManager = BillingManager(this, settingsViewModel, activityScope)
+        billingManager.startConnection()
+
         slamFireManager = SlamFireManager(this, settingsViewModel, activityScope) { isDouble ->
             handleSlamFire(isDouble)
         }
@@ -216,6 +220,7 @@ class ClientActivity : ComponentActivity() {
                     settingsViewModel = settingsViewModel,
                     clientViewModel = clientViewModel,
                     currency = tokenBalance.toLong(),
+                    billingManager = billingManager,
                     onQrScannerToggle = { show ->
                         if (show) {
                             val canShow = uiState.macros.isEmpty() && uiState.connectionStatus == "Pending Approval"

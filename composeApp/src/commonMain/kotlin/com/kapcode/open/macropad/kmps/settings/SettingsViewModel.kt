@@ -71,6 +71,13 @@ class SettingsViewModel {
     private val _isPro = MutableStateFlow(false)
     val isPro = _isPro.asStateFlow()
 
+    private val _isAdFree = MutableStateFlow(false)
+    val isAdFree = _isAdFree.asStateFlow()
+
+    // Memory-only developer mode. Not persisted to settings file.
+    private val _isDeveloperMode = MutableStateFlow(false)
+    val isDeveloperMode = _isDeveloperMode.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -142,6 +149,14 @@ class SettingsViewModel {
 
     fun setIsPro(pro: Boolean) {
         _isPro.value = pro
+    }
+
+    fun setIsAdFree(adFree: Boolean) {
+        _isAdFree.value = adFree
+    }
+
+    fun setDeveloperMode(enabled: Boolean) {
+        _isDeveloperMode.value = enabled
     }
 
     fun updateServerHistory(server: TrustedServer) {

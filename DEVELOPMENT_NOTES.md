@@ -491,20 +491,34 @@ Automated macros could cause loss of system control if they ran too long or went
     *   **Stable Sizing**: Wrapped window dimension reads in `remember(windowState.size)` to prevent rapid-fire recompositions during window initialization.
     *   **Safe Resizing**: Added equality checks (`if (windowState.size != targetSize)`) in `LaunchedEffect` blocks to prevent redundant OS-level window resize calls.
 
-## 51. Enhanced Security & Maintenance
+## 52. Google Play Billing Integration
 
-### Challenge: Brute-Force PIN Attacks
-- **Problem**: A 6-digit PIN has only 1 million combinations, making it vulnerable to automated guessing if not rate-limited.
-- **Solution**: Implemented a **Timed Ban System** (`PairingBanManager`). 
-    *   Devices are given a configurable "Strike Limit" (default 6).
-    *   Exceeding the limit results in a temporary ban (default 15 mins) where the server rejects all further connection attempts from that ID.
-    *   The server communicates the remaining time to the client, improving user feedback.
+### Challenge: Modernizing the Freemium Model
+- **Problem**: The app relied solely on rewarded ads for tokens, which lacked a permanent solution for power users who wanted to remove ads or gain permanent "Pro" access.
+- **Solution**:
+    - **Google Play Billing Library 7.x**: Integrated the latest Billing Library to support In-App Products (one-time) and Subscriptions.
+    - **Product Suite**:
+        - `pro_pass_one_time`: Permanent Pro access.
+        - `pro_subscription`: Monthly/Yearly Pro access.
+        - `ad_free_one_time`: Permanent banner ad removal.
+        - `ad_free_subscription`: Monthly/Yearly ad removal.
+    - **BillingManager**: Created a dedicated, lifecycle-aware `BillingManager` that handles the connection to Google Play, queries product details (prices, titles), and manages the purchase/acknowledgment flow.
+    - **Ad Suppression**: Updated `ClientScreen.kt` to hide `AdmobBanner` if `isPro` or `isAdFree` states are active, ensuring a clean UI for paying users.
 
-### Challenge: "Nuclear" State Recovery
-- **Problem**: Users needed a way to completely clear the server state (macros, packs, or trusted devices) without manually hunting down files in `~/.openmacropad`.
-- **Solution**: Implemented a **Factory Reset** system in `ResetSettingsSection.kt`.
-    *   **Selective Deletion**: Checkboxes allow resetting just settings, just macros/packs, or clearing the entire device trust list.
-    *   **Safety Interlock**: Requires the user to type the case-sensitive word **"Delete"** before the action is executed, preventing accidental data loss.
+### Challenge: Testing Billing Flows without Sandbox Overhead
+- **Problem**: Testing real Google Play Billing requires a signed APK, a licensed tester account, and internal distribution, which is slow for UI iteration.
+- **Solution**:
+    - **Memory-Only Developer Mode**: Implemented a `isDeveloperMode` flag in `SettingsViewModel`. 
+    - **Instant Simulation**: When enabled, the `BillingManager` (via `CommonAppBar`) bypasses the Google Play Store and immediately grants the requested status (Pro or Ad-Free) in RAM. 
+    - **Security**: The flag is intentionally memory-only and not persisted to settings, making it harder to exploit while remaining highly useful for development.
+
+## 53. Desktop Window Management
+
+### Challenge: Non-Maximized Window on Init
+- **Problem**: The desktop application would start in a small "Floating" window even if the monitor index was set, requiring users to manually maximize it every time.
+- **Solution**:
+    - **Forced Maximization**: Updated `DesktopWindowState.kt`'s `applyInitialPlacement` function to set `windowState.placement = WindowPlacement.Maximized` immediately upon initialization.
+    - **Monitor Awareness**: The app still respects monitor selection (Primary, Index, or Cursor-based) but now ensures it fills the target screen from the first frame.
 
 ## 42. Advanced Automation & Scripting Suite (Phase 6)
 

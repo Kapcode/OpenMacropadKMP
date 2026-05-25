@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.BillingConstants
+import com.kapcode.open.macropad.kmps.BillingManager
 import com.kapcode.open.macropad.kmps.TokenManager
 import com.kapcode.open.macropad.kmps.loadRewardedAd
 import com.kapcode.open.macropad.kmps.showRewardedAd
@@ -69,7 +70,11 @@ fun CommonAppBar(
     isPro: Boolean = false,
     isServerPro: Boolean = false,
     serverProTimeRemaining: Long = 0,
+    isAdFree: Boolean = false,
+    isDeveloperMode: Boolean = false,
+    billingManager: BillingManager? = null,
     onProPurchaseClick: (() -> Unit)? = null,
+    onAdFreePurchaseClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -82,6 +87,8 @@ fun CommonAppBar(
         ProPurchaseDialog(
             onDismissRequest = { showProPurchaseDialog = false },
             isPro = isPro || isServerPro,
+            isAdFree = isAdFree,
+            isDeveloperMode = isDeveloperMode,
             onWatchAd = {
                 loadRewardedAd(
                     context,
@@ -97,14 +104,36 @@ fun CommonAppBar(
                 showProPurchaseDialog = false
             },
             onPurchaseSubscription = {
-                Toast.makeText(context, "Subscription billing coming soon!", Toast.LENGTH_SHORT).show()
+                if (isDeveloperMode) {
+                    onProPurchaseClick?.invoke()
+                    showProPurchaseDialog = false
+                } else {
+                    billingManager?.launchBillingFlow(activity, BillingConstants.PRODUCT_ID_PRO_SUB)
+                }
             },
             onPurchaseOneTime = {
-                // For now, this just toggles the Pro status as a simulation
-                // In a real app, this would trigger a Play Store purchase flow
-                Toast.makeText(context, "Simulating Pro Pass purchase...", Toast.LENGTH_SHORT).show()
-                onProPurchaseClick?.invoke()
-                showProPurchaseDialog = false
+                if (isDeveloperMode) {
+                    onProPurchaseClick?.invoke()
+                    showProPurchaseDialog = false
+                } else {
+                    billingManager?.launchBillingFlow(activity, BillingConstants.PRODUCT_ID_PRO_ONE_TIME)
+                }
+            },
+            onRemoveAdsSubscription = {
+                if (isDeveloperMode) {
+                    onAdFreePurchaseClick?.invoke()
+                    showProPurchaseDialog = false
+                } else {
+                    billingManager?.launchBillingFlow(activity, BillingConstants.PRODUCT_ID_AD_FREE_SUB)
+                }
+            },
+            onRemoveAdsOneTime = {
+                if (isDeveloperMode) {
+                    onAdFreePurchaseClick?.invoke()
+                    showProPurchaseDialog = false
+                } else {
+                    billingManager?.launchBillingFlow(activity, BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME)
+                }
             }
         )
     }

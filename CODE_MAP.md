@@ -49,8 +49,9 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
 | **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
 | **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
-| **Client** | Connects to server, spends tokens, and triggers macros. Supports **Rich Widgets** (Buttons, Toggles, Sliders). Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
-| **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. | `androidMain/com/.../TokenManager.kt` |
+| **Client** | Connects to server, spends tokens, and triggers macros. Supports **Rich Widgets** (Buttons, Toggles, Sliders) and **Google Play Billing** (Pro & Ad-Free). Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
+| **TokenManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. Integrates with **Google Play Billing** for purchases. | `androidMain/com/.../TokenManager.kt` |
+| **BillingManager** | Manages Google Play Billing lifecycle, product details, and purchase flows for Android. | `androidMain/com/.../BillingManager.kt` |
 | **IconMapper** | Maps string-based icon IDs from the server to Android Material Icons. | `androidMain/com/.../MacroButtonsScreen.kt` |
 | **GridWidget** | Shared model for UI items. Defines type (Button, Toggle, Slider), color, position, and state. | `commonMain/com/.../models/GridModels.kt` |
 | **AutomationAST** | Defines the logic for stateful automation (Triggers, Conditions, Actions). | `commonMain/com/.../models/AutomationAST.kt` |

@@ -31,6 +31,7 @@ fun MainUI(
     settingsViewModel: SettingsViewModel,
     clientDiscovery: ClientDiscovery,
     hardwareTriggerManager: HardwareTriggerManager? = null,
+    billingManager: BillingManager? = null,
     onLaunchClient: (ServerInfo, String) -> Unit,
     onOkayTriggerSet: (() -> Unit) -> Unit
 ) {
@@ -96,13 +97,21 @@ fun MainUI(
                             }
                         },
                         isPro = settingsViewModel.isPro.collectAsState().value,
-                        onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) }
+                        isAdFree = settingsViewModel.isAdFree.collectAsState().value,
+                        isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
+                        onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) },
+                        onAdFreePurchaseClick = { settingsViewModel.setIsAdFree(!settingsViewModel.isAdFree.value) },
+                        billingManager = billingManager
                     )
                 },
             bottomBar = { 
                 val configuration = androidx.compose.ui.platform.LocalConfiguration.current
                 val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                if (showAd && !isLandscape && !isGlobalLoading && !showSettings) {
+                val isPro = settingsViewModel.isPro.collectAsState().value
+                val isAdFree = settingsViewModel.isAdFree.collectAsState().value
+                val adsDisabled = isPro || isAdFree
+                
+                if (showAd && !isLandscape && !isGlobalLoading && !showSettings && !adsDisabled) {
                     BottomAppBar { AdmobBanner() }
                 }
             }

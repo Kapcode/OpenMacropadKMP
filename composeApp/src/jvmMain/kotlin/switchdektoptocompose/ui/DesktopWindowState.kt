@@ -141,9 +141,9 @@ class DesktopWindowState(
 
         println("Target bounds for placement: $targetBounds")
 
-        windowState.placement = WindowPlacement.Floating // Force floating to allow positioning
-        windowState.position = WindowPosition(targetBounds.x.dp + 100.dp, targetBounds.y.dp + 100.dp)
-        windowState.size = DpSize(1200.dp, 800.dp) // Set a reasonable default size if not maximized
+        windowState.placement = WindowPlacement.Maximized
+        windowState.position = WindowPosition(targetBounds.x.dp, targetBounds.y.dp)
+        windowState.size = DpSize(1200.dp, 800.dp) // Fallback size if it ever flips to floating
     }
 
     fun calculateCenteredWindowPosition(dialogSize: DpSize): WindowPosition {

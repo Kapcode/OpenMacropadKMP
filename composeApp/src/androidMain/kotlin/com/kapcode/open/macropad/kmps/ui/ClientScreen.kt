@@ -52,6 +52,7 @@ fun ClientScreen(
     settingsViewModel: SettingsViewModel,
     clientViewModel: ClientViewModel,
     currency: Long = 0,
+    billingManager: BillingManager? = null,
     onGetMacros: () -> Unit,
     onWidgetInteraction: (GridWidget) -> Unit,
     onPairingCodeEntered: (String) -> Unit,
@@ -192,9 +193,13 @@ fun ClientScreen(
                 isCoordinateCaptureActive = uiState.isCoordinateCaptureActive,
                 onCoordinateCaptureToggle = { clientViewModel.setCoordinateCaptureActive(it) },
                 isPro = settingsViewModel.isPro.collectAsState().value,
-                isServerPro = settingsViewModel.isServerProActive.collectAsState().value,
+                isServerPro = settingsViewModel.serverProTimeRemaining.collectAsState().value > 0, // Simplified check
                 serverProTimeRemaining = settingsViewModel.serverProTimeRemaining.collectAsState().value,
+                isAdFree = settingsViewModel.isAdFree.collectAsState().value,
+                isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
+                billingManager = billingManager,
                 onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) },
+                onAdFreePurchaseClick = { settingsViewModel.setIsAdFree(!settingsViewModel.isAdFree.value) },
                 navigationIcon = {
                     if (showSettings) {
                         IconButton(onClick = { showSettings = false }) {
@@ -337,7 +342,12 @@ fun ClientScreen(
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             val isConnected = connectionStatus == "Connected" && macros.isNotEmpty()
-            if (!showSettings && !isLandscape && isConnected) {
+            val isPro = settingsViewModel.isPro.collectAsState().value
+            val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
+            val isAdFree = settingsViewModel.isAdFree.collectAsState().value
+            val adsDisabled = isPro || isServerPro || isAdFree
+
+            if (!showSettings && !isLandscape && isConnected && !adsDisabled) {
                 BottomAppBar { AdmobBanner() }
             }
         }

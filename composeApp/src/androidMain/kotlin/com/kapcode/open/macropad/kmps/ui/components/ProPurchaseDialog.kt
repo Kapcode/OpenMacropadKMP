@@ -21,7 +21,11 @@ fun ProPurchaseDialog(
     onWatchAd: () -> Unit,
     onPurchaseSubscription: () -> Unit,
     onPurchaseOneTime: () -> Unit,
-    isPro: Boolean = false
+    onRemoveAdsSubscription: () -> Unit,
+    onRemoveAdsOneTime: () -> Unit,
+    isPro: Boolean = false,
+    isAdFree: Boolean = false,
+    isDeveloperMode: Boolean = false
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
@@ -73,7 +77,7 @@ fun ProPurchaseDialog(
                         description = "Unlimited Pro access with a monthly or yearly sub.",
                         icon = Icons.Default.CalendarMonth,
                         onClick = onPurchaseSubscription,
-                        badge = "Coming Soon"
+                        badge = if (isPro) "Active" else null
                     )
                 }
 
@@ -83,7 +87,37 @@ fun ProPurchaseDialog(
                         description = "Permanent Pro access for this device and server.",
                         icon = Icons.Default.CardMembership,
                         onClick = onPurchaseOneTime,
-                        highlight = true
+                        highlight = true,
+                        badge = if (isPro) "Active" else if (isDeveloperMode) "DEV" else null
+                    )
+                }
+
+                item {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text(
+                        text = "Remove Ads Only",
+                        style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                item {
+                    PurchaseOptionCard(
+                        title = "Remove Ads (Sub)",
+                        description = "Remove banner ads with a small monthly contribution.",
+                        icon = Icons.Default.Block,
+                        onClick = onRemoveAdsSubscription,
+                        badge = if (isAdFree) "Active" else null
+                    )
+                }
+
+                item {
+                    PurchaseOptionCard(
+                        title = "Remove Ads (One-Time)",
+                        description = "One-time payment to remove all banner ads forever.",
+                        icon = Icons.Default.DoneAll,
+                        onClick = onRemoveAdsOneTime,
+                        badge = if (isAdFree) "Active" else if (isDeveloperMode) "DEV" else null
                     )
                 }
             }
