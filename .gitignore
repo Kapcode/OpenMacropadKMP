@@ -3,8 +3,17 @@
 .gradle
 **/build/
 xcuserdata
-!src/**/build/
 local.properties
+
+# Release Artifacts
+*.apk
+*.aab
+*.jar
+*.dmg
+*.msi
+*.deb
+*.exe
+
 .idea
 .DS_Store
 captures

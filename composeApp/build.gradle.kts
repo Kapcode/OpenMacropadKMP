@@ -130,6 +130,10 @@ android {
     buildTypes {
         getByName("release") {
             isMinifyEnabled = true
+            // Generate native debug symbols for Play Store crash reporting
+            ndk {
+                debugSymbolLevel = "FULL"
+            }
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
         getByName("debug") {
