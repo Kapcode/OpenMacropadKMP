@@ -76,7 +76,8 @@ fun ProPurchaseDialog(
                     description = "Unlimited Pro access with a monthly or yearly sub.",
                     icon = Icons.Default.CalendarMonth,
                     onClick = onPurchaseSubscription,
-                    badge = if (isPro) "Active" else null
+                    badge = if (isPro) "Active" else null,
+                    highlight = !isPro
                 )
 
                 PurchaseOptionCard(
@@ -84,7 +85,7 @@ fun ProPurchaseDialog(
                     description = "Permanent Pro access for this device and server.",
                     icon = Icons.Default.CardMembership,
                     onClick = onPurchaseOneTime,
-                    highlight = true,
+                    highlight = !isPro,
                     badge = if (isPro) "Active" else if (isDeveloperMode) "DEV" else null
                 )
 
@@ -100,7 +101,8 @@ fun ProPurchaseDialog(
                     description = "Remove banner ads with a small monthly contribution.",
                     icon = Icons.Default.Block,
                     onClick = onRemoveAdsSubscription,
-                    badge = if (isAdFree) "Active" else null
+                    badge = if (isAdFree) "Active" else null,
+                    highlight = !isAdFree
                 )
 
                 PurchaseOptionCard(
@@ -108,7 +110,8 @@ fun ProPurchaseDialog(
                     description = "One-time payment to remove all banner ads forever.",
                     icon = Icons.Default.DoneAll,
                     onClick = onRemoveAdsOneTime,
-                    badge = if (isAdFree) "Active" else if (isDeveloperMode) "DEV" else null
+                    badge = if (isAdFree) "Active" else if (isDeveloperMode) "DEV" else null,
+                    highlight = !isAdFree
                 )
             }
         },

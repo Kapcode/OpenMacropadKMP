@@ -16,6 +16,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
+import kotlinx.coroutines.delay
 import switchdektoptocompose.ui.settings.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -78,12 +79,14 @@ fun SettingsDialog(
 
     LaunchedEffect(initialScrollToSecurity, securitySectionOffset) {
         if (initialScrollToSecurity && securitySectionOffset > 0) {
+            delay(100) // Wait for layout stability
             scrollState.animateScrollTo(securitySectionOffset.toInt())
         }
     }
 
     LaunchedEffect(initialScrollToVariables, variablesSectionOffset) {
         if (initialScrollToVariables && variablesSectionOffset > 0) {
+            delay(100) // Wait for layout stability
             scrollState.animateScrollTo(variablesSectionOffset.toInt())
         }
     }

@@ -179,8 +179,8 @@ class ClientActivity : ComponentActivity() {
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, activityScope)
 
-        billingManager = BillingManager(this, settingsViewModel, activityScope)
-        billingManager.startConnection()
+        billingManager = BillingManager.getInstance(this)
+        billingManager.startConnection(settingsViewModel)
 
         slamFireManager = SlamFireManager(this, settingsViewModel, activityScope) { isDouble ->
             handleSlamFire(isDouble)

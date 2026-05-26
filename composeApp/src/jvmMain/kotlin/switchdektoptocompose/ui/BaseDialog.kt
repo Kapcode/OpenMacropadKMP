@@ -11,6 +11,7 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import kotlinx.coroutines.delay
 import switchdektoptocompose.model.LogLevel
 import switchdektoptocompose.viewmodel.ConsoleViewModel
 
@@ -40,18 +41,36 @@ fun AppDialog(
         focusable = true,
         icon = icon
     ) {
+        // Force focus and repaint on init to avoid "glitched" non-responsive states
+        LaunchedEffect(Unit) {
+            repeat(3) { stage ->
+                window.toFront()
+                window.requestFocus()
+                window.revalidate()
+                window.repaint()
+                delay(if (stage == 0) 50 else 150)
+            }
+        }
+
         LaunchedEffect(state.isMinimized) {
             if (state.isMinimized && closeOnMinimize) {
                 consoleViewModel?.addLog(LogLevel.Info, "DIALOG CLOSED: $title minimized and was closed automatically.")
                 onCloseRequest()
             }
         }
-        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-            Surface(
-                modifier = Modifier.fillMaxSize(),
-                color = MaterialTheme.colorScheme.background // Explicitly set background color to prevent smearing
-            ) {
-                content()
+        
+        // Root Surface with explicit color prevents transparency/smearing before theme is fully applied
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = if (selectedTheme == "Dark Blue") androidx.compose.ui.graphics.Color(0xFF121212) else androidx.compose.ui.graphics.Color.White
+        ) {
+            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background // Explicitly set background color to prevent smearing
+                ) {
+                    content()
+                }
             }
         }
     }

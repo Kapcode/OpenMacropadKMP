@@ -99,8 +99,8 @@ class MainActivity : ComponentActivity() {
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
 
-        billingManager = BillingManager(this, settingsViewModel, lifecycleScope)
-        billingManager.startConnection()
+        billingManager = BillingManager.getInstance(this)
+        billingManager.startConnection(settingsViewModel)
 
         // Move discovery and heavy initialization to immediately after binding ViewModel
         lifecycleScope.launch(Dispatchers.IO) {

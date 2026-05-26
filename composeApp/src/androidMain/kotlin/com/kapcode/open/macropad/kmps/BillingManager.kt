@@ -2,6 +2,7 @@ package com.kapcode.open.macropad.kmps
 
 import android.app.Activity
 import android.content.Context
+import android.util.Log
 import android.widget.Toast
 import com.android.billingclient.api.*
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
@@ -10,12 +11,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-class BillingManager(
-    private val context: Context,
-    private val settingsViewModel: SettingsViewModel,
-    private val scope: CoroutineScope
-) {
-    private val billingClient = BillingClient.newBuilder(context)
+class BillingManager private constructor(context: Context) {
+    private val appContext = context.applicationContext
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var settingsViewModel: SettingsViewModel? = null
+
+    private val billingClient = BillingClient.newBuilder(appContext)
         .setListener { billingResult: BillingResult, purchases: List<Purchase>? ->
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && purchases != null) {
                 for (purchase in purchases) {
@@ -30,24 +31,68 @@ class BillingManager(
     val isAdFree: StateFlow<Boolean> = _isAdFree.asStateFlow()
 
     private val productDetailsMap = mutableMapOf<String, ProductDetails>()
+    private var isConnecting = false
 
-    fun startConnection() {
+    companion object {
+        @Volatile
+        private var instance: BillingManager? = null
+
+        fun getInstance(context: Context): BillingManager {
+            return instance ?: synchronized(this) {
+                instance ?: BillingManager(context).also { instance = it }
+            }
+        }
+    }
+
+    fun startConnection(settingsViewModel: SettingsViewModel) {
+        this.settingsViewModel = settingsViewModel
+        if (billingClient.isReady) {
+            Log.d("BillingManager", "BillingClient is already ready. Querying products...")
+            queryProductDetails()
+            checkPurchases()
+            return
+        }
+
+        if (isConnecting) return
+        isConnecting = true
+
+        Log.d("BillingManager", "Starting BillingClient connection...")
         billingClient.startConnection(object : BillingClientStateListener {
             override fun onBillingSetupFinished(billingResult: BillingResult) {
+                isConnecting = false
+                Log.d("BillingManager", "Billing setup finished. Response code: ${billingResult.responseCode}")
                 if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
                     queryProductDetails()
                     checkPurchases()
+                    
+                    // Periodically refresh product details to handle eventual consistency/sync issues
+                    scope.launch {
+                        while (isActive) {
+                            delay(300_000) // 5 minutes
+                            queryProductDetails()
+                        }
+                    }
+                } else {
+                    Log.e("BillingManager", "Billing setup failed: ${billingResult.debugMessage}")
                 }
             }
 
             override fun onBillingServiceDisconnected() {
-                // Handle retry logic
+                isConnecting = false
+                Log.w("BillingManager", "Billing service disconnected. Retrying in 5s...")
+                scope.launch {
+                    delay(5000)
+                    startConnection(settingsViewModel)
+                }
             }
         })
     }
 
     private fun queryProductDetails() {
-        val productList = listOf(
+        Log.d("BillingManager", "Querying product details (INAPP and SUBS separately)...")
+        
+        // 1. Query INAPP products
+        val inAppProductList = listOf(
             QueryProductDetailsParams.Product.newBuilder()
                 .setProductId(BillingConstants.PRODUCT_ID_PRO_ONE_TIME)
                 .setProductType(BillingClient.ProductType.INAPP)
@@ -55,7 +100,25 @@ class BillingManager(
             QueryProductDetailsParams.Product.newBuilder()
                 .setProductId(BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME)
                 .setProductType(BillingClient.ProductType.INAPP)
-                .build(),
+                .build()
+        )
+        val inAppParams = QueryProductDetailsParams.newBuilder().setProductList(inAppProductList).build()
+        
+        billingClient.queryProductDetailsAsync(inAppParams) { billingResult, productDetailsList ->
+            Log.d("BillingManager", "INAPP query response code: ${billingResult.responseCode}")
+            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+                Log.d("BillingManager", "Found ${productDetailsList.size} INAPP products")
+                productDetailsList.forEach { 
+                    Log.d("BillingManager", "Loaded INAPP: ${it.productId} (${it.name}) -> Price: ${it.oneTimePurchaseOfferDetails?.formattedPrice}")
+                    productDetailsMap[it.productId] = it 
+                }
+            } else {
+                Log.e("BillingManager", "INAPP query failed: ${billingResult.debugMessage}")
+            }
+        }
+
+        // 2. Query SUBS products
+        val subProductList = listOf(
             QueryProductDetailsParams.Product.newBuilder()
                 .setProductId(BillingConstants.PRODUCT_ID_PRO_SUB)
                 .setProductType(BillingClient.ProductType.SUBS)
@@ -65,12 +128,18 @@ class BillingManager(
                 .setProductType(BillingClient.ProductType.SUBS)
                 .build()
         )
+        val subParams = QueryProductDetailsParams.newBuilder().setProductList(subProductList).build()
 
-        val params = QueryProductDetailsParams.newBuilder().setProductList(productList).build()
-
-        billingClient.queryProductDetailsAsync(params) { billingResult, productDetailsList ->
+        billingClient.queryProductDetailsAsync(subParams) { billingResult, productDetailsList ->
+            Log.d("BillingManager", "SUBS query response code: ${billingResult.responseCode}")
             if (billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
-                productDetailsList.forEach { productDetailsMap[it.productId] = it }
+                Log.d("BillingManager", "Found ${productDetailsList.size} SUBS products")
+                productDetailsList.forEach { 
+                    Log.d("BillingManager", "Loaded SUBS: ${it.productId} (${it.name}) -> Offers: ${it.subscriptionOfferDetails?.size}")
+                    productDetailsMap[it.productId] = it 
+                }
+            } else {
+                Log.e("BillingManager", "SUBS query failed: ${billingResult.debugMessage}")
             }
         }
     }
@@ -78,7 +147,10 @@ class BillingManager(
     fun launchBillingFlow(activity: Activity, productId: String) {
         val productDetails = productDetailsMap[productId]
         if (productDetails == null) {
-            Toast.makeText(context, "Product details not found. Please ensure you have a stable internet connection and try again.", Toast.LENGTH_LONG).show()
+            val available = productDetailsMap.keys.joinToString(", ")
+            Toast.makeText(appContext, "Product ID '$productId' not found. Available: [$available]. Check connection or Play Console config.", Toast.LENGTH_LONG).show()
+            // Force a refresh if not found
+            queryProductDetails()
             return
         }
         
@@ -86,7 +158,6 @@ class BillingManager(
             BillingFlowParams.ProductDetailsParams.newBuilder()
                 .setProductDetails(productDetails)
                 .apply {
-                    // For subscriptions, set the offer token
                     if (productDetails.productType == BillingClient.ProductType.SUBS) {
                         productDetails.subscriptionOfferDetails?.getOrNull(0)?.offerToken?.let {
                             setOfferToken(it)
@@ -104,7 +175,8 @@ class BillingManager(
     }
 
     private fun checkPurchases() {
-        // Query In-App purchases
+        if (!billingClient.isReady) return
+
         billingClient.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.INAPP).build()
         ) { billingResult, purchaseList ->
@@ -113,7 +185,6 @@ class BillingManager(
             }
         }
 
-        // Query Subscriptions
         billingClient.queryPurchasesAsync(
             QueryPurchasesParams.newBuilder().setProductType(BillingClient.ProductType.SUBS).build()
         ) { billingResult, purchaseList ->
@@ -144,12 +215,12 @@ class BillingManager(
         scope.launch {
             if (purchase.products.contains(BillingConstants.PRODUCT_ID_PRO_ONE_TIME) ||
                 purchase.products.contains(BillingConstants.PRODUCT_ID_PRO_SUB)) {
-                settingsViewModel.setIsPro(true)
+                settingsViewModel?.setIsPro(true)
             }
             
             if (purchase.products.contains(BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME) ||
                 purchase.products.contains(BillingConstants.PRODUCT_ID_AD_FREE_SUB)) {
-                settingsViewModel.setIsAdFree(true)
+                settingsViewModel?.setIsAdFree(true)
                 _isAdFree.value = true
             }
         }

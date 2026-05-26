@@ -717,3 +717,14 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Implementation**: 
     - The `_isDeveloperMode` Flow in `SettingsViewModel.kt` defaults to `false` and should remain so in the repository.
     - **UI Control**: Visibility of sensitive developer-only UI (like the Pro switch in the Marketplace) MUST be bound to the `isDeveloperMode` flag.
+
+## 58. Troubleshooting Google Play Billing: "Version Not Configured"
+
+### Challenge: Local APK Mismatch
+- **Problem**: Receiving a Google Play error: "The version of this application is not configured for billing through google play."
+- **Diagnosis**: This occurs when the APK installed on the device is not recognized by the Play Store as a valid testing version.
+- **Mandatory Fixes**:
+    1.  **Release Signing**: The app MUST be built as a **Signed Release APK** using the production keystore. Local debug builds signed with the auto-generated debug key will always fail this check.
+    2.  **Internal Testing Track**: The signed APK (matching the current `versionCode`) MUST be uploaded to an **Internal Testing** or **Closed Testing** track in the Google Play Console.
+    3.  **Tester Opt-in**: The device's primary Google account MUST be added as a tester in the track, and the user MUST navigate to the opt-in URL provided by the Console to accept the test.
+    4.  **License Testing**: In the Play Console (Setup > License Testing), ensure the tester's email is added to allow test purchases.
