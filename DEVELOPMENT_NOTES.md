@@ -677,3 +677,43 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Solution**:
     - **Custom Discriminator**: Applied `@JsonClassDiscriminator("kind")` to the `AutomationAction` sealed class. This moves the polymorphism metadata to a new JSON field (`kind`), freeing up the `type` property for use by the data models.
     - **Experimental API Opt-In**: Added `@file:OptIn(ExperimentalSerializationApi::class)` to `AutomationAST.kt` to enable the use of the custom discriminator annotation.
+
+## 54. Compiler Warning Cleanup & Performance Regressions
+
+### Challenge: JVM System Crawl after "Style" Cleanups
+- **Problem**: A batch of standard compiler warning fixes (adding named arguments, clarifying parentheses, and moving lambdas) caused the application to slow down the entire host virtual machine to a crawl, despite low CPU usage.
+- **Root Cause**: Likely an interaction between the Kotlin compiler's bytecode generation for certain constructs (like `mutableStateOf` with named arguments) and the JIT compiler or VM runtime in performance-critical loops (Heartbeat watchdog or JS bridge).
+- **Solution**: 
+    - **Cautious Re-application**: Reverted all changes and re-applied only unambiguous static cleanups.
+    - **Functional Fixes ONLY**: Restricted JVM cleanups to unused import removal, unused exception parameters (`_`), and removing unused loop variables.
+    - **Avoided Syntactic Sugar**: Specifically avoided adding named arguments or extra parentheses in the `MacroKtorServer` watchdog and `MacroPlayer` execution loops to maintain original bytecode performance characteristics.
+    - **Incremental Verification**: Adopted a "Small Batch & Monitor" strategy for all future IDE-suggested cleanups.
+
+## 55. Billing Implementation & Marketplace Placeholder
+
+### Challenge: Finishing the Billing Flow
+- **Problem**: Several purchase options (One-time Pro, Subscription Pro, Ad-Free) needed to be unified and wired to the Google Play Billing Library.
+- **Solution**: 
+    - **Unified Dialog**: Completed the `ProPurchaseDialog` with all five purchase/reward options.
+    - **Product ID Standardization**: Updated `BillingConstants.kt` to include `openmacropadkmp_pro_subscription` and `openmacropadkmp_ad_free_subscription`.
+    - **Simulation Support**: Ensured "Developer Mode" in `CommonAppBar` correctly bypasses Play Store for local testing of all tiers.
+    - **Lifecycle Integration**: Verified `BillingManager` correctly queries and handles both In-App and Subscription product types.
+
+### Challenge: Communicating Marketplace Status
+- **Problem**: The Marketplace tab was empty, which could be confusing for new users.
+- **Solution**: Added a "Marketplace Coming Soon" placeholder to `MarketplaceScreen.kt` on Android, featuring a `Storefront` icon and a descriptive message about future community macro packs.
+
+## 56. Marketplace Tab Fix & Communication Bridge
+- **Problem**: The Marketplace tab on Android was stuck on a loading spinner because the server wasn't handling the `getMarketplace` command.
+- **Solution**:
+    - **Command Wiring**: Updated `ClientCommunicationViewModel.kt` (JVM) to handle the `getMarketplace` command and return a response.
+    - **DI Reference**: Wired `MarketplaceViewModel` into the communication bridge via `ViewModelFactory`.
+    - **Loading Safety**: Added a 5-second timeout in `ClientViewModel.kt` (Android) to ensure the loading indicator is cleared even if the network fails.
+    - **Coming Soon Trigger**: Set the server to return an empty list for now, which triggers the newly added "Coming Soon" UI on the Android client.
+
+## 57. Security & Billing Standards: Developer Mode
+- **Rule**: "Developer Mode" (used for bypassing Google Play Billing and other simulations) MUST only be toggled via direct source code modification.
+- **Rationale**: To prevent accidental activation or exploitation by end-users, this flag should never be exposed as a setting in the UI, even in an "Advanced" section.
+- **Implementation**: 
+    - The `_isDeveloperMode` Flow in `SettingsViewModel.kt` defaults to `false` and should remain so in the repository.
+    - **UI Control**: Visibility of sensitive developer-only UI (like the Pro switch in the Marketplace) MUST be bound to the `isDeveloperMode` flag.

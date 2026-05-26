@@ -24,6 +24,7 @@ class ClientCommunicationViewModel(
     lateinit var macroManagerViewModel: MacroManagerViewModel
     lateinit var serverViewModel: ServerViewModel
     lateinit var layoutViewModel: LayoutViewModel
+    lateinit var marketplaceViewModel: MarketplaceViewModel
 
     private val viewModelScope = CoroutineScope(Dispatchers.Main)
 
@@ -393,7 +394,15 @@ class ClientCommunicationViewModel(
             },
             onCommand = { cmd, _ ->
                 consoleViewModel.addLog(LogLevel.Debug, "Command received from $clientId: $cmd")
-                if (cmd.startsWith("play:")) {
+                if (cmd == "getMarketplace") {
+                    // Send an empty list for now to show "Coming Soon" on Android
+                    val items = emptyList<com.kapcode.open.macropad.kmps.models.MarketplaceItem>()
+                    val json = Json { ignoreUnknownKeys = true }
+                    viewModelScope.launch {
+                        serverViewModel.server.sendToClient(clientId, dataMessage("marketplace_items", json.encodeToString(items).encodeToByteArray()))
+                    }
+                    consoleViewModel.addLog(LogLevel.Debug, "Sent (empty) marketplace items to $clientId to trigger 'Coming Soon' UI")
+                } else if (cmd.startsWith("play:")) {
                     if (isMacroExecutionEnabled.value) {
                         val macroName = cmd.substringAfter("play:")
                         val isTrusted = serverViewModel.server.isDeviceTrusted(clientId)

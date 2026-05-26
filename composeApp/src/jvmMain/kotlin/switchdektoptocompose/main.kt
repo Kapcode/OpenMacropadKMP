@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
 import com.formdev.flatlaf.FlatDarkLaf
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import kotlinx.coroutines.delay
 import switchdektoptocompose.di.ViewModelFactory
 import switchdektoptocompose.logic.InspectorManager
 import switchdektoptocompose.logic.TriggerListener
@@ -481,6 +482,20 @@ fun main(args: Array<String>) {
         title = "Open Macropad (Compose)",
         icon = icon
     ) {
+        // Force window to front and request focus when shown to avoid "glitched" non-responsive states
+        LaunchedEffect(desktopWindowState.isWindowVisible) {
+            if (desktopWindowState.isWindowVisible) {
+                window.toFront()
+                window.requestFocus()
+                // Safety repaint for software rendering
+                window.repaint()
+
+                // "Poke" the window manager after content is ready to ensure first frame renders
+                delay(100)
+                desktopWindowState.windowState.placement = WindowPlacement.Maximized
+            }
+        }
+
         DesktopApp(
             viewModels = viewModels,
             desktopWindowState = desktopWindowState,

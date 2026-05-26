@@ -1,8 +1,8 @@
 package com.kapcode.open.macropad.kmps.ui.components
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -49,77 +49,67 @@ fun ProPurchaseDialog(
             }
         },
         text = {
-            LazyColumn(
+            Column(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
             ) {
-                item {
-                    Text(
-                        text = "Get global server access for 12 hours. Pro status is shared with the server and all connected clients.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
-                    )
-                }
+                Text(
+                    text = "Get global server access for 12 hours. Pro status is shared with the server and all connected clients.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 8.dp)
+                )
 
-                item {
-                    PurchaseOptionCard(
-                        title = "Watch Ad",
-                        description = "Earn ${BillingConstants.TOKENS_PER_REWARDED_AD} tokens for free.",
-                        icon = Icons.Default.PlayCircle,
-                        onClick = onWatchAd
-                    )
-                }
+                PurchaseOptionCard(
+                    title = "Watch Ad",
+                    description = "Earn ${BillingConstants.TOKENS_PER_REWARDED_AD} tokens for free.",
+                    icon = Icons.Default.PlayCircle,
+                    onClick = onWatchAd
+                )
 
-                item {
-                    PurchaseOptionCard(
-                        title = "Pro Subscription",
-                        description = "Unlimited Pro access with a monthly or yearly sub.",
-                        icon = Icons.Default.CalendarMonth,
-                        onClick = onPurchaseSubscription,
-                        badge = if (isPro) "Active" else null
-                    )
-                }
+                PurchaseOptionCard(
+                    title = "Pro Subscription",
+                    description = "Unlimited Pro access with a monthly or yearly sub.",
+                    icon = Icons.Default.CalendarMonth,
+                    onClick = onPurchaseSubscription,
+                    badge = if (isPro) "Active" else null
+                )
 
-                item {
-                    PurchaseOptionCard(
-                        title = "Pro Pass (One-Time)",
-                        description = "Permanent Pro access for this device and server.",
-                        icon = Icons.Default.CardMembership,
-                        onClick = onPurchaseOneTime,
-                        highlight = true,
-                        badge = if (isPro) "Active" else if (isDeveloperMode) "DEV" else null
-                    )
-                }
+                PurchaseOptionCard(
+                    title = "Pro Pass (One-Time)",
+                    description = "Permanent Pro access for this device and server.",
+                    icon = Icons.Default.CardMembership,
+                    onClick = onPurchaseOneTime,
+                    highlight = true,
+                    badge = if (isPro) "Active" else if (isDeveloperMode) "DEV" else null
+                )
 
-                item {
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    Text(
-                        text = "Remove Ads Only",
-                        style = MaterialTheme.typography.titleSmall,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                Text(
+                    text = "Remove Ads Only",
+                    style = MaterialTheme.typography.titleSmall,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
 
-                item {
-                    PurchaseOptionCard(
-                        title = "Remove Ads (Sub)",
-                        description = "Remove banner ads with a small monthly contribution.",
-                        icon = Icons.Default.Block,
-                        onClick = onRemoveAdsSubscription,
-                        badge = if (isAdFree) "Active" else null
-                    )
-                }
+                PurchaseOptionCard(
+                    title = "Remove Ads (Sub)",
+                    description = "Remove banner ads with a small monthly contribution.",
+                    icon = Icons.Default.Block,
+                    onClick = onRemoveAdsSubscription,
+                    badge = if (isAdFree) "Active" else null
+                )
 
-                item {
-                    PurchaseOptionCard(
-                        title = "Remove Ads (One-Time)",
-                        description = "One-time payment to remove all banner ads forever.",
-                        icon = Icons.Default.DoneAll,
-                        onClick = onRemoveAdsOneTime,
-                        badge = if (isAdFree) "Active" else if (isDeveloperMode) "DEV" else null
-                    )
-                }
+                PurchaseOptionCard(
+                    title = "Remove Ads (One-Time)",
+                    description = "One-time payment to remove all banner ads forever.",
+                    icon = Icons.Default.DoneAll,
+                    onClick = onRemoveAdsOneTime,
+                    badge = if (isAdFree) "Active" else if (isDeveloperMode) "DEV" else null
+                )
             }
         },
         confirmButton = {
@@ -140,9 +130,8 @@ private fun PurchaseOptionCard(
     highlight: Boolean = false
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
             containerColor = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
         )

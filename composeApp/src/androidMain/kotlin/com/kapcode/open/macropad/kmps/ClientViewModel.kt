@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 data class ClientUiState(
     val connectionStatus: String = "Disconnected",
@@ -329,6 +330,14 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     fun requestMarketplace() {
         _uiState.update { it.copy(isMarketplaceLoading = true) }
         repository.requestMarketplace()
+        
+        // Add a safety timeout to clear the loading state if the server doesn't respond
+        viewModelScope.launch {
+            delay(5000)
+            if (_uiState.value.isMarketplaceLoading) {
+                _uiState.update { it.copy(isMarketplaceLoading = false) }
+            }
+        }
     }
 
     fun setMarketplaceItems(items: List<MarketplaceItem>) {

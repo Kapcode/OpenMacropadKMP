@@ -145,6 +145,7 @@ object ViewModelFactory {
         val pairingViewModel = remember { PairingViewModel(settingsViewModel, clientCommunicationViewModel.pendingPairingRequests) }
 
         // Final wiring
+        clientCommunicationViewModel.marketplaceViewModel = marketplaceViewModel
         macroManagerViewModel.onEditMacroRequested = { macroState ->
             macroEditorViewModel.openOrSwitchToTab(macroState)
             layoutViewModel.setMainTab(1) // Switch to Editor tab

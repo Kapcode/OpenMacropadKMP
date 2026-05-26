@@ -450,6 +450,7 @@ fun ClientScreen(
                                             MarketplaceScreen(
                                                 items = uiState.marketplaceItems,
                                                 isPro = uiState.isPro,
+                                                isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
                                                 onProToggle = { clientViewModel.setIsPro(it) },
                                                 onDownload = { clientViewModel.downloadMarketplaceItem(it) }
                                             )

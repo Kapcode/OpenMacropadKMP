@@ -7,11 +7,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
@@ -21,6 +23,7 @@ import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 fun MarketplaceScreen(
     items: List<MarketplaceItem>,
     isPro: Boolean,
+    isDeveloperMode: Boolean,
     onProToggle: (Boolean) -> Unit,
     onDownload: (MarketplaceItem) -> Unit,
     modifier: Modifier = Modifier
@@ -34,7 +37,9 @@ fun MarketplaceScreen(
     }
 
     Column(modifier = modifier.fillMaxSize()) {
-        ProAccessSection(isPro = isPro, onProToggle = onProToggle)
+        if (isDeveloperMode) {
+            ProAccessSection(isPro = isPro, onProToggle = onProToggle)
+        }
         
         SearchBar(
             query = searchQuery,
@@ -44,13 +49,44 @@ fun MarketplaceScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
 
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            items(filteredItems) { item ->
-                MarketplaceItemCard(item = item, onDownload = { onDownload(item) })
+        if (items.isEmpty()) {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Storefront,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "Marketplace Coming Soon",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    Text(
+                        text = "Soon you will be able to browse and download community macro packs directly from the app.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredItems) { item ->
+                    MarketplaceItemCard(item = item, onDownload = { onDownload(item) })
+                }
             }
         }
     }

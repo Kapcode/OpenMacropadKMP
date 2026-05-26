@@ -1,7 +1,6 @@
 package com.kapcode.open.macropad.kmps.models
 
 import kotlinx.serialization.Serializable
-import com.kapcode.open.macropad.kmps.models.AutomationRoutine
 
 @Serializable
 enum class WidgetType { BUTTON, TOGGLE, SLIDER_HORIZONTAL, SLIDER_VERTICAL }

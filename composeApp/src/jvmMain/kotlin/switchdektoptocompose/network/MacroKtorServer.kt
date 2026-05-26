@@ -253,7 +253,7 @@ class MacroKtorServer(
                     else -> { /* Ktor handles Ping/Pong */ }
                 }
             }
-        } catch (e: ClosedReceiveChannelException) {
+        } catch (_: ClosedReceiveChannelException) {
             logger.info("Client disconnected: {}", client.id)
         } catch (e: Exception) {
             logger.error("Error in session for {}", client.id, e)
@@ -457,7 +457,7 @@ class MacroKtorServer(
         try {
             client.session.send(Frame.Binary(true, controlMessage(ControlCommand.DISCONNECT, mapOf("reason" to reason)).toBytes()))
             client.session.close(CloseReason(CloseReason.Codes.NORMAL, reason))
-        } catch (e: Exception) {}
+        } catch (_: Exception) {}
         
         // Explicitly remove and notify ONLY if this is still the active session for this ID
         if (clients[clientId] === client) {

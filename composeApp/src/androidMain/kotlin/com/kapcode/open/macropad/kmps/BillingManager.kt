@@ -2,6 +2,7 @@ package com.kapcode.open.macropad.kmps
 
 import android.app.Activity
 import android.content.Context
+import android.widget.Toast
 import com.android.billingclient.api.*
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import kotlinx.coroutines.*
@@ -75,7 +76,11 @@ class BillingManager(
     }
 
     fun launchBillingFlow(activity: Activity, productId: String) {
-        val productDetails = productDetailsMap[productId] ?: return
+        val productDetails = productDetailsMap[productId]
+        if (productDetails == null) {
+            Toast.makeText(context, "Product details not found. Please ensure you have a stable internet connection and try again.", Toast.LENGTH_LONG).show()
+            return
+        }
         
         val productDetailsParamsList = listOf(
             BillingFlowParams.ProductDetailsParams.newBuilder()

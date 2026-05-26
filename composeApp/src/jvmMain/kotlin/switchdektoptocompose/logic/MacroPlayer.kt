@@ -6,7 +6,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.yield
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
-import org.graalvm.polyglot.Value
 import switchdektoptocompose.model.*
 import java.awt.MouseInfo
 import java.awt.Robot
@@ -37,50 +36,61 @@ class MacroPlayer(
     }
 
     inner class KapHostApi {
+        @Suppress("unused")
         fun pressKey(keyName: String) {
             val keyCodes = KeyParser.parseAwtKeys(keyName)
             keyCodes.forEach { robot.keyPress(it) }
         }
+        @Suppress("unused")
         fun releaseKey(keyName: String) {
             val keyCodes = KeyParser.parseAwtKeys(keyName)
             keyCodes.forEach { robot.keyRelease(it) }
         }
+        @Suppress("unused")
         fun moveMouse(x: Int, y: Int) {
             robot.mouseMove(x, y)
         }
+        @Suppress("unused")
         fun clickMouse(button: Int) {
             val mask = InputEvent.getMaskForButton(button)
             robot.mousePress(mask)
             robot.mouseRelease(mask)
         }
+        @Suppress("unused")
         fun delay(ms: Long) {
             Thread.sleep(ms)
         }
+        @Suppress("unused")
         fun log(message: String) {
             onLog(LogLevel.Info, "[JS] $message")
         }
+        @Suppress("unused")
         fun getActiveProcess(): String? {
             return this@MacroPlayer.getActiveProcess()
         }
+        @Suppress("unused")
         fun playMacro(macroId: String) {
             onPlayMacroRequested(macroId)
         }
+        @Suppress("unused")
         fun notify(message: String) {
             onNotify(message)
         }
+        @Suppress("unused")
         fun getClipboardText(): String? {
             return try {
                 val transferable = java.awt.Toolkit.getDefaultToolkit().systemClipboard.getContents(null)
                 if (transferable != null && transferable.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.stringFlavor)) {
                     transferable.getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
                 } else null
-            } catch (e: Exception) { null }
+            } catch (_: Exception) { null }
         }
+        @Suppress("unused")
         fun setClipboardText(text: String) {
             try {
                 val selection = java.awt.datatransfer.StringSelection(text)
                 java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
-            } catch (e: Exception) { }
+            } catch (_: Exception) { }
         }
     }
 
@@ -97,7 +107,7 @@ class MacroPlayer(
     suspend fun play(events: List<MacroEventState>) {
         val initialAutoDelay = robot.autoDelay
         try {
-            for ((index, event) in events.withIndex()) {
+            for (event in events) {
                 yield() // Check for cancellation
                 
                 when (event) {

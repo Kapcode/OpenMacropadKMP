@@ -6,8 +6,8 @@ object BillingConstants {
     const val STARTING_TOKENS = 500
 
     // Google Play Billing Product IDs
-    const val PRODUCT_ID_PRO_ONE_TIME = "pro_pass_one_time"
-    const val PRODUCT_ID_PRO_SUB = "pro_subscription"
-    const val PRODUCT_ID_AD_FREE_ONE_TIME = "ad_free_one_time"
-    const val PRODUCT_ID_AD_FREE_SUB = "ad_free_subscription"
+    const val PRODUCT_ID_PRO_ONE_TIME = "lifetime_openmacropadkmp_pro"
+    const val PRODUCT_ID_PRO_SUB = "openmacropadkmp_pro_subscription"
+    const val PRODUCT_ID_AD_FREE_ONE_TIME = "openmacropadkmp_remove_intrusive_ads"
+    const val PRODUCT_ID_AD_FREE_SUB = "openmacropadkmp_ad_free_subscription"
 }

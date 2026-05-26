@@ -11,7 +11,6 @@ import com.kapcode.open.macropad.kmps.network.sockets.model.handle
 import com.kapcode.open.macropad.kmps.utils.HashUtils
 import io.ktor.client.*
 import io.ktor.client.plugins.websocket.*
-import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
@@ -68,7 +67,7 @@ class MacroKtorClient(
                 delay(5000)
                 try {
                     session?.send(Frame.Binary(true, heartbeatMessage().toBytes()))
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     break
                 }
             }

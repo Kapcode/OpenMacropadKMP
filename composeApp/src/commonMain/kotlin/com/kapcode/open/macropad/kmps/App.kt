@@ -11,7 +11,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
-import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
 import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import androidx.compose.ui.tooling.preview.Preview
@@ -87,7 +86,9 @@ fun App(
                     // This will be handled by the caller to update storage and state
                     onConnectClick(server.copy(name = "SET_DEFAULT"), deviceName)
                 },
-                onClick = { onConnectClick(server, deviceName) }
+                onClick = {
+                    onConnectClick(server, deviceName)
+                }
             )
         }
         
