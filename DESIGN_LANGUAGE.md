@@ -164,3 +164,22 @@ The UI is designed to be fully navigable via D-Pad and Left Stick:
     - **Accept**: Bottom face button (e.g., 'A' / Cross).
     - **Back/Cancel**: Right face button (e.g., 'B' / Circle).
     - **Menu**: 'Start' or 'Menu' button.
+
+## 6. Monetization & Marketplace UI
+
+### Purchase Cards & Ads
+- **Highlighting**: Use `primaryContainer` for tiers the user *doesn't* yet own to draw attention.
+- **Sticky Ad Footers**: All banner ads on scrollable screens (Marketplace, Settings) MUST be implemented as sticky footers. They stay visible at the bottom of the screen while content scrolls behind/above them.
+- **Universal Ad Logic**: Ads MUST be hidden if any of the following are true:
+    - `isPro` (local purchase) is active.
+    - `isAdFree` (local purchase) is active.
+    - `isServerProActive` (shared status from server) is active.
+- **Badges**:
+    - **WATCH AD**: Used for free rewarded options.
+    - **$ Tags**: Relative price indicators ($ to $$$$$) pinned to the top-right of purchase cards.
+    - **ACTIVE**: Primary-colored badge for currently owned tiers.
+- **Benefit Lists**: Displayed as small-text bullet points with check icons (`Icons.Default.Check`) below the product description.
+- **Currency**: Tokens are represented by `Icons.Default.CurrencyExchange` in `GoldCurrencyColor` (0xFFFFD700).
+
+### Marketplace Status
+- **Marketplace Coming Soon**: Displays a `Storefront` icon with a description about future community macro packs.

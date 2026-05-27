@@ -260,6 +260,7 @@ fun MacroGridItem(
     isDragging: Boolean = false,
     dragOffset: IntOffset = IntOffset.Zero,
     currency: Long = 0,
+    isPro: Boolean = false,
     onInteraction: (GridWidget) -> Unit,
     onLongClick: () -> Unit = {}
 ) {
@@ -320,7 +321,7 @@ fun MacroGridItem(
             }
         ) {
             when (widget.type) {
-                WidgetType.BUTTON -> ButtonContent(widget, isExecuting, currency)
+                WidgetType.BUTTON -> ButtonContent(widget, isExecuting, currency, isPro)
                 WidgetType.TOGGLE -> ToggleContent(widget, isExecuting)
                 WidgetType.SLIDER_HORIZONTAL -> SliderHorizontalContent(widget, onInteraction)
                 WidgetType.SLIDER_VERTICAL -> SliderVerticalContent(widget, onInteraction)
@@ -330,28 +331,47 @@ fun MacroGridItem(
 }
 
 @Composable
-fun ButtonContent(widget: GridWidget, isExecuting: Boolean, currency: Long) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize().padding(8.dp)
-    ) {
-        Icon(IconMapper.getIcon(widget.icon), contentDescription = null, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(
-            widget.label,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.labelLarge,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        if (isExecuting) {
+fun ButtonContent(widget: GridWidget, isExecuting: Boolean, currency: Long, isPro: Boolean = false) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize().padding(8.dp)
+        ) {
+            Icon(IconMapper.getIcon(widget.icon), contentDescription = null, modifier = Modifier.size(24.dp))
             Spacer(Modifier.height(4.dp))
-            LinearProgressIndicator(
-                modifier = Modifier.fillMaxWidth(0.8f).height(2.dp),
-                color = LocalContentColor.current
+            Text(
+                widget.label,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
+            if (isExecuting) {
+                Spacer(Modifier.height(4.dp))
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(0.8f).height(2.dp),
+                    color = LocalContentColor.current
+                )
+            }
+        }
+
+        // Token cost badge (only if not Pro)
+        if (!isPro) {
+            Badge(
+                containerColor = GoldCurrencyColor,
+                contentColor = Color.Black,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+            ) {
+                Text(
+                    text = "${BillingConstants.TOKENS_PER_MACRO_PRESS}",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
     }
 }
@@ -477,6 +497,7 @@ fun MacroButtonsScreen(
     onRemoveWidget: (GridWidget) -> Unit = {},
     onMoveWidget: (Int, Int) -> Unit = { _, _ -> },
     currency: Long = 0,
+    isPro: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val gridState = rememberLazyGridState()
@@ -571,6 +592,7 @@ fun MacroButtonsScreen(
                     isDragging = draggingIndex == index,
                     dragOffset = dragOffset,
                     currency = currency,
+                    isPro = isPro,
                     onInteraction = onWidgetInteraction,
                     onLongClick = { onWidgetLongClick(widget) }
                 )

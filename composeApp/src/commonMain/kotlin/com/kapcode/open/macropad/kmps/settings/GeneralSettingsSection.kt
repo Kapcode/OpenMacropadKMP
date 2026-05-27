@@ -30,6 +30,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import com.kapcode.open.macropad.kmps.isDesktop
 import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
@@ -48,35 +49,37 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
     val scope = rememberCoroutineScope()
 
     Column {
-        Text("Directory Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
-        Column(Modifier.padding(horizontal = 16.dp)) {
-            OutlinedTextField(
-                value = macroDirectory.ifEmpty { "No directory selected" },
-                onValueChange = {},
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                label = { Text("Macro Storage Path") },
-                trailingIcon = {
-                    Row {
-                        IconButton(onClick = {
-                            if (macroDirectory.isNotEmpty()) {
-                                scope.launch {
-                                    clipboard.copyToClipboard(macroDirectory)
+        if (isDesktop) {
+            Text("Directory Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+            Column(Modifier.padding(horizontal = 16.dp)) {
+                OutlinedTextField(
+                    value = macroDirectory.ifEmpty { "No directory selected" },
+                    onValueChange = {},
+                    modifier = Modifier.fillMaxWidth(),
+                    readOnly = true,
+                    label = { Text("Macro Storage Path") },
+                    trailingIcon = {
+                        Row {
+                            IconButton(onClick = {
+                                if (macroDirectory.isNotEmpty()) {
+                                    scope.launch {
+                                        clipboard.copyToClipboard(macroDirectory)
+                                    }
                                 }
+                            }) {
+                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
                             }
-                        }) {
-                            Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                            IconButton(onClick = { viewModel.onOpenFolder() }) {
+                                Icon(Icons.Default.FolderOpen, contentDescription = "Open Folder")
+                            }
                         }
-                        IconButton(onClick = { viewModel.onOpenFolder() }) {
-                            Icon(Icons.Default.FolderOpen, contentDescription = "Open Folder")
-                        }
-                    }
-                },
-                isError = macroDirectory.isEmpty()
-            )
-        }
+                    },
+                    isError = macroDirectory.isEmpty()
+                )
+            }
 
-        HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+        }
 
         Text("Theme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Column(Modifier.selectableGroup()) {
@@ -84,13 +87,12 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(56.dp)
                         .selectable(
                             selected = (theme == currentTheme),
                             onClick = { viewModel.setTheme(theme) },
                             role = Role.RadioButton
                         )
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     RadioButton(
@@ -112,8 +114,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -133,8 +134,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -178,8 +178,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
@@ -235,11 +234,10 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Enable Notifications", modifier = Modifier.weight(1f))
+            Text("Enable Notifications", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Switch(
                 checked = enableToasts,
                 onCheckedChange = { viewModel.setEnableToasts(it) }
@@ -249,11 +247,10 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Notifications in Background", modifier = Modifier.weight(1f))
+            Text("Notifications in Background", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Switch(
                 checked = enableBackgroundToasts,
                 onCheckedChange = { viewModel.setEnableBackgroundToasts(it) }

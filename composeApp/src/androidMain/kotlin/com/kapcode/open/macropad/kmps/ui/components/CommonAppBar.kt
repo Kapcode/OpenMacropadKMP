@@ -6,8 +6,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -75,12 +73,14 @@ fun CommonAppBar(
     billingManager: BillingManager? = null,
     onProPurchaseClick: (() -> Unit)? = null,
     onAdFreePurchaseClick: (() -> Unit)? = null,
+    tokensPerAd: Int = BillingConstants.TOKENS_PER_REWARDED_AD,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val context = LocalContext.current
     val activity = context as Activity
     val tokenManager = remember { TokenManager.getInstance(context) }
     val tokenBalance by tokenManager.tokenBalance.collectAsState()
+    val formattedPrices by (billingManager?.formattedPrices?.collectAsState() ?: remember { mutableStateOf(emptyMap()) })
     var showProPurchaseDialog by remember { mutableStateOf(false) }
 
     if (showProPurchaseDialog) {
@@ -89,18 +89,19 @@ fun CommonAppBar(
             isPro = isPro || isServerPro,
             isAdFree = isAdFree,
             isDeveloperMode = isDeveloperMode,
+            formattedPrices = formattedPrices,
+            tokensPerAd = tokensPerAd,
             onWatchAd = {
                 loadRewardedAd(
                     context,
                     onAdLoaded = { ad ->
                         showRewardedAd(activity, ad) {
-                            tokenManager.awardTokens(BillingConstants.TOKENS_PER_REWARDED_AD)
+                            tokenManager.awardTokens(tokensPerAd)
                         }
-                    },
-                    onAdFailedToLoad = {
-                        Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
                     }
-                )
+                ) {
+                    Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
+                }
                 showProPurchaseDialog = false
             },
             onPurchaseSubscription = {

@@ -90,7 +90,7 @@ import kotlinx.coroutines.*
 @OptIn(ExperimentalMaterial3Api::class)
 class ClientActivity : ComponentActivity() {
 
-    private val settingsViewModel = SettingsViewModel()
+    private val settingsViewModel = MacroApplication.settingsViewModel
     private lateinit var clientRepository: ClientRepository
     private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
@@ -186,12 +186,15 @@ class ClientActivity : ComponentActivity() {
             handleSlamFire(isDouble)
         }
 
+        MacroApplication.analyticsManager.trackScreen("Client", "ClientActivity")
+
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
             val uiState by clientViewModel.uiState.collectAsState()
             
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
-                val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
+                CompositionLocalProvider(com.kapcode.open.macropad.kmps.utils.LocalClipboardManager provides com.kapcode.open.macropad.kmps.utils.ClipboardManager()) {
+                    val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
                 val tokenBalance by tokenManager.tokenBalance.collectAsState()
 
                 LaunchedEffect(Unit) {
@@ -258,6 +261,7 @@ class ClientActivity : ComponentActivity() {
                         Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
                     }
                 )
+                }
             }
         }
     }

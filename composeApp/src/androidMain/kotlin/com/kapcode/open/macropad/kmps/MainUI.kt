@@ -82,6 +82,14 @@ fun MainUI(
         showSettings = false
     }
 
+    LaunchedEffect(showSettings) {
+        if (showSettings) {
+            MacroApplication.analyticsManager.trackScreen("Settings", "MainUI")
+        } else {
+            MacroApplication.analyticsManager.trackScreen("ServerList", "MainUI")
+        }
+    }
+
     AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
         CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
             Scaffold(
@@ -109,9 +117,11 @@ fun MainUI(
                 val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
                 val isPro = settingsViewModel.isPro.collectAsState().value
                 val isAdFree = settingsViewModel.isAdFree.collectAsState().value
-                val adsDisabled = isPro || isAdFree
+                val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
+                val adsDisabled = isPro || isAdFree || isServerPro
+                val shouldShowAd = showAd && !isLandscape && !isGlobalLoading && !showSettings && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible
                 
-                if (showAd && !isLandscape && !isGlobalLoading && !showSettings && !adsDisabled) {
+                if (shouldShowAd) {
                     BottomAppBar { AdmobBanner() }
                 }
             }

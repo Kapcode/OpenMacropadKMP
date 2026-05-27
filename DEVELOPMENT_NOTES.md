@@ -703,11 +703,14 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: The Marketplace tab was empty, which could be confusing for new users.
 - **Solution**: Added a "Marketplace Coming Soon" placeholder to `MarketplaceScreen.kt` on Android, featuring a `Storefront` icon and a descriptive message about future community macro packs.
 
-## 56. Marketplace Tab Fix & Communication Bridge
-- **Problem**: The Marketplace tab on Android was stuck on a loading spinner because the server wasn't handling the `getMarketplace` command.
+## 57. Enhanced Purchase UI & Dynamic Billing
+- **Problem**: The original `ProPurchaseDialog` had static text, hardcoded prices, and a confusing layout for various tiers (Pro vs Ad-Free).
 - **Solution**:
-    - **Command Wiring**: Updated `ClientCommunicationViewModel.kt` (JVM) to handle the `getMarketplace` command and return a response.
-    - **DI Reference**: Wired `MarketplaceViewModel` into the communication bridge via `ViewModelFactory`.
+    - **Dynamic Product Data**: Updated `BillingManager` to expose `formattedPrices` as a `StateFlow`, allowing the UI to show real localized prices from Google Play.
+    - **Logical Tiering**: Reordered options to: Watch Ad -> One-Time (Ad-Free, Pro) -> Subscriptions (Ad-Free, Pro).
+    - **Tier Visualization**: Introduced a dollar-sign badge system ($ to $$$$$) aligned to the right, indicating relative value/price.
+    - **Benefit Clarification**: Explicitly detailed which ads are removed (banner, interruptible) and clarified that rewarded ads for tokens remain available.
+    - **Responsive Layout**: Moved badges to a separate column with `Arrangement.SpaceBetween` to prevent squishing when titles are long.
     - **Loading Safety**: Added a 5-second timeout in `ClientViewModel.kt` (Android) to ensure the loading indicator is cleared even if the network fails.
     - **Coming Soon Trigger**: Set the server to return an empty list for now, which triggers the newly added "Coming Soon" UI on the Android client.
 

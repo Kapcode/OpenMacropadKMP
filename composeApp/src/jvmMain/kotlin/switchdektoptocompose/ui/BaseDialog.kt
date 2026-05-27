@@ -41,13 +41,23 @@ fun AppDialog(
         focusable = true,
         icon = icon
     ) {
-        // Force focus and repaint on init to avoid "glitched" non-responsive states
+        // Force focus and repaint on init to avoid "glitched" non-responsive states.
+        // In VM environments, we perform an aggressive sequence to ensure the Skia surface renders.
         LaunchedEffect(Unit) {
-            repeat(3) { stage ->
+            repeat(5) { stage ->
                 window.toFront()
                 window.requestFocus()
                 window.revalidate()
                 window.repaint()
+                
+                // On the third stage, perform a tiny move to trigger window manager refresh
+                if (stage == 2) {
+                    val pos = window.location
+                    window.setLocation(pos.x + 1, pos.y)
+                    delay(10)
+                    window.setLocation(pos.x, pos.y)
+                }
+
                 delay(if (stage == 0) 50 else 150)
             }
         }

@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.google.android.gms.ads.AdSize
+import com.kapcode.open.macropad.kmps.AdmobBanner
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,7 +28,8 @@ fun MarketplaceScreen(
     isDeveloperMode: Boolean,
     onProToggle: (Boolean) -> Unit,
     onDownload: (MarketplaceItem) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    adsDisabled: Boolean = false
 ) {
     var searchQuery by remember { mutableStateOf("") }
     
@@ -49,45 +52,55 @@ fun MarketplaceScreen(
             modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
 
-        if (items.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(32.dp)
+        Box(modifier = Modifier.weight(1f)) {
+            if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Storefront,
-                        contentDescription = null,
-                        modifier = Modifier.size(64.dp),
-                        tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
-                    )
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = "Marketplace Coming Soon",
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    )
-                    Text(
-                        text = "Soon you will be able to browse and download community macro packs directly from the app.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Storefront,
+                            contentDescription = null,
+                            modifier = Modifier.size(64.dp),
+                            tint = MaterialTheme.colorScheme.secondary.copy(alpha = 0.5f)
+                        )
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = "Marketplace Coming Soon",
+                            style = MaterialTheme.typography.headlineSmall,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "Soon you will be able to browse and download community macro packs directly from the app.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    items(filteredItems) { item ->
+                        MarketplaceItemCard(item = item, onDownload = { onDownload(item) })
+                    }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                items(filteredItems) { item ->
-                    MarketplaceItemCard(item = item, onDownload = { onDownload(item) })
-                }
-            }
+        }
+
+        // Add a large banner at the bottom of the Marketplace if ads are enabled
+        if (!adsDisabled) {
+            AdmobBanner(
+                modifier = Modifier.padding(bottom = 8.dp),
+                adSize = AdSize.LARGE_BANNER
+            )
         }
     }
 }

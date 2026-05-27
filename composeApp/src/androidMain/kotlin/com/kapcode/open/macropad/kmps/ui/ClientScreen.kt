@@ -158,6 +158,16 @@ fun ClientScreen(
 
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    LaunchedEffect(uiState.currentTab) {
+        val tabName = when (uiState.currentTab) {
+            0 -> "Dashboard"
+            1 -> "ActivePack"
+            2 -> "Marketplace"
+            else -> "Unknown"
+        }
+        MacroApplication.analyticsManager.trackScreen(tabName, "ClientScreen")
+    }
+
     Scaffold(
         topBar = {
             CommonAppBar(
@@ -346,8 +356,10 @@ fun ClientScreen(
             val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
             val isAdFree = settingsViewModel.isAdFree.collectAsState().value
             val adsDisabled = isPro || isServerPro || isAdFree
+            val isMarketplaceTab = uiState.currentTab == 2
+            val shouldShowAd = !showSettings && !isLandscape && isConnected && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible && !isMarketplaceTab
 
-            if (!showSettings && !isLandscape && isConnected && !adsDisabled) {
+            if (shouldShowAd) {
                 BottomAppBar { AdmobBanner() }
             }
         }
@@ -447,41 +459,48 @@ fun ClientScreen(
                                                 CircularProgressIndicator()
                                             }
                                         } else {
+                                            val isPro = settingsViewModel.isPro.collectAsState().value
+                                            val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
+                                            val isAdFree = settingsViewModel.isAdFree.collectAsState().value
+                                            val adsDisabled = isPro || isServerPro || isAdFree
+                                            
                                             MarketplaceScreen(
                                                 items = uiState.marketplaceItems,
                                                 isPro = uiState.isPro,
                                                 isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
                                                 onProToggle = { clientViewModel.setIsPro(it) },
-                                                onDownload = { clientViewModel.downloadMarketplaceItem(it) }
+                                                onDownload = { clientViewModel.downloadMarketplaceItem(it) },
+                                                adsDisabled = adsDisabled
                                             )
                                         }
                                     } else {
-                                        MacroButtonsScreen(
-                                            widgets = displayWidgets,
-                                            executingMacros = executingMacros,
-                                            failedMacros = failedMacros,
-                                            isEditMode = uiState.isEditMode,
-                                            onWidgetInteraction = onWidgetInteraction,
-                                            onWidgetLongClick = { widget ->
-                                                if (uiState.currentTab == 0) {
-                                                    clientViewModel.removeFromDashboard(widget.id)
-                                                } else {
-                                                    clientViewModel.addToDashboard(widget)
-                                                }
-                                            },
-                                            onRemoveWidget = { widget ->
-                                                if (uiState.currentTab == 0) {
-                                                    clientViewModel.removeFromDashboard(widget.id)
-                                                }
-                                            },
-                                            onMoveWidget = { from, to ->
-                                                if (uiState.currentTab == 0) {
-                                                    clientViewModel.moveDashboardMacro(from, to)
-                                                }
-                                            },
-                                            currency = uiState.currency,
-                                            modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
-                                        )
+                                            MacroButtonsScreen(
+                                                widgets = displayWidgets,
+                                                executingMacros = executingMacros,
+                                                failedMacros = failedMacros,
+                                                isEditMode = uiState.isEditMode,
+                                                onWidgetInteraction = onWidgetInteraction,
+                                                onWidgetLongClick = { widget ->
+                                                    if (uiState.currentTab == 0) {
+                                                        clientViewModel.removeFromDashboard(widget.id)
+                                                    } else {
+                                                        clientViewModel.addToDashboard(widget)
+                                                    }
+                                                },
+                                                onRemoveWidget = { widget ->
+                                                    if (uiState.currentTab == 0) {
+                                                        clientViewModel.removeFromDashboard(widget.id)
+                                                    }
+                                                },
+                                                onMoveWidget = { from, to ->
+                                                    if (uiState.currentTab == 0) {
+                                                        clientViewModel.moveDashboardMacro(from, to)
+                                                    }
+                                                },
+                                                currency = uiState.currency,
+                                                isPro = settingsViewModel.isPro.collectAsState().value || settingsViewModel.isServerProActive.collectAsState().value,
+                                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
+                                            )
                                     }
 
                                     if (showMacroPicker) {

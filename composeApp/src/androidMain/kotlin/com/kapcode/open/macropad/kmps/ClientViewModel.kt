@@ -87,6 +87,11 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                     )
                     settingsViewModel.updateServerHistory(server)
                     
+                    MacroApplication.analyticsManager.trackEvent("server_connected", mapOf(
+                        "server_name" to (name ?: "Unknown"),
+                        "is_secure" to isSecure.toString()
+                    ))
+
                     // Sync Pro status to server
                     if (uiState.value.isPro) {
                         repository.sendPremiumSync(true)

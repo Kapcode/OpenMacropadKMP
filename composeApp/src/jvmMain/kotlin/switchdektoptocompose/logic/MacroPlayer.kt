@@ -113,14 +113,21 @@ class MacroPlayer(
                 when (event) {
                     is MacroEventState.KeyEvent -> {
                         val keyCodes = KeyParser.parseAwtKeys(event.keyName)
+                        if (keyCodes.isEmpty()) {
+                            onLog(LogLevel.Warn, "No AWT mapping for key: ${event.keyName}")
+                        }
                         for (keyCode in keyCodes) {
-                            when (event.action) {
-                                KeyAction.PRESS -> {
-                                    robot.keyPress(keyCode)
+                            try {
+                                when (event.action) {
+                                    KeyAction.PRESS -> {
+                                        robot.keyPress(keyCode)
+                                    }
+                                    KeyAction.RELEASE -> {
+                                        robot.keyRelease(keyCode)
+                                    }
                                 }
-                                KeyAction.RELEASE -> {
-                                    robot.keyRelease(keyCode)
-                                }
+                            } catch (e: Exception) {
+                                onLog(LogLevel.Error, "Robot failed to ${event.action} key $keyCode (${event.keyName}): ${e.message}")
                             }
                             delay(currentAutoDelay)
                         }

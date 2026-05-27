@@ -504,7 +504,7 @@ class MacroManagerViewModel(
                     if (macro.file?.name?.endsWith(".js", ignoreCase = true) == true) {
                         macroPlayer.executeScript(content)
                     } else {
-                        val events = parseEventsFromJson(content)
+                        val events = parseEventsFromJson(content, macro.name)
                         macroPlayer.play(events)
                     }
 
@@ -594,30 +594,35 @@ class MacroManagerViewModel(
         }
     }
 
-    private fun parseEventsFromJson(jsonContent: String): List<MacroEventState> {
+    private fun parseEventsFromJson(jsonContent: String, macroName: String = "Unknown"): List<MacroEventState> {
         val events = mutableListOf<MacroEventState>()
         try {
             val json = JSONObject(jsonContent)
             json.optJSONArray("events")?.let { eventsArray ->
                 for (i in 0 until eventsArray.length()) {
                     eventsArray.getJSONObject(i)?.let { eventObj ->
-                        when (eventObj.getString("type").lowercase()) {
-                            "key" -> events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
-                            "mouse" -> events.add(MacroEventState.MouseEvent(
-                                eventObj.optInt("x", 0), 
-                                eventObj.optInt("y", 0), 
-                                MouseAction.valueOf(eventObj.getString("action").uppercase()),
-                                eventObj.optBoolean("isAnimated", false)
-                            ))
-                            "mousebutton" -> events.add(MacroEventState.MouseButtonEvent(eventObj.getInt("buttonNumber"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
-                            "scroll" -> events.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
-                            "delay" -> events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
-                            "set_auto_wait" -> events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
+                        try {
+                            when (eventObj.getString("type").lowercase()) {
+                                "key" -> events.add(MacroEventState.KeyEvent(eventObj.getString("keyName"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                                "mouse" -> events.add(MacroEventState.MouseEvent(
+                                    eventObj.optInt("x", 0), 
+                                    eventObj.optInt("y", 0), 
+                                    MouseAction.valueOf(eventObj.getString("action").uppercase()),
+                                    eventObj.optBoolean("isAnimated", false)
+                                ))
+                                "mousebutton" -> events.add(MacroEventState.MouseButtonEvent(eventObj.getInt("buttonNumber"), KeyAction.valueOf(eventObj.getString("action").uppercase())))
+                                "scroll" -> events.add(MacroEventState.ScrollEvent(eventObj.getString("scrollAmount").replace("+", "").toInt()))
+                                "delay" -> events.add(MacroEventState.DelayEvent(eventObj.getLong("durationMs")))
+                                "set_auto_wait" -> events.add(MacroEventState.SetAutoWaitEvent(eventObj.getInt("value")))
+                            }
+                        } catch (e: Exception) {
+                            consoleViewModel.addLog(LogLevel.Error, "Error parsing event $i in macro '$macroName': ${e.message}")
                         }
                     }
                 }
             }
         } catch (e: Exception) {
+            consoleViewModel.addLog(LogLevel.Error, "JSON Syntax Error in macro '$macroName': ${e.message}")
             e.printStackTrace()
         }
         return events

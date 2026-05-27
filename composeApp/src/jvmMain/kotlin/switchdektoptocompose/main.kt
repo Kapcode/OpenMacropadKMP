@@ -34,9 +34,16 @@ object AppConfig {
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun main(args: Array<String>) {
-    // Attempt to fix graphics context issues by providing a fallback to software rendering if OpenGL fails.
-    // This addresses the "Failed to create Skia OpenGL context" and "Can't wrap nullptr" errors.
-    System.setProperty("skiko.renderApi", "SOFTWARE")
+    // Check if a specific render API is requested via CLI or system property
+    val forcedRenderApi = System.getProperty("skiko.renderApi") ?: args.find { it.startsWith("-render=") }?.substringAfter("=")
+    
+    if (forcedRenderApi == null) {
+        // Default to OPENGL for better performance in VM environments with GPU passthrough.
+        // SOFTWARE rendering often causes the "transparency glitch" where the first frame isn't pushed to the virtual GPU.
+        System.setProperty("skiko.renderApi", "OPENGL")
+    } else {
+        System.setProperty("skiko.renderApi", forcedRenderApi)
+    }
     
     application {
         // Suppress specific log spam from AWT/Swing
@@ -195,6 +202,14 @@ fun main(args: Array<String>) {
         resizable = false,
         icon = icon
     ) {
+        // Force repaint for transparent windows in VM environments
+        LaunchedEffect(activeToast != null) {
+            if (activeToast != null) {
+                window.revalidate()
+                window.repaint()
+            }
+        }
+
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(
                 modifier = Modifier
@@ -223,18 +238,19 @@ fun main(args: Array<String>) {
     }
 
     if (desktopWindowState.showMarketplace) {
-        Window(
+        switchdektoptocompose.ui.AppDialog(
             onCloseRequest = { desktopWindowState.toggleMarketplace(false) },
             state = desktopWindowState.marketplaceWindowState,
             title = "Marketplace",
-            icon = icon
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon,
+            resizable = true
         ) {
-            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
-                MarketplaceScreen(
-                    viewModel = viewModels.marketplaceViewModel,
-                    onBack = { desktopWindowState.toggleMarketplace(false) }
-                )
-            }
+            MarketplaceScreen(
+                viewModel = viewModels.marketplaceViewModel,
+                onBack = { desktopWindowState.toggleMarketplace(false) }
+            )
         }
     }
     
@@ -479,18 +495,30 @@ fun main(args: Array<String>) {
             }
         },
         state = desktopWindowState.windowState,
-        title = "Open Macropad (Compose)",
+        title = "Open Macropad (Server)", // Updated title for clarity
         icon = icon
     ) {
-        // Force window to front and request focus when shown to avoid "glitched" non-responsive states
+        // Force window to front and request focus when shown to avoid "glitched" non-responsive states.
+        // In VM environments, we perform an aggressive "Double-Poke" sequence to ensure the Skia surface renders.
         LaunchedEffect(desktopWindowState.isWindowVisible) {
             if (desktopWindowState.isWindowVisible) {
-                window.toFront()
-                window.requestFocus()
-                // Safety repaint for software rendering
-                window.repaint()
+                repeat(4) { stage ->
+                    window.toFront()
+                    window.requestFocus()
+                    window.revalidate()
+                    window.repaint()
+                    
+                    // On the second stage, "poke" the placement to trigger a layout re-calc at the OS level
+                    if (stage == 1) {
+                         delay(50)
+                         window.isVisible = false
+                         window.isVisible = true
+                    }
+                    
+                    delay(if (stage == 0) 50 else 150)
+                }
 
-                // "Poke" the window manager after content is ready to ensure first frame renders
+                // Final placement stabilization
                 delay(100)
                 desktopWindowState.windowState.placement = WindowPlacement.Maximized
             }

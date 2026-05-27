@@ -79,7 +79,7 @@ const val TAG = "MainActivity"
 class MainActivity : ComponentActivity() {
 
     private val clientDiscovery by lazy { ClientDiscovery() }
-    private val settingsViewModel = SettingsViewModel()
+    private val settingsViewModel = MacroApplication.settingsViewModel
     private lateinit var clientRepository: ClientRepository
     private lateinit var clientViewModel: ClientViewModel
     private lateinit var settingsStorage: SettingsStorage
@@ -110,9 +110,6 @@ class MainActivity : ComponentActivity() {
                 IdentityManager().getIdentityPublicKey()
             } catch (e: Exception) {
                 Log.e(TAG, "IdentityManager initialization failed", e)
-            }
-            if (settingsViewModel.analyticsEnabled.value) {
-                FirebaseApp.initializeApp(this@MainActivity)
             }
             MobileAds.initialize(this@MainActivity)
         }

@@ -11,6 +11,8 @@ actual fun openFolder(path: String) {
     // No-op for Android
 }
 
+actual val isDesktop: Boolean = false
+
 actual fun generateUuid(): String = UUID.randomUUID().toString()
 
 actual fun currentTimeMillis(): Long = System.currentTimeMillis()

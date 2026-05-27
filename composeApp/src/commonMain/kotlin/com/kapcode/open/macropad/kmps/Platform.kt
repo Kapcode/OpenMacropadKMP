@@ -2,6 +2,8 @@ package com.kapcode.open.macropad.kmps
 
 expect fun openFolder(path: String)
 
+expect val isDesktop: Boolean
+
 expect fun generateUuid(): String
 
 expect fun currentTimeMillis(): Long

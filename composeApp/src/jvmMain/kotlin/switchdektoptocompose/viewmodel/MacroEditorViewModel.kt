@@ -47,7 +47,11 @@ class MacroEditorViewModel(
             selectTab(existingTabIndex)
         } else {
             try {
-                val content = fileToOpen?.readText() ?: macro.content
+                val content = if (fileToOpen != null && fileToOpen.exists()) {
+                    fileToOpen.readText()
+                } else {
+                    macro.content
+                }
                 val syntaxStyle = if (fileToOpen?.name?.endsWith(".js", ignoreCase = true) == true) {
                     "text/javascript"
                 } else {
