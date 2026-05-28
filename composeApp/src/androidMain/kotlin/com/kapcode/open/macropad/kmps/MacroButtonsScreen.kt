@@ -489,16 +489,16 @@ fun Modifier.scale(scale: Float) = graphicsLayer(scaleX = scale, scaleY = scale)
 @Composable
 fun MacroButtonsScreen(
     widgets: List<GridWidget>,
+    modifier: Modifier = Modifier,
     executingMacros: Set<String> = emptySet(),
     failedMacros: Set<String> = emptySet(),
     isEditMode: Boolean = false,
+    isPro: Boolean = false,
+    currency: Long = 0,
     onWidgetInteraction: (GridWidget) -> Unit,
     onWidgetLongClick: (GridWidget) -> Unit = {},
     onRemoveWidget: (GridWidget) -> Unit = {},
-    onMoveWidget: (Int, Int) -> Unit = { _, _ -> },
-    currency: Long = 0,
-    isPro: Boolean = false,
-    modifier: Modifier = Modifier
+    onMoveWidget: (Int, Int) -> Unit = { _, _ -> }
 ) {
     val gridState = rememberLazyGridState()
     var draggingIndex by remember { mutableStateOf<Int?>(null) }

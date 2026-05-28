@@ -111,8 +111,11 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 onMacroExecutionStart(macro)
                 val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
                 if (!isProActive) {
-                    if (tokenManager.spendTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
-                        repository.sendData("currency_spent", BillingConstants.TOKENS_PER_MACRO_PRESS.toString())
+                    val result = tokenManager.spendTokensWithResult(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                    if (result > 0) {
+                        repository.sendData("currency_spent", result.toString())
+                    }
+                    if (result >= 0) {
                         repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
                     }
                 }
@@ -155,7 +158,14 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     }
 
     fun sendMacro(macroName: String) {
-        repository.sendMacro(macroName)
+        val isProActive = uiState.value.isPro || MacroApplication.settingsViewModel.isServerProActive.value
+        val tokenManager = TokenManager.getInstance(MacroApplication.instance)
+        
+        if (isProActive || tokenManager.canAfford(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+            repository.sendMacro(macroName)
+        } else {
+            onMacroExecutionFailed(macroName)
+        }
     }
 
     private var lastPairingCodeAttemptTime = 0L

@@ -476,9 +476,12 @@ fun ClientScreen(
                                     } else {
                                             MacroButtonsScreen(
                                                 widgets = displayWidgets,
+                                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier,
                                                 executingMacros = executingMacros,
                                                 failedMacros = failedMacros,
                                                 isEditMode = uiState.isEditMode,
+                                                isPro = settingsViewModel.isPro.collectAsState().value || settingsViewModel.isServerProActive.collectAsState().value,
+                                                currency = uiState.currency,
                                                 onWidgetInteraction = onWidgetInteraction,
                                                 onWidgetLongClick = { widget ->
                                                     if (uiState.currentTab == 0) {
@@ -496,10 +499,7 @@ fun ClientScreen(
                                                     if (uiState.currentTab == 0) {
                                                         clientViewModel.moveDashboardMacro(from, to)
                                                     }
-                                                },
-                                                currency = uiState.currency,
-                                                isPro = settingsViewModel.isPro.collectAsState().value || settingsViewModel.isServerProActive.collectAsState().value,
-                                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier
+                                                }
                                             )
                                     }
 

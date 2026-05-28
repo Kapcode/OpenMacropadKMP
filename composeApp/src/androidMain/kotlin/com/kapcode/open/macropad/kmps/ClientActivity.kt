@@ -1,5 +1,7 @@
 package com.kapcode.open.macropad.kmps
 
+import com.kapcode.open.macropad.kmps.utils.ClipboardManager
+import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import com.kapcode.open.macropad.kmps.network.sockets.MacroKtorClient
 import android.annotation.SuppressLint
 import android.os.Bundle
@@ -102,7 +104,6 @@ class ClientActivity : ComponentActivity() {
     private var onCancelPressed: (() -> Unit)? = null
     private var onSlamTriggered: ((Boolean) -> Unit)? = null
     private var lastToast: Toast? = null
-    private var isHandlingSlam = false
 
     private fun showSlamToast(message: String) {
         lastToast?.cancel()
@@ -191,13 +192,12 @@ class ClientActivity : ComponentActivity() {
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
             val uiState by clientViewModel.uiState.collectAsState()
-            
-            AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
-                CompositionLocalProvider(com.kapcode.open.macropad.kmps.utils.LocalClipboardManager provides com.kapcode.open.macropad.kmps.utils.ClipboardManager()) {
-                    val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
-                val tokenBalance by tokenManager.tokenBalance.collectAsState()
+            val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
+            val tokenBalance by tokenManager.tokenBalance.collectAsState()
 
-                LaunchedEffect(Unit) {
+            AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
+                CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
+                    LaunchedEffect(Unit) {
                     clientViewModel.connect(
                         ipAddress = ipAddress,
                         port = port,

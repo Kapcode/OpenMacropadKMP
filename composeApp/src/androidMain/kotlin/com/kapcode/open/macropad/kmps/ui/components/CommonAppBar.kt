@@ -82,6 +82,27 @@ fun CommonAppBar(
     val tokenBalance by tokenManager.tokenBalance.collectAsState()
     val formattedPrices by (billingManager?.formattedPrices?.collectAsState() ?: remember { mutableStateOf(emptyMap()) })
     var showProPurchaseDialog by remember { mutableStateOf(false) }
+    var showRewardConfirmDialog by remember { mutableStateOf(false) }
+
+    if (showRewardConfirmDialog) {
+        RewardConfirmDialog(
+            onDismissRequest = { showRewardConfirmDialog = false },
+            tokensPerAd = tokensPerAd,
+            onConfirm = {
+                showRewardConfirmDialog = false
+                loadRewardedAd(
+                    context,
+                    onAdLoaded = { ad ->
+                        showRewardedAd(activity, ad) {
+                            tokenManager.awardTokens(tokensPerAd)
+                        }
+                    }
+                ) {
+                    Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
 
     if (showProPurchaseDialog) {
         ProPurchaseDialog(
@@ -237,7 +258,7 @@ fun CommonAppBar(
                 Spacer(modifier = Modifier.width(8.dp))
                 // Optionally show tokens even in QR mode if there's space
                 Row(
-                    modifier = Modifier.clickable { showProPurchaseDialog = true },
+                    modifier = Modifier.clickable { showRewardConfirmDialog = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -251,6 +272,12 @@ fun CommonAppBar(
                         text = tokenBalance.toString(),
                         color = GoldCurrencyColor,
                         fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Earn Tokens",
+                        tint = GoldCurrencyColor,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
@@ -281,7 +308,7 @@ fun CommonAppBar(
                     }
                 }
                 Row(
-                    modifier = Modifier.clickable { showProPurchaseDialog = true },
+                    modifier = Modifier.clickable { showRewardConfirmDialog = true },
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -296,6 +323,12 @@ fun CommonAppBar(
                         style = MaterialTheme.typography.bodyMedium,
                         color = GoldCurrencyColor,
                         fontWeight = FontWeight.Bold
+                    )
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Earn Tokens",
+                        tint = GoldCurrencyColor,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
                 IconButton(onClick = { onCoordinateCaptureToggle(!isCoordinateCaptureActive) }) {

@@ -104,6 +104,15 @@ class SlamFireManager(
 
     private fun invokeSlam(isDouble: Boolean) {
         if (isHandlingSlam) return
+
+        val tokenManager = TokenManager.getInstance(context)
+        val isProActive = settingsViewModel.isPro.value || settingsViewModel.isServerProActive.value
+        
+        if (!isProActive && !tokenManager.canAfford(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+            // Not enough tokens to fire macro
+            return
+        }
+
         isHandlingSlam = true
         onSlam(isDouble)
         scope.launch {

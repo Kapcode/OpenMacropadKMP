@@ -130,7 +130,7 @@ class MacroManagerViewModel(
 
     private val robot = try { java.awt.Robot() } catch(e: Exception) { null }
 
-    private val macroPlayer = MacroPlayer(
+    internal val macroPlayer = MacroPlayer(
         onLog = { level, msg -> consoleViewModel.addLog(level, msg) },
         getActiveProcess = { _uiState.value.currentActiveProcess },
         onPlayMacroRequested = { macroId -> 
@@ -594,7 +594,7 @@ class MacroManagerViewModel(
         }
     }
 
-    private fun parseEventsFromJson(jsonContent: String, macroName: String = "Unknown"): List<MacroEventState> {
+    internal fun parseEventsFromJson(jsonContent: String, macroName: String = "Unknown"): List<MacroEventState> {
         val events = mutableListOf<MacroEventState>()
         try {
             val json = JSONObject(jsonContent)

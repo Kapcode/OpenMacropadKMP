@@ -3,6 +3,7 @@ package switchdektoptocompose.viewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import switchdektoptocompose.model.*
 import java.io.File
 import javax.swing.JFileChooser
@@ -115,19 +116,48 @@ class MacroEditorViewModel(
 
         _uiState.update { state ->
             val newTabs = state.tabs.toMutableList().also {
-                it[currentIndex] = it[currentIndex].copy(content = newContent)
+                it[currentIndex] = it[currentIndex].copy(content = newContent, isModified = true)
             }
             state.copy(tabs = newTabs)
         }
     }
 
     fun saveSelectedTab() {
-        val currentTab = _uiState.value.tabs.getOrNull(_uiState.value.selectedTabIndex) ?: return
+        val currentIndex = _uiState.value.selectedTabIndex
+        val currentTab = _uiState.value.tabs.getOrNull(currentIndex) ?: return
         if (currentTab.file != null) {
             currentTab.file.writeText(currentTab.content)
+            _uiState.update { state ->
+                val newTabs = state.tabs.toMutableList().also {
+                    it[currentIndex] = it[currentIndex].copy(isModified = false)
+                }
+                state.copy(tabs = newTabs)
+            }
             macroManagerViewModel.refresh()
         } else {
             saveSelectedTabAs()
+        }
+    }
+
+    fun saveAndRunSelectedTab() {
+        saveSelectedTab()
+        val currentTab = _uiState.value.tabs.getOrNull(_uiState.value.selectedTabIndex) ?: return
+        val file = currentTab.file ?: return // If they cancelled save as, we can't run
+
+        viewModelScope.launch {
+            // Find the MacroFileState for this file
+            val macroState = macroManagerViewModel.macroFiles.value.find { it.file?.absolutePath == file.absolutePath }
+            if (macroState != null) {
+                macroManagerViewModel.onPlayMacro(macroState)
+            } else {
+                // Fallback: manually parse and play
+                try {
+                    val events = macroManagerViewModel.parseEventsFromJson(currentTab.content, file.name)
+                    macroManagerViewModel.macroPlayer.play(events)
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
         }
     }
     
@@ -160,7 +190,8 @@ class MacroEditorViewModel(
             selectedFile.writeText(currentTab.content)
             val newTabState = currentTab.copy(
                 file = selectedFile,
-                title = selectedFile.nameWithoutExtension
+                title = selectedFile.nameWithoutExtension,
+                isModified = false
             )
             _uiState.update { state ->
                 val newTabs = state.tabs.toMutableList().apply { set(state.selectedTabIndex, newTabState) }

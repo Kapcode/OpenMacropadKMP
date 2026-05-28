@@ -1,12 +1,10 @@
 package switchdektoptocompose.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.SaveAs
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import switchdektoptocompose.viewmodel.*
 import switchdektoptocompose.ui.components.AppTooltipArea
@@ -31,6 +29,21 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
             title = { Text("Editor") },
             actions = {
                 val isTabOpen = tabs.isNotEmpty()
+                AppTooltipArea(tooltipText = "Save and Run", delayMillis = 0) {
+                    IconButton(onClick = { viewModel.saveAndRunSelectedTab() }, enabled = isTabOpen) {
+                        Box {
+                            Icon(Icons.Default.PlayArrow, contentDescription = "Save and Run")
+                            Icon(
+                                Icons.Default.Save,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .align(Alignment.BottomEnd)
+                                    .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.extraSmall)
+                            )
+                        }
+                    }
+                }
                 AppTooltipArea(tooltipText = "Save", delayMillis = 0) {
                     IconButton(onClick = { viewModel.saveSelectedTab() }, enabled = isTabOpen) {
                         Icon(Icons.Default.Save, contentDescription = "Save")
@@ -61,7 +74,7 @@ fun MacroEditorScreen(viewModel: MacroEditorViewModel, settingsViewModel: Settin
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                             modifier = Modifier.padding(vertical = 8.dp, horizontal = 4.dp)
                         ) {
-                            Text(tab.title)
+                            Text(tab.title + (if (tab.isModified) " •" else ""))
                             // Prevent closing the last tab
                             if (tabs.size > 1) {
                                 IconButton(onClick = { viewModel.closeTab(index) }, modifier = Modifier.size(20.dp)) {

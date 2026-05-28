@@ -21,6 +21,9 @@ import com.kapcode.open.macropad.kmps.AdmobBanner
 import com.kapcode.open.macropad.kmps.BillingConstants
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+
 @Composable
 fun ProPurchaseDialog(
     onDismissRequest: () -> Unit,
@@ -45,152 +48,186 @@ fun ProPurchaseDialog(
         }
     }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = onDismissRequest,
-        title = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Star,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(48.dp)
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = if (isPro) "Pro Access Active" else "Support OpenMacropad",
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-            }
-        },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Text(
-                    text = "Unlock premium features, remove ads, and support the development of OpenMacropad.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    textAlign = TextAlign.Center,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.92f)
+                .fillMaxHeight(0.85f),
+            shape = MaterialTheme.shapes.extraLarge,
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                // --- Fixed Header ---
+                Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                )
+                        .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(32.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (isPro) "Pro Access Active" else "Support OpenMacropad",
+                        style = MaterialTheme.typography.titleLarge,
+                        textAlign = TextAlign.Center,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                    )
+                }
 
-                // 1. Watch Ad
-                PurchaseOptionCard(
-                    title = "Watch Ad",
-                    description = "Watch a short video to earn tokens.",
-                    price = "+$tokensPerAd Tokens",
-                    benefits = listOf(
-                        "Earn $tokensPerAd tokens for free",
-                        "No permanent commitment",
-                        "Supports development"
-                    ),
-                    icon = Icons.Default.PlayCircle,
-                    onClick = onWatchAd,
-                    badge = "WATCH AD"
-                )
+                // --- Scrollable Body ---
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 16.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = "Unlock premium features, remove ads, and support development.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 4.dp)
+                    )
 
-                Text(
-                    text = "One-Time Purchases",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                    Text(
+                        text = "One-Time Purchases",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
 
-                // 2. Ad Free One-Time
-                PurchaseOptionCard(
-                    title = "Remove Ads",
-                    description = "One-time payment to remove banner ads forever.",
-                    price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME] ?: "---",
-                    benefits = listOf(
-                        "Removes banner ads",
-                        "Removes interruptible ads",
-                        "Keeps rewarded ads for tokens",
-                        "One-time payment"
-                    ),
-                    icon = Icons.Default.DoneAll,
-                    onClick = onRemoveAdsOneTime,
-                    badge = if (isAdFree) "ACTIVE" else if (isDeveloperMode) "DEV" else "$",
-                    highlight = !isAdFree
-                )
+                    // 1. Ad Free One-Time
+                    PurchaseOptionCard(
+                        title = "Remove Ads",
+                        description = "One-time payment to remove banner ads forever.",
+                        price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME] ?: "---",
+                        benefits = listOf(
+                            "Removes banner ads",
+                            "Removes interruptible ads",
+                            "Keeps rewarded ads for tokens",
+                            "One-time payment"
+                        ),
+                        icon = Icons.Default.DoneAll,
+                        onClick = onRemoveAdsOneTime,
+                        badge = if (isAdFree) "ACTIVE" else if (isDeveloperMode) "DEV" else "$",
+                        highlight = !isAdFree
+                    )
 
-                // 3. Pro One-Time
-                PurchaseOptionCard(
-                    title = "Pro Lifetime Pass",
-                    description = "Permanent Pro access for this device and server.",
-                    price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_ONE_TIME] ?: "---",
-                    benefits = listOf(
-                        "Unlimited Pro access forever",
-                        "Global server access (No tokens)",
-                        "Pro shared with all clients",
-                        "Exclusive future features"
-                    ),
-                    icon = Icons.Default.CardMembership,
-                    onClick = onPurchaseOneTime,
-                    badge = if (isPro) "ACTIVE" else if (isDeveloperMode) "DEV" else "$$$$$",
-                    highlight = !isPro
-                )
+                    // 2. Pro One-Time
+                    PurchaseOptionCard(
+                        title = "Pro Lifetime Pass",
+                        description = "Permanent Pro access for this device and server.",
+                        price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_ONE_TIME] ?: "---",
+                        benefits = listOf(
+                            "Unlimited Pro access forever",
+                            "Global server access (No tokens)",
+                            "Pro shared with all clients",
+                            "Exclusive future features"
+                        ),
+                        icon = Icons.Default.CardMembership,
+                        onClick = onPurchaseOneTime,
+                        badge = if (isPro) "ACTIVE" else if (isDeveloperMode) "DEV" else "$$$$$",
+                        highlight = !isPro
+                    )
 
-                Text(
-                    text = "Subscriptions",
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.secondary
-                )
+                    Text(
+                        text = "Subscriptions",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.secondary
+                    )
 
-                // 4. Ad Free Subscription
-                PurchaseOptionCard(
-                    title = "Ad-Free Monthly",
-                    description = "Remove ads with a small monthly contribution.",
-                    price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_SUB] ?: "---",
-                    benefits = listOf(
-                        "Removes banner ads",
-                        "Removes interruptible ads",
-                        "Keeps rewarded ads for tokens",
-                        "Cancel anytime"
-                    ),
-                    icon = Icons.Default.Block,
-                    onClick = onRemoveAdsSubscription,
-                    badge = if (isAdFree) "ACTIVE" else "$$",
-                    highlight = !isAdFree
-                )
+                    // 3. Ad Free Subscription
+                    PurchaseOptionCard(
+                        title = "Ad-Free Monthly",
+                        description = "Remove ads with a small monthly contribution.",
+                        price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_SUB] ?: "---",
+                        benefits = listOf(
+                            "Removes banner ads",
+                            "Removes interruptible ads",
+                            "Keeps rewarded ads for tokens",
+                            "Cancel anytime"
+                        ),
+                        icon = Icons.Default.Block,
+                        onClick = onRemoveAdsSubscription,
+                        badge = if (isAdFree) "ACTIVE" else "$$",
+                        highlight = !isAdFree
+                    )
 
-                // 5. Pro Subscription
-                PurchaseOptionCard(
-                    title = "Pro Monthly",
-                    description = "Unlimited Pro access with a monthly sub.",
-                    price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_SUB] ?: "---",
-                    benefits = listOf(
-                        "All Pro features included",
-                        "Unlimited global access",
-                        "Auto-renewing convenience",
-                        "Cancel anytime"
-                    ),
-                    icon = Icons.Default.CalendarMonth,
-                    onClick = onPurchaseSubscription,
-                    badge = if (isPro) "ACTIVE" else "$$$$",
-                    highlight = !isPro
-                )
+                    // 4. Pro Subscription
+                    PurchaseOptionCard(
+                        title = "Pro Monthly",
+                        description = "Unlimited Pro access with a monthly sub.",
+                        price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_SUB] ?: "---",
+                        benefits = listOf(
+                            "All Pro features included",
+                            "Unlimited global access",
+                            "Auto-renewing convenience",
+                            "Cancel anytime"
+                        ),
+                        icon = Icons.Default.CalendarMonth,
+                        onClick = onPurchaseSubscription,
+                        badge = if (isPro) "ACTIVE" else "$$$$",
+                        highlight = !isPro
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
-                // Add a banner ad inside the dialog if ads are not disabled
-                if (!isPro && !isAdFree && !isDeveloperMode) { // Logic simplified for the dialog itself as it's the gateway
-                    AdmobBanner(modifier = Modifier.padding(vertical = 8.dp))
+                // --- Sticky Footer ---
+                Surface(
+                    tonalElevation = 2.dp,
+                    shadowElevation = 8.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        // Watch Ad (Sticky Footer)
+                        PurchaseOptionCard(
+                            title = "Watch Ad",
+                            description = "Watch a short video to earn tokens.",
+                            price = "+$tokensPerAd Tokens",
+                            benefits = listOf("Earn tokens for free", "Supports development"),
+                            icon = Icons.Default.PlayCircle,
+                            onClick = onWatchAd,
+                            badge = "FREE",
+                            compact = true
+                        )
+
+                        // Banner Ad (Sticky Footer)
+                        val adsDisabled = isPro || isAdFree || isDeveloperMode
+                        if (!adsDisabled) {
+                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = onDismissRequest) {
+                                Text("Close")
+                            }
+                        }
+                    }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Close")
-            }
         }
-    )
+    }
 }
 
 @Composable
@@ -203,6 +240,7 @@ private fun PurchaseOptionCard(
     onClick: () -> Unit,
     badge: String? = null,
     highlight: Boolean = false,
+    compact: Boolean = false,
 ) {
     Card(
         onClick = onClick,
@@ -211,7 +249,11 @@ private fun PurchaseOptionCard(
             containerColor = if (highlight) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        val padding = if (compact) 12.dp else 16.dp
+        val iconSize = if (compact) 24.dp else 32.dp
+        val textPadding = if (compact) 36.dp else 48.dp
+
+        Column(modifier = Modifier.padding(padding)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -219,7 +261,7 @@ private fun PurchaseOptionCard(
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(iconSize),
                     tint = if (highlight) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.width(16.dp))
@@ -232,13 +274,15 @@ private fun PurchaseOptionCard(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = title,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                style = if (compact) MaterialTheme.typography.titleSmall else MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = price,
-                                style = MaterialTheme.typography.labelLarge,
+                                style = if (compact) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge,
                                 color = MaterialTheme.colorScheme.primary,
                                 fontWeight = FontWeight.ExtraBold
                             )
@@ -262,31 +306,35 @@ private fun PurchaseOptionCard(
                 }
             }
             
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = description,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 48.dp)
-            )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-            Column(modifier = Modifier.padding(start = 48.dp)) {
-                benefits.forEach { benefit ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(vertical = 1.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = benefit,
-                            style = MaterialTheme.typography.labelSmall
-                        )
+            if (!compact) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = textPadding, end = 8.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                Column(modifier = Modifier.padding(start = textPadding)) {
+                    benefits.forEach { benefit ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 1.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = benefit,
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
                     }
                 }
             }
