@@ -1,6 +1,6 @@
 # Data Tracking Transparency
 
-This document outlines exactly what data is tracked by OpenMacropadKMP, why it is tracked, and how you can control it.
+This document outlines exactly what data is tracked by MacroKapKMP, why it is tracked, and how you can control it.
 
 ## 🛡️ Privacy First: Opt-in Only
 Tracking is **DISABLED** by default. No analytics data is collected unless you explicitly enable it in the **Settings** menu.

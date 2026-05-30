@@ -1,12 +1,13 @@
 package switchdektoptocompose.logic
 
+import switchdektoptocompose.utils.ProjectPaths
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
 
 object AppSettings {
-    private val configDir = File(System.getProperty("user.home"), "Documents/OpenMacropadServer")
+    private val configDir = ProjectPaths.configDir
     private val configFile = File(configDir, "config.properties")
     private val properties = Properties()
 
@@ -74,10 +75,7 @@ object AppSettings {
         // Set a Linux-specific default macro directory if none is set
         val os = System.getProperty("os.name").lowercase()
         if (os.contains("linux") && properties.getProperty(MACRO_DIR_KEY).isNullOrBlank()) {
-            val linuxDefaultDir = File(System.getProperty("user.home"), ".config/OpenMacropadKMP/macros")
-            if (!linuxDefaultDir.exists()) {
-                linuxDefaultDir.mkdirs()
-            }
+            val linuxDefaultDir = ProjectPaths.linuxMacroDir
             properties.setProperty(MACRO_DIR_KEY, linuxDefaultDir.absolutePath)
             save()
         }
@@ -410,6 +408,6 @@ object AppSettings {
     }
 
     private fun save() {
-        FileOutputStream(configFile).use { properties.store(it, "OpenMacropadServer Settings") }
+        FileOutputStream(configFile).use { properties.store(it, "MacroKapServer Settings") }
     }
 }

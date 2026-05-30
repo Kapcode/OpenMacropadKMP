@@ -135,7 +135,7 @@ class WifiServer : Wifi() {
 
         serverJob = serverScope.launch {
             try {
-                val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "OpenMacropad Server" }
+                val serverName = try { InetAddress.getLocalHost().hostName } catch (e: Exception) { "MacroKap Server" }
                 discovery = ServerDiscovery(serverName, currentPort)
                 discovery?.start()
                 server?.start(wait = true)
@@ -190,7 +190,7 @@ class WifiServer : Wifi() {
         keyPairGenerator.initialize(2048)
         val keyPair = keyPairGenerator.generateKeyPair()
 
-        val owner = X500Name("CN=OpenMacropad")
+        val owner = X500Name("CN=MacroKap")
         val now = Date()
         val expiry = Date(now.time + 3650.days.inWholeMilliseconds)
         val serialNumber = BigInteger(64, Random())

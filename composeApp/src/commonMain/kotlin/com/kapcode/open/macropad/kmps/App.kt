@@ -15,6 +15,10 @@ import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
 import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import androidx.compose.ui.tooling.preview.Preview
 
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
+import org.jetbrains.compose.resources.stringResource
+
 @Composable
 fun App(
     modifier: Modifier = Modifier,
@@ -47,7 +51,7 @@ fun App(
         TextField(
             value = deviceName,
             onValueChange = { deviceName = it },
-            label = { Text("Device Name") },
+            label = { Text(stringResource(Res.string.device_name)) },
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(16.dp))
@@ -58,7 +62,7 @@ fun App(
             horizontalArrangement = Arrangement.Center
         ) {
             Button(onClick = scanServers, enabled = !isScanning) {
-                Text(if (isScanning) "Scanning..." else "Scan for Servers")
+                Text(if (isScanning) stringResource(Res.string.scanning) else stringResource(Res.string.scan_for_servers))
             }
             if (isScanning) {
                 Spacer(modifier = Modifier.width(16.dp))
@@ -95,16 +99,16 @@ fun App(
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         // --- Manual Connection ---
-        Text("Manual Connection", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(Res.string.manual_connection), style = MaterialTheme.typography.headlineSmall)
         TextField(
             value = manualIpAddress,
             onValueChange = { manualIpAddress = it },
-            label = { Text("Server IP:Port") },
+            label = { Text(stringResource(Res.string.server_ip_port)) },
             modifier = Modifier.fillMaxWidth()
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = isManualSecure, onCheckedChange = { isManualSecure = it })
-            Text("Use Secure Connection (WSS)")
+            Text(stringResource(Res.string.use_secure_connection))
         }
         Button(
             onClick = {
@@ -115,7 +119,7 @@ fun App(
             },
             enabled = manualIpAddress.isNotBlank()
         ) {
-            Text("Connect Manually")
+            Text(stringResource(Res.string.connect_manually))
         }
     }
 }

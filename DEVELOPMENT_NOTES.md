@@ -1,6 +1,6 @@
 # Development Notes
 
-This document serves as a technical log for the challenges encountered and solutions implemented during the development of OpenMacropadKMP, particularly focusing on the Desktop Server component.
+This document serves as a technical log for the challenges encountered and solutions implemented during the development of MacroKapKMP, particularly focusing on the Desktop Server component.
 
 ## Critical Technical Challenges & Solutions
 
@@ -695,7 +695,7 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: Several purchase options (One-time Pro, Subscription Pro, Ad-Free) needed to be unified and wired to the Google Play Billing Library.
 - **Solution**: 
     - **Unified Dialog**: Completed the `ProPurchaseDialog` with all five purchase/reward options.
-    - **Product ID Standardization**: Updated `BillingConstants.kt` to include `openmacropadkmp_pro_subscription` and `openmacropadkmp_ad_free_subscription`.
+    - **Product ID Standardization**: Updated `BillingConstants.kt` to include `macrokapkmp_pro_subscription` and `macrokapkmp_ad_free_subscription`.
     - **Simulation Support**: Ensured "Developer Mode" in `CommonAppBar` correctly bypasses Play Store for local testing of all tiers.
     - **Lifecycle Integration**: Verified `BillingManager` correctly queries and handles both In-App and Subscription product types.
 

@@ -32,6 +32,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.*
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.WidgetType
 import com.kapcode.open.macropad.kmps.models.SliderUpdateMode
@@ -43,6 +45,7 @@ import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.MarketplaceScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @ExperimentalGetImage
@@ -171,7 +174,7 @@ fun ClientScreen(
     Scaffold(
         topBar = {
             CommonAppBar(
-                title = if (showSettings) "Settings" else "Open Macropad",
+                title = if (showSettings) stringResource(Res.string.settings) else stringResource(Res.string.app_name),
                 onSettingsClick = { showSettings = !showSettings },
                 currency = uiState.currency,
                 isQrScannerActive = showQrScanner && !showSettings,
@@ -397,12 +400,12 @@ fun ClientScreen(
                                 Tab(
                                     selected = uiState.currentTab == 0,
                                     onClick = { clientViewModel.setTab(0) },
-                                    text = { Text("My Dashboard") }
+                                    text = { Text(stringResource(Res.string.dashboard)) }
                                 )
                                 Tab(
                                     selected = uiState.currentTab == 1,
                                     onClick = { clientViewModel.setTab(1) },
-                                    text = { Text("Active Pack") }
+                                    text = { Text(stringResource(Res.string.active_pack)) }
                                 )
                                 Tab(
                                     selected = uiState.currentTab == 2,
@@ -410,7 +413,7 @@ fun ClientScreen(
                                         clientViewModel.setTab(2)
                                         clientViewModel.requestMarketplace()
                                     },
-                                    text = { Text("Marketplace") }
+                                    text = { Text(stringResource(Res.string.marketplace)) }
                                 )
                             }
                         }
@@ -569,7 +572,7 @@ fun ClientScreen(
                                                         Icon(Icons.Default.Block, contentDescription = null)
                                                         Spacer(Modifier.width(8.dp))
                                                         Text(
-                                                            "Execution Disabled (E-STOP)",
+                                                            stringResource(Res.string.execution_disabled),
                                                             style = MaterialTheme.typography.titleMedium,
                                                             fontWeight = FontWeight.Bold
                                                         )
@@ -658,7 +661,7 @@ fun ClientScreen(
                                             horizontalAlignment = Alignment.Start
                                         ) {
                                             Text(
-                                                "Quick Reconnect",
+                                                stringResource(Res.string.reconnect_quick),
                                                 style = MaterialTheme.typography.labelLarge,
                                                 color = MaterialTheme.colorScheme.primary
                                             )
@@ -727,13 +730,13 @@ fun ClientScreen(
                                                     )
                                                     Spacer(Modifier.height(16.dp))
                                                     Text(
-                                                        "Code Matched!",
+                                                        stringResource(Res.string.code_matched),
                                                         style = MaterialTheme.typography.headlineSmall,
                                                         color = Color(0xFF008000)
                                                     )
                                                     Spacer(Modifier.height(8.dp))
                                                     Text(
-                                                        "Please click 'Allow' on your Desktop to finish pairing.",
+                                                        stringResource(Res.string.code_matched_instruction),
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                                     )
                                                 }
@@ -745,7 +748,7 @@ fun ClientScreen(
                                                         verticalArrangement = Arrangement.Center
                                                     ) {
                                                         Text(
-                                                            "Please enter the 6-digit code shown on your Desktop:",
+                                                            stringResource(Res.string.pairing_code_instruction),
                                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                                                         )
                                                         Spacer(Modifier.height(16.dp))
@@ -756,7 +759,7 @@ fun ClientScreen(
                                                         ) {
                                                             Icon(Icons.Default.QrCodeScanner, contentDescription = null)
                                                             Spacer(Modifier.width(8.dp))
-                                                            Text("Scan QR Code")
+                                                            Text(stringResource(Res.string.scan_qr_code))
                                                         }
                                                     }
                                                 }
@@ -780,7 +783,7 @@ fun ClientScreen(
                                                                 }
                                                             }
                                                         },
-                                                        label = { if (!isKeyboardOpen) Text("6-Digit Code") },
+                                                        label = { if (!isKeyboardOpen) Text(stringResource(Res.string.six_digit_code)) },
                                                         placeholder = { if (isKeyboardOpen) Text("Code") },
                                                         singleLine = true,
                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -829,7 +832,7 @@ fun ClientScreen(
 
                                             if (!isKeyboardOpen) {
                                                 Text(
-                                                    "Verification required to secure the connection.",
+                                                    stringResource(Res.string.verification_required),
                                                     style = MaterialTheme.typography.labelSmall,
                                                     modifier = Modifier.padding(bottom = 8.dp)
                                                 )
@@ -855,12 +858,12 @@ fun ClientScreen(
                                                 }
                                                 Spacer(Modifier.width(32.dp))
                                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                                    Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                                    Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.headlineMedium)
                                                     Spacer(Modifier.height(8.dp))
                                                     Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
                                                     Spacer(Modifier.height(16.dp))
                                                     Button(onClick = onBackToMain) {
-                                                        Text("Back to Server List")
+                                                        Text(stringResource(Res.string.back_to_server_list))
                                                     }
                                                 }
                                             }
@@ -872,12 +875,12 @@ fun ClientScreen(
                                                 tint = MaterialTheme.colorScheme.error
                                             )
                                             Spacer(Modifier.height(16.dp))
-                                            Text("Disconnected", style = MaterialTheme.typography.headlineMedium)
+                                            Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.headlineMedium)
                                             Spacer(Modifier.height(8.dp))
                                             Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
                                             Spacer(Modifier.height(32.dp))
                                             Button(onClick = onBackToMain) {
-                                                Text("Back to Server List")
+                                                Text(stringResource(Res.string.back_to_server_list))
                                             }
                                         }
                                     } else {

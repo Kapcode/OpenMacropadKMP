@@ -8,8 +8,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import openmacropadkmp.composeapp.generated.resources.Res
-import openmacropadkmp.composeapp.generated.resources.macropadIcon512
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.macropadIcon512
 import org.jetbrains.compose.resources.painterResource
 
 @Composable

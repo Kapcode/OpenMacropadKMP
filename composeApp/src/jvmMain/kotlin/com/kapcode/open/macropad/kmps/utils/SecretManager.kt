@@ -5,7 +5,7 @@ import java.security.SecureRandom
 import java.util.Base64
 
 object SecretManager {
-    private const val SERVICE_NAME = "com.kapcode.openmacropad"
+    private const val SERVICE_NAME = "com.kapcode.open.macropad.kmps"
     private const val ACCOUNT_NAME = "server-keystore-password"
     
     private val keyring: Keyring? by lazy {

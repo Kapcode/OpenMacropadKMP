@@ -20,6 +20,10 @@ import com.google.android.gms.ads.AdSize
 import com.kapcode.open.macropad.kmps.AdmobBanner
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
+import org.jetbrains.compose.resources.stringResource
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MarketplaceScreen(
@@ -47,7 +51,7 @@ fun MarketplaceScreen(
         SearchBar(
             query = searchQuery,
             onQueryChange = { searchQuery = it },
-            placeholder = { Text("Search Marketplace...") },
+            placeholder = { Text(stringResource(Res.string.search_marketplace)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
             modifier = Modifier.fillMaxWidth().padding(16.dp)
         )
@@ -70,12 +74,12 @@ fun MarketplaceScreen(
                         )
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "Marketplace Coming Soon",
+                            text = stringResource(Res.string.marketplace_coming_soon),
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                         Text(
-                            text = "Soon you will be able to browse and download community macro packs directly from the app.",
+                            text = stringResource(Res.string.marketplace_desc),
                             style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -122,7 +126,7 @@ fun ProAccessSection(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = if (isPro) "Pro Access Active" else "Go Pro",
+                    text = if (isPro) stringResource(Res.string.pro_access_active) else stringResource(Res.string.buy_pro),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

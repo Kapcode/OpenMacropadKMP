@@ -1,4 +1,4 @@
-# OpenMacropadKMP Code Map
+# MacroKapKMP Code Map
 
 This document serves as a guide for AI assistants to navigate the project effectively.
 

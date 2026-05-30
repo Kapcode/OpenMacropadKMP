@@ -15,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.utils.ClipboardManager
 import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
@@ -23,8 +25,10 @@ import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
+import com.kapcode.open.macropad.kmps.ui.components.LegalDialog
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun MainUI(
@@ -36,6 +40,7 @@ fun MainUI(
     onOkayTriggerSet: (() -> Unit) -> Unit
 ) {
     val theme by settingsViewModel.theme.collectAsState()
+    val legalAccepted by settingsViewModel.legalAccepted.collectAsState()
     var showSettings by remember { mutableStateOf(false) }
     var showAd by remember { mutableStateOf(false) }
 
@@ -91,16 +96,23 @@ fun MainUI(
     }
 
     AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
+        if (!legalAccepted) {
+            LegalDialog(
+                onAccept = { settingsViewModel.setLegalAccepted(true) },
+                onDeny = { /* Stay shown */ }
+            )
+        }
+
         CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
             Scaffold(
                 topBar = {
                     CommonAppBar(
-                        title = if (showSettings) "Settings" else "Open Macropad",
+                        title = if (showSettings) stringResource(Res.string.settings) else stringResource(Res.string.app_name),
                         onSettingsClick = { showSettings = !showSettings },
                         navigationIcon = {
                             if (showSettings) {
                                 IconButton(onClick = { showSettings = false }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                                 }
                             }
                         },

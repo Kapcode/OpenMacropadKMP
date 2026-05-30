@@ -23,6 +23,9 @@ import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun ProPurchaseDialog(
@@ -61,27 +64,41 @@ fun ProPurchaseDialog(
             tonalElevation = 6.dp
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-                // --- Fixed Header ---
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp, start = 16.dp, end = 16.dp, bottom = 12.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                // --- Fixed Sticky Header ---
+                Surface(
+                    tonalElevation = 8.dp,
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.surface,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Star,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = if (isPro) "Pro Access Active" else "Support OpenMacropad",
-                        style = MaterialTheme.typography.titleLarge,
-                        textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp, horizontal = 16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = if (isPro) stringResource(Res.string.pro_access_active) else stringResource(Res.string.support_macrokap),
+                            style = MaterialTheme.typography.titleLarge,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+
+                        // --- Moved Banner Ad to Sticky Header ---
+                        val adsDisabled = isPro || isAdFree || isDeveloperMode
+                        if (!adsDisabled) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+                        }
+                    }
                 }
 
                 // --- Scrollable Body ---
@@ -92,8 +109,9 @@ fun ProPurchaseDialog(
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Unlock premium features, remove ads, and support development.",
+                        text = stringResource(Res.string.unlock_premium),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
@@ -102,7 +120,7 @@ fun ProPurchaseDialog(
                     )
 
                     Text(
-                        text = "One-Time Purchases",
+                        text = stringResource(Res.string.one_time_purchases),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
@@ -110,8 +128,8 @@ fun ProPurchaseDialog(
 
                     // 1. Ad Free One-Time
                     PurchaseOptionCard(
-                        title = "Remove Ads",
-                        description = "One-time payment to remove banner ads forever.",
+                        title = stringResource(Res.string.remove_ads),
+                        description = stringResource(Res.string.remove_ads_desc),
                         price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME] ?: "---",
                         benefits = listOf(
                             "Removes banner ads",
@@ -127,8 +145,8 @@ fun ProPurchaseDialog(
 
                     // 2. Pro One-Time
                     PurchaseOptionCard(
-                        title = "Pro Lifetime Pass",
-                        description = "Permanent Pro access for this device and server.",
+                        title = stringResource(Res.string.pro_lifetime),
+                        description = stringResource(Res.string.pro_lifetime_desc),
                         price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_ONE_TIME] ?: "---",
                         benefits = listOf(
                             "Unlimited Pro access forever",
@@ -143,7 +161,7 @@ fun ProPurchaseDialog(
                     )
 
                     Text(
-                        text = "Subscriptions",
+                        text = stringResource(Res.string.subscriptions),
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.secondary
@@ -151,8 +169,8 @@ fun ProPurchaseDialog(
 
                     // 3. Ad Free Subscription
                     PurchaseOptionCard(
-                        title = "Ad-Free Monthly",
-                        description = "Remove ads with a small monthly contribution.",
+                        title = stringResource(Res.string.ad_free_monthly),
+                        description = stringResource(Res.string.ad_free_monthly_desc),
                         price = formattedPrices[BillingConstants.PRODUCT_ID_AD_FREE_SUB] ?: "---",
                         benefits = listOf(
                             "Removes banner ads",
@@ -168,8 +186,8 @@ fun ProPurchaseDialog(
 
                     // 4. Pro Subscription
                     PurchaseOptionCard(
-                        title = "Pro Monthly",
-                        description = "Unlimited Pro access with a monthly sub.",
+                        title = stringResource(Res.string.pro_monthly),
+                        description = stringResource(Res.string.pro_monthly_desc),
                         price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_SUB] ?: "---",
                         benefits = listOf(
                             "All Pro features included",
@@ -199,8 +217,8 @@ fun ProPurchaseDialog(
                     ) {
                         // Watch Ad (Sticky Footer)
                         PurchaseOptionCard(
-                            title = "Watch Ad",
-                            description = "Watch a short video to earn tokens.",
+                            title = stringResource(Res.string.watch_ad),
+                            description = stringResource(Res.string.watch_ad_desc),
                             price = "+$tokensPerAd Tokens",
                             benefits = listOf("Earn tokens for free", "Supports development"),
                             icon = Icons.Default.PlayCircle,
@@ -209,18 +227,12 @@ fun ProPurchaseDialog(
                             compact = true
                         )
 
-                        // Banner Ad (Sticky Footer)
-                        val adsDisabled = isPro || isAdFree || isDeveloperMode
-                        if (!adsDisabled) {
-                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
-                        }
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
                         ) {
                             TextButton(onClick = onDismissRequest) {
-                                Text("Close")
+                                Text(stringResource(Res.string.close))
                             }
                         }
                     }

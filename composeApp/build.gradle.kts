@@ -160,6 +160,7 @@ android {
 
 compose.resources {
     publicResClass = true
+    packageOfResClass = "com.kapcode.open.macropad.kmps"
 }
 
 dependencies {
@@ -186,7 +187,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "OpenMacropadServer"
+            packageName = "MacroKapServer"
             packageVersion = "1.1.1"
         }
     }
@@ -195,9 +196,9 @@ compose.desktop {
 
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
-    val uberJarPath = layout.buildDirectory.file("compose/jars/OpenMacropadServer-linux-x64-1.1.1.jar")
+    val uberJarPath = layout.buildDirectory.file("compose/jars/MacroKapServer-linux-x64-1.1.1.jar")
     
-    archiveFileName.set("OpenMacropadServer-linux-x64-1.1.1-unsigned.jar")
+    archiveFileName.set("MacroKapServer-linux-x64-1.1.1-unsigned.jar")
     destinationDirectory.set(layout.buildDirectory.dir("compose/jars"))
 
     from(zipTree(uberJarPath)) {

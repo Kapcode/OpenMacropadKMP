@@ -128,7 +128,7 @@ object KeystoreUtils {
         val expiry = Date(now.time + 365L * 24 * 60 * 60 * 1000) // 1 year
         val serialNumber = BigInteger(64, SecureRandom())
         
-        val subject = X500Name("CN=OpenMacropadServer")
+        val subject = X500Name("CN=MacroKapServer")
         val builder = JcaX509v3CertificateBuilder(
             subject,
             serialNumber,

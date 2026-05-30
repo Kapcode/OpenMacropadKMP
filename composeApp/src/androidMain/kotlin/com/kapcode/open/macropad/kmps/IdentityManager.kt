@@ -17,7 +17,7 @@ import javax.security.auth.x500.X500Principal
 actual class IdentityManager actual constructor() {
 
     actual companion object {
-        private const val KEY_ALIAS = "OpenMacropadIdentity"
+        private const val KEY_ALIAS = "MacroKapIdentity"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
 
         actual fun verifySignature(message: ByteArray, signature: ByteArray, publicKeyBytes: ByteArray): Boolean {
@@ -89,7 +89,7 @@ actual class IdentityManager actual constructor() {
                 setDigests(KeyProperties.DIGEST_SHA256)
                 // Use hardware-backed keys if available
                 setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                setCertificateSubject(X500Principal("CN=OpenMacropad Device, OU=Kapcode"))
+                setCertificateSubject(X500Principal("CN=MacroKap Device, OU=Kapcode"))
                 build()
             }
 

@@ -58,8 +58,8 @@ import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import kotlinx.coroutines.delay
-import openmacropadkmp.composeapp.generated.resources.Res
-import openmacropadkmp.composeapp.generated.resources.macropadIcon512
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.macropadIcon512
 import org.jetbrains.compose.resources.painterResource
 
 import com.kapcode.open.macropad.kmps.IdentityManager

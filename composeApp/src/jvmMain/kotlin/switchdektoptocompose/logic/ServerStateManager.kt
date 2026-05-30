@@ -1,5 +1,6 @@
 package switchdektoptocompose.logic
 
+import switchdektoptocompose.utils.ProjectPaths
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -13,7 +14,7 @@ import java.io.File
  * Manages the server's authoritative state, including session locks and monetization.
  */
 object ServerStateManager {
-    private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+    private val workingDir = ProjectPaths.workingDir
     private val stateFile = File(workingDir, "server_state.json")
     private val premiumUsersFile = File(workingDir, "premium_users.json")
 

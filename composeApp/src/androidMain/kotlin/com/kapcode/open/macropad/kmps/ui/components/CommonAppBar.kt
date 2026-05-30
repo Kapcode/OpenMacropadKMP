@@ -40,11 +40,14 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.BillingConstants
 import com.kapcode.open.macropad.kmps.BillingManager
 import com.kapcode.open.macropad.kmps.TokenManager
 import com.kapcode.open.macropad.kmps.loadRewardedAd
 import com.kapcode.open.macropad.kmps.showRewardedAd
+import org.jetbrains.compose.resources.stringResource
 
 val GoldCurrencyColor = Color(0xFFFFD700)
 
@@ -162,7 +165,7 @@ fun CommonAppBar(
 
     val titleContent = @Composable {
         if (title == "Settings") {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(Res.string.settings), style = MaterialTheme.typography.titleMedium)
         } else {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -171,13 +174,18 @@ fun CommonAppBar(
                 if (isPro) {
                     Icon(Icons.Default.Star, null, tint = GoldCurrencyColor, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Pro Active", style = MaterialTheme.typography.titleMedium, color = GoldCurrencyColor, fontWeight = FontWeight.Bold)
+                    Text(stringResource(Res.string.pro_active), style = MaterialTheme.typography.titleMedium, color = GoldCurrencyColor, fontWeight = FontWeight.Bold)
                 } else if (isServerPro) {
                     val hours = serverProTimeRemaining / (1000 * 60 * 60)
                     val minutes = (serverProTimeRemaining / (1000 * 60)) % 60
                     Icon(Icons.Default.Dns, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Server Pro (${hours}h ${minutes}m)", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = stringResource(Res.string.server_pro, hours, minutes),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
                 } else {
                     OutlinedCard(
                         onClick = { showProPurchaseDialog = true },
@@ -186,7 +194,7 @@ fun CommonAppBar(
                         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                     ) {
                         Text(
-                            "BUY PRO",
+                            text = stringResource(Res.string.buy_pro),
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Black

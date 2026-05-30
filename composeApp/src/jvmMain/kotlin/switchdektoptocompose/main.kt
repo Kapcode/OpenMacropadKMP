@@ -11,8 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.painterResource
-import openmacropadkmp.composeapp.generated.resources.Res
-import openmacropadkmp.composeapp.generated.resources.macropadIcon64
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.macropadIcon64
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
@@ -256,7 +256,7 @@ fun main(args: Array<String>) {
     
     Tray(
         icon = icon,
-        tooltip = "Open Macropad Server (Right-click for menu)",
+        tooltip = "MacroKap Server (Right-click for menu)",
         onAction = { 
             desktopWindowState.toggleWindow()
         },
@@ -495,7 +495,7 @@ fun main(args: Array<String>) {
             }
         },
         state = desktopWindowState.windowState,
-        title = "Open Macropad (Server)", // Updated title for clarity
+        title = "MacroKap (Server)", // Updated title for clarity
         icon = icon
     ) {
         // Force window to front and request focus when shown to avoid "glitched" non-responsive states.

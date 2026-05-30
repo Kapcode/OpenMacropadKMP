@@ -1,4 +1,4 @@
-rootProject.name = "openmacropadkmp"
+rootProject.name = "MacroKap"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

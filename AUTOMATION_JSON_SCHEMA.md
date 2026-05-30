@@ -1,6 +1,6 @@
 # Automation JSON Schema
 
-This document describes the JSON structure for `AutomationRoutine` and its components used in the Open Macropad KMP project.
+This document describes the JSON structure for `AutomationRoutine` and its components used in the MacroKap KMP project.
 
 ## AutomationRoutine
 

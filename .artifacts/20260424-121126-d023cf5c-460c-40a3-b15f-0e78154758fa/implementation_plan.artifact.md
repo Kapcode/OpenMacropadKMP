@@ -9,7 +9,7 @@ Refactor the `MacroManagerScreen` to provide dedicated, collapsible headers for 
 
 ### UI Components
 
-#### [MacroManagerScreen.kt](file:///mnt/512_nvme/Master_Projects/Android/OpenMacropadKMP/composeApp/src/jvmMain/kotlin/switchdektoptocompose/ui/MacroManagerScreen.kt)
+#### [MacroManagerScreen.kt](file:///mnt/512_nvme/Master_Projects/Android/MacroKapKMP/composeApp/src/jvmMain/kotlin/switchdektoptocompose/ui/MacroManagerScreen.kt)
 
 - **Update `SectionHeader`**:
     - Use `Icons.Default.PostAdd` (Page with plus) for the "New Pack" icon.

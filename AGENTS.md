@@ -1,6 +1,6 @@
 # AI Agent Guide
 
-This document is the primary entry point for AI assistants and automated tools working on the OpenMacropadKMP project. It provides a map of documentation and critical instructions for maintaining project health.
+This document is the primary entry point for AI assistants and automated tools working on the MacroKapKMP project. It provides a map of documentation and critical instructions for maintaining project health.
 
 ## 📚 Documentation Index
 

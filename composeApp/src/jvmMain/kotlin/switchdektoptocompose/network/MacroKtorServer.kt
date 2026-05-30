@@ -1,5 +1,6 @@
 package switchdektoptocompose.network
 
+import switchdektoptocompose.utils.ProjectPaths
 import com.kapcode.open.macropad.kmps.IdentityManager
 import com.kapcode.open.macropad.kmps.ProjectConfig
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
@@ -36,7 +37,7 @@ class MacroKtorServer(
     private val logger = LoggerFactory.getLogger(MacroKtorServer::class.java)
     private var server: EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration>? = null
     private val clients = ConcurrentHashMap<String, ConnectedClient>()
-    private val temporaryTrustedDevices = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+    private val temporaryTrustedDevices = ConcurrentHashMap.newKeySet<String>()
     private val serverScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var watchdogJob: Job? = null
 
@@ -61,6 +62,10 @@ class MacroKtorServer(
 
     fun approveTemporaryDevice(clientId: String) {
         temporaryTrustedDevices.add(clientId)
+    }
+
+    fun removeTemporaryTrust(clientId: String) {
+        temporaryTrustedDevices.remove(clientId)
     }
 
     fun isDeviceTrusted(clientId: String): Boolean {
@@ -91,7 +96,7 @@ class MacroKtorServer(
 
         server = embeddedServer(Netty, configure = {
             if (isSecure) {
-                val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+                val workingDir = ProjectPaths.workingDir
                 if (!workingDir.exists()) workingDir.mkdirs()
 
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
@@ -227,7 +232,7 @@ class MacroKtorServer(
                 }
                 logger.info("New pairing request for device {} ({})", client.name, client.id)
                 
-                val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+                val workingDir = ProjectPaths.workingDir
                 val keystore = KeystoreUtils.getOrCreateKeystore(workingDir)
                 val fingerprint = KeystoreUtils.getCertificateFingerprint(keystore)
                 
@@ -264,7 +269,11 @@ class MacroKtorServer(
                 temporaryTrustedDevices.remove(client.id)
                 onClientDisconnected(client.id)
             } else {
-                logger.debug("Session for {} finished, but a newer session is already active. Skipping removal.", client.id)
+                logger.debug("Session for {} finished, but a newer session is already active. Skipping removal from client map.", client.id)
+                // IMPORTANT: We do NOT remove from temporaryTrustedDevices here, 
+                // because the NEW session might need that trust if it hasn't authenticated yet.
+                // However, the leak happens if we NEVER remove it. 
+                // The new session will eventually hit its own finally block and remove it.
             }
         }
     }
@@ -288,7 +297,7 @@ class MacroKtorServer(
             // Auto-promote to AUTHENTICATED if the device is now trusted and we aren't waiting for a challenge.
             // This handles the transition after manual pairing approval in the UI.
             if (client.authStatus == AuthStatus.CHALLENGE_PENDING && client.pendingChallenge == null && isDeviceTrusted(client.id)) {
-                logger.info("Client {} automatically promoted to AUTHENTICATED (now trusted)", client.id)
+                logger.info("Client {} automatically promoted to AUTHENTICATED (now trusted and no pending challenge)", client.id)
                 client.authStatus = AuthStatus.AUTHENTICATED
             }
             
@@ -411,7 +420,7 @@ class MacroKtorServer(
                 client.session.send(Frame.Binary(true, serverInfoMessage(
                     version = ProjectConfig.VERSION,
                     platform = "$os ($arch)",
-                    serverId = KeystoreUtils.getCertificateFingerprint(KeystoreUtils.getOrCreateKeystore(File(System.getProperty("user.home"), ".openmacropad")))
+                    serverId = KeystoreUtils.getCertificateFingerprint(KeystoreUtils.getOrCreateKeystore(ProjectPaths.workingDir))
                 ).toBytes()))
             } else {
                 logger.warn("Authentication failed for {}", client.id)

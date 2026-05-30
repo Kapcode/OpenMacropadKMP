@@ -1,10 +1,10 @@
 # Design Language
 
-This document outlines the visual and interaction principles for OpenMacropadKMP, ensuring a consistent and accessible experience across Android and Desktop platforms.
+This document outlines the visual and interaction principles for MacroKapKMP, ensuring a consistent and accessible experience across Android and Desktop platforms.
 
 ## 1. Visual Identity
 
-OpenMacropadKMP uses **Material Design 3 (M3)** as its foundational design system, customized with a specialized "Blue" color language.
+MacroKapKMP uses **Material Design 3 (M3)** as its foundational design system, customized with a specialized "Blue" color language.
 
 ### Color Palette
 

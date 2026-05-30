@@ -2,13 +2,14 @@ package switchdektoptocompose.logic
 
 import org.json.JSONArray
 import org.json.JSONObject
+import switchdektoptocompose.utils.ProjectPaths
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.CopyOnWriteArrayList
 
 object ConnectionHistoryManager {
-    private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+    private val workingDir = ProjectPaths.workingDir
     private val historyFile = File(workingDir, "connection_history.json")
     private val maxEntries = 100
 

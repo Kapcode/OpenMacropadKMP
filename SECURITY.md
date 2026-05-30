@@ -1,6 +1,6 @@
 # Security Policy
 
-This document outlines the security vulnerabilities identified in OpenMacropadKMP and the status of their mitigations.
+This document outlines the security vulnerabilities identified in MacroKapKMP and the status of their mitigations.
 
 ## Status of Vulnerability Mitigations
 

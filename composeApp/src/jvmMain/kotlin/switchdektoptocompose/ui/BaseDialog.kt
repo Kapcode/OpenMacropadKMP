@@ -44,21 +44,21 @@ fun AppDialog(
         // Force focus and repaint on init to avoid "glitched" non-responsive states.
         // In VM environments, we perform an aggressive sequence to ensure the Skia surface renders.
         LaunchedEffect(Unit) {
-            repeat(5) { stage ->
+            repeat(10) { stage ->
                 window.toFront()
                 window.requestFocus()
                 window.revalidate()
                 window.repaint()
                 
-                // On the third stage, perform a tiny move to trigger window manager refresh
-                if (stage == 2) {
+                // On several stages, perform a tiny move to trigger window manager refresh
+                if (stage % 3 == 2) {
                     val pos = window.location
                     window.setLocation(pos.x + 1, pos.y)
-                    delay(10)
+                    delay(5)
                     window.setLocation(pos.x, pos.y)
                 }
 
-                delay(if (stage == 0) 50 else 150)
+                delay(if (stage == 0) 20 else 100)
             }
         }
 

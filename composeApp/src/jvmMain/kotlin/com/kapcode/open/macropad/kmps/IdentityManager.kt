@@ -1,5 +1,6 @@
 package com.kapcode.open.macropad.kmps
 
+import switchdektoptocompose.utils.ProjectPaths
 import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
 import com.kapcode.open.macropad.kmps.utils.SecretManager
 import java.io.File
@@ -15,7 +16,7 @@ import java.security.spec.X509EncodedKeySpec
  */
 actual class IdentityManager actual constructor() {
 
-    private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+    private val workingDir = ProjectPaths.workingDir
     private val keyStore: KeyStore
 
     init {

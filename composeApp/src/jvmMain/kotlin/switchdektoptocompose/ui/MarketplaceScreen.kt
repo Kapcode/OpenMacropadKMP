@@ -33,7 +33,7 @@ fun MarketplaceScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("OpenMacropad Marketplace") },
+                title = { Text("MacroKap Marketplace") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

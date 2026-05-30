@@ -224,7 +224,7 @@ class DesktopWindowState(
         } else {
             // Check if our window is actually the active one in the OS
             val isActive = java.awt.Window.getWindows().any { 
-                (it as? java.awt.Frame)?.title == "Open Macropad (Compose)" && (it.isFocused || it.isActive)
+                (it as? java.awt.Frame)?.title == "MacroKap (Compose)" && (it.isFocused || it.isActive)
             }
             if (!isActive) {
                 showWindow() // Bring to front if not active

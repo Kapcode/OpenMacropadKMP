@@ -1,11 +1,12 @@
 package switchdektoptocompose.logic
 
+import switchdektoptocompose.utils.ProjectPaths
 import org.json.JSONObject
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 object TrustedDeviceManager {
-    private val workingDir = File(System.getProperty("user.home"), ".openmacropad")
+    private val workingDir = ProjectPaths.workingDir
     private val trustedDevicesFile = File(workingDir, "trusted_devices.json")
     private val bannedDevicesFile = File(workingDir, "banned_devices.json")
     
