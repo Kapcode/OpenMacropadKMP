@@ -33,7 +33,7 @@ data class MacroManagerState(
     val filesPendingDeletion: List<File>? = null,
     val macroBeingRenamed: MacroFileState? = null,
     val packBeingEdited: MacroPack? = null,
-    val triggerPendingConfirmation: switchdektoptocompose.logic.UnifiedTrigger? = null,
+    val triggerPendingConfirmation: UnifiedTrigger? = null,
     val activeToast: String? = null
 )
 
@@ -121,7 +121,7 @@ class MacroManagerViewModel(
     val activeToast: StateFlow<String?> = _uiState.map { it.activeToast }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
-    val triggerPendingConfirmation: StateFlow<switchdektoptocompose.logic.UnifiedTrigger?> = _uiState.map { it.triggerPendingConfirmation }
+    val triggerPendingConfirmation: StateFlow<UnifiedTrigger?> = _uiState.map { it.triggerPendingConfirmation }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
     private val playbackJob = SupervisorJob()
@@ -198,7 +198,7 @@ class MacroManagerViewModel(
             .mapNotNull { file ->
                 try {
                     val content = file.readText()
-                    val (trigger, allowedClients) = if (file.name.endsWith(".json", ignoreCase = true)) {
+                    val (_, allowedClients) = if (file.name.endsWith(".json", ignoreCase = true)) {
                         val json = JSONObject(content)
                         val t = json.optJSONObject("trigger")
                         t to (t?.optString("allowedClients", "") ?: "")
@@ -294,22 +294,22 @@ class MacroManagerViewModel(
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.KeyEvent -> {
                                         executeKeyEvent(action)
-                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                        delay(currentAutoDelay)
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.MouseEvent -> {
                                         executeMouseEvent(action)
-                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                        delay(currentAutoDelay)
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.MouseButtonEvent -> {
                                         executeMouseButtonEvent(action)
-                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                        delay(currentAutoDelay)
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.ScrollEvent -> {
                                         macroPlayer.play(listOf(MacroEventState.ScrollEvent(resolveToInt(action.amount))))
-                                        kotlinx.coroutines.delay(currentAutoDelay)
+                                        delay(currentAutoDelay)
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.DelayEvent -> {
-                                        kotlinx.coroutines.delay(resolveToLong(action.durationMs))
+                                        delay(resolveToLong(action.durationMs))
                                     }
                                     is com.kapcode.open.macropad.kmps.models.AutomationAction.ScriptAction -> {
                                         macroPlayer.executeScript(action.script)
@@ -339,7 +339,7 @@ class MacroManagerViewModel(
         if (name == "clipboard_text") {
             try {
                 val selection = java.awt.datatransfer.StringSelection(resolvedValue)
-                java.awt.Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
+                Toolkit.getDefaultToolkit().systemClipboard.setContents(selection, selection)
             } catch (e: Exception) { e.printStackTrace() }
         } else {
             variables[name] = resolvedValue
@@ -374,7 +374,7 @@ class MacroManagerViewModel(
                 try {
                     // NOTE: ClassNotFoundExceptions seen in logs while running in IDE are benign side-effects 
                     // of AWT probing IntelliJ's custom clipboard formats.
-                    val clipboard = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+                    val clipboard = Toolkit.getDefaultToolkit().systemClipboard
                     if (clipboard.isDataFlavorAvailable(java.awt.datatransfer.DataFlavor.stringFlavor)) {
                         clipboard.getData(java.awt.datatransfer.DataFlavor.stringFlavor) as String
                     } else ""
@@ -935,7 +935,7 @@ class MacroManagerViewModel(
         }
     }
 
-    fun showTriggerConfirmation(trigger: switchdektoptocompose.logic.UnifiedTrigger) {
+    fun showTriggerConfirmation(trigger: UnifiedTrigger) {
         _uiState.update { it.copy(triggerPendingConfirmation = trigger) }
     }
 

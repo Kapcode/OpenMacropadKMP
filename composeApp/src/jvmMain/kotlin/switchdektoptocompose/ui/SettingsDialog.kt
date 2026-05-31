@@ -70,7 +70,6 @@ fun SettingsDialog(
     val clientSlamFireAction by settingsViewModel.clientSlamFireAction.collectAsState()
 
     // Variable settings
-    val windowPollingRate by settingsViewModel.windowPollingRate.collectAsState()
 
     // Scroll state management
     val scrollState = rememberScrollState()

@@ -81,7 +81,7 @@ fun BlinkingCursor(isBlinking: Boolean = true) {
 }
 
 @Composable
-private fun Dot(infiniteTransition: androidx.compose.animation.core.InfiniteTransition, delayMillis: Int) {
+private fun Dot(infiniteTransition: InfiniteTransition, delayMillis: Int) {
     val scale by infiniteTransition.animateFloat(
         initialValue = 0.4f,
         targetValue = 1f,

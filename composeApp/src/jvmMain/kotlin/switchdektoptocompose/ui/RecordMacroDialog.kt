@@ -45,7 +45,6 @@ fun RecordMacroDialog(
         val macroName by viewModel.macroName.collectAsState()
         val useRecordingDuration by viewModel.useRecordingDuration.collectAsState()
         val recordingDurationMs by viewModel.recordingDurationMs.collectAsState()
-        val selectedStopKey by viewModel.selectedStopKey.collectAsState()
 
         val triggerType by viewModel.triggerType.collectAsState()
         val holdDurationMs by viewModel.holdDurationMs.collectAsState()

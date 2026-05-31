@@ -163,7 +163,7 @@ fun ClientScreen(
         }
     }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val animationManager = remember { KapAnimationManager() }
     val lastClickedPositions = remember { mutableMapOf<String, Offset>() }
 

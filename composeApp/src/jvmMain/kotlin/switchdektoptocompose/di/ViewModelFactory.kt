@@ -114,7 +114,6 @@ object ViewModelFactory {
         
         remember(controllerManager) {
             serverViewModel.controllerManager = controllerManager
-            Unit
         }
 
         val desktopViewModel = remember { 

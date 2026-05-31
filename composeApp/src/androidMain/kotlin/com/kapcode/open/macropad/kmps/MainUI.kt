@@ -44,7 +44,7 @@ fun MainUI(
     var showSettings by remember { mutableStateOf(false) }
     var showAd by remember { mutableStateOf(false) }
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
     val foundServers by clientDiscovery.foundServers.collectAsState()
     val isScanning by clientDiscovery.isScanning.collectAsState()
     val isGlobalLoading by settingsViewModel.isGlobalLoading.collectAsState()

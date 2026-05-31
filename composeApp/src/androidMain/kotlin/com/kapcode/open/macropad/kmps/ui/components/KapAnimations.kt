@@ -101,7 +101,7 @@ val LocalKapAnimationManager = staticCompositionLocalOf { KapAnimationManager() 
 @Composable
 fun KapAnimationOverlay() {
     val manager = LocalKapAnimationManager.current
-    val density = LocalDensity.current
+    LocalDensity.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         manager.flyEvents.forEach { event ->
@@ -120,7 +120,7 @@ fun KapAnimationOverlay() {
 @Composable
 fun DeductionAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     val animProgress = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
+    rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         animProgress.animateTo(

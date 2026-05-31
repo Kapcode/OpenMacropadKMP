@@ -16,7 +16,7 @@ class ControllerManager(
     private val macroManagerViewModel: MacroManagerViewModel,
     private val layoutViewModel: switchdektoptocompose.viewmodel.LayoutViewModel
 ) {
-    private val jamepad = com.studiohartman.jamepad.ControllerManager()
+    private val jamepad = ControllerManager()
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private var pollingJob: Job? = null
     

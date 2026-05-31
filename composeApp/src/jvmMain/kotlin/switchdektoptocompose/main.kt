@@ -85,7 +85,6 @@ fun main(args: Array<String>) {
     // Pass listener back to serverViewModel
     remember(triggerListener, serverViewModel) {
         serverViewModel.triggerListener = triggerListener
-        Unit
     }
     val inspectorManager = remember { 
         InspectorManager(
@@ -161,7 +160,7 @@ fun main(args: Array<String>) {
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
 
     LaunchedEffect(selectedTheme) {
-        val laf = if (selectedTheme == "Dark Blue") com.formdev.flatlaf.FlatDarkLaf::class.java.name else com.formdev.flatlaf.FlatLightLaf::class.java.name
+        val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else com.formdev.flatlaf.FlatLightLaf::class.java.name
         UIManager.setLookAndFeel(laf)
         for (window in java.awt.Window.getWindows()) {
             javax.swing.SwingUtilities.updateComponentTreeUI(window)

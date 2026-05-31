@@ -77,8 +77,6 @@ fun DesktopApp(
     val newEventViewModel = viewModels.newEventViewModel
     val layoutViewModel = viewModels.layoutViewModel
 
-    val mainTab by layoutViewModel.mainTab.collectAsState()
-
     val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
     val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
     val allowNewConnections by settingsViewModel.allowNewConnections.collectAsState()
