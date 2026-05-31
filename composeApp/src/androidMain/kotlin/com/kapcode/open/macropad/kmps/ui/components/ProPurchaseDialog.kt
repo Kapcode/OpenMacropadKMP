@@ -39,7 +39,7 @@ fun ProPurchaseDialog(
     isPro: Boolean = false,
     isAdFree: Boolean = false,
     isDeveloperMode: Boolean = false,
-    tokensPerAd: Int = BillingConstants.TOKENS_PER_REWARDED_AD,
+    kapsPerAd: Int = BillingConstants.KAPS_PER_REWARDED_AD,
 ) {
     LaunchedEffect(Unit) {
         AdVisibilityManager.isForegroundAdVisible = true
@@ -77,6 +77,13 @@ fun ProPurchaseDialog(
                             .padding(vertical = 16.dp, horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
+                        // --- Ad at the top of Sticky Header ---
+                        val adsDisabled = isPro || isAdFree || isDeveloperMode
+                        if (!adsDisabled) {
+                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
+                        }
+
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
@@ -92,12 +99,13 @@ fun ProPurchaseDialog(
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
 
-                        // --- Moved Banner Ad to Sticky Header ---
-                        val adsDisabled = isPro || isAdFree || isDeveloperMode
-                        if (!adsDisabled) {
-                            Spacer(modifier = Modifier.height(12.dp))
-                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
-                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = stringResource(Res.string.unlock_premium),
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 }
 
@@ -110,14 +118,6 @@ fun ProPurchaseDialog(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = stringResource(Res.string.unlock_premium),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(bottom = 4.dp)
-                    )
 
                     Text(
                         text = stringResource(Res.string.one_time_purchases),
@@ -134,7 +134,7 @@ fun ProPurchaseDialog(
                         benefits = listOf(
                             "Removes banner ads",
                             "Removes interruptible ads",
-                            "Keeps rewarded ads for tokens",
+                            "Keeps rewarded ads for Kaps",
                             "One-time payment"
                         ),
                         icon = Icons.Default.DoneAll,
@@ -150,7 +150,7 @@ fun ProPurchaseDialog(
                         price = formattedPrices[BillingConstants.PRODUCT_ID_PRO_ONE_TIME] ?: "---",
                         benefits = listOf(
                             "Unlimited Pro access forever",
-                            "Global server access (No tokens)",
+                            "Global server access (No Kaps)",
                             "Pro shared with all clients",
                             "Exclusive future features"
                         ),
@@ -175,7 +175,7 @@ fun ProPurchaseDialog(
                         benefits = listOf(
                             "Removes banner ads",
                             "Removes interruptible ads",
-                            "Keeps rewarded ads for tokens",
+                            "Keeps rewarded ads for Kaps",
                             "Cancel anytime"
                         ),
                         icon = Icons.Default.Block,
@@ -219,8 +219,8 @@ fun ProPurchaseDialog(
                         PurchaseOptionCard(
                             title = stringResource(Res.string.watch_ad),
                             description = stringResource(Res.string.watch_ad_desc),
-                            price = "+$tokensPerAd Tokens",
-                            benefits = listOf("Earn tokens for free", "Supports development"),
+                            price = "+$kapsPerAd Kaps",
+                            benefits = listOf("Earn Kaps for free", "Supports development"),
                             icon = Icons.Default.PlayCircle,
                             onClick = onWatchAd,
                             badge = "FREE",
@@ -365,7 +365,7 @@ fun ProPurchaseDialogPreview() {
             onPurchaseOneTime = {},
             onRemoveAdsSubscription = {},
             onRemoveAdsOneTime = {},
-            tokensPerAd = 25,
+            kapsPerAd = 25,
             formattedPrices = mapOf(
                 BillingConstants.PRODUCT_ID_PRO_ONE_TIME to "$19.99",
                 BillingConstants.PRODUCT_ID_PRO_SUB to "$2.99/mo",

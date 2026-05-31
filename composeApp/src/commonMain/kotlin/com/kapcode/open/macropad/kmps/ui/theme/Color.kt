@@ -25,6 +25,9 @@ val light_surfaceVariant = Color(0xFFDFE2EB)
 val light_onSurfaceVariant = Color(0xFF43474E)
 val light_outline = Color(0xFF73777F)
 
+val GoldCurrencyColor = Color(0xFFFFD700)
+val DarkGoldCurrencyColor = Color(0xFFB8860B)
+
 // Dark Blue Theme Colors
 val dark_primary = Color(0xFF9ECAFF)
 val dark_onPrimary = Color(0xFF003258)

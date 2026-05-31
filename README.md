@@ -49,9 +49,14 @@ MacroKapKMP is a Kotlin Multiplatform project that transforms your Android devic
 *   **Editable Dashboard:** Fully customizable "My Dashboard" tab. Users can add macros from any connected server pack using the **Macro Picker** dialog, choose their preferred **Widget Variant**, and remove them via **Drag-to-Trash**.
 *   **Drag-and-Drop Reordering:** Intuitive long-press gesture to enter "Edit Mode," allowing users to rearrange macros in their dashboard with real-time visual feedback (scaling and rotation).
 *   **Search & Filtering**: Real-time search bar for filtering macro packs and finding specific automation tools.
-*   **Token System:** A rewarded ad-supported model for macro execution.
+*   **Kap System:** A rewarded ad-supported model for macro execution.
 *   **Discovery:** Automatic discovery of servers on the local network.
-*   **Gold Standard Token Sync:** Seamlessly synchronizes the Android `TokenManager` balance with the Server's global ledger. Reports `currency_spent` events in real-time to maintain an accurate cross-platform audit of expenditure.
+*   **Gold Standard Kap Sync:** Seamlessly synchronizes the Android `KapManager` balance with the Server's global ledger. Reports `currency_spent` events in real-time to maintain an accurate cross-platform audit of expenditure.
+*   **Grace Period System:** Features a 10-second "Grace Period" after spending a Kap. Any additional macros executed within this window are free of charge. Includes a high-visibility, **thick blue timer bar** in the App Bar with a sliding Kap icon thumb.
+*   **Dynamic UI Animations:** Implemented a coordinate-aware animation system for real-time feedback:
+    *   **Deduction (Straight Flight)**: Kaps fly directly from your balance to the clicked button when spent.
+    *   **Grace Skip (Boomerang)**: During the grace period, Kaps perform a 1000ms "U-turn" or boomerang flight—traveling 80% of the way to the button before returning to the balance—to visually signal a free execution.
+    *   **Award Effects**: Flying Kaps and floating "+100" text effects for rewarded actions.
 *   **Security:** Supports TLS/SSL (WSS) for encrypted communication and out-of-band TOFU verification. Uses stable hardware fingerprints (`MANUFACTURER|MODEL|BOARD|HARDWARE`) to ensure reliable device identification.
 
 ## Installation and Usage

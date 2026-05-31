@@ -4,7 +4,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import switchdektoptocompose.logic.ConnectionHistoryManager
 import switchdektoptocompose.logic.TriggerBridge
 import switchdektoptocompose.logic.UnifiedTrigger
 import switchdektoptocompose.model.*
@@ -84,8 +83,7 @@ open class DesktopViewModel(
     }
 
     fun clearConnectionHistory() {
-        ConnectionHistoryManager.clearHistory()
-        // ClientCommunicationViewModel should ideally expose the history flow
+        clientCommunicationViewModel.clearConnectionHistory()
     }
 
     fun shutdown() {

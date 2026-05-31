@@ -29,7 +29,7 @@ class MacroApplication : Application() {
         analyticsManager = AnalyticsManager(this, settingsViewModel)
 
         // Warm up SharedPreferences on a background thread
-        // This makes TokenManager and other pref-based logic "instant" later
+        // This makes KapManager and other pref-based logic "instant" later
         Thread {
             getSharedPreferences("token_prefs", MODE_PRIVATE)
         }.start()

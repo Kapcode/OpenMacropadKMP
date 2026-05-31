@@ -49,6 +49,7 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
 - **Color Logic**:
     - **Success/Active**: Standard Green in Dark Theme, High-Contrast Green (`#008000`) in Light Theme.
     - **Error/Stopped**: Material 3 Error color (`#BA1A1A`).
+    - **Grace Period**: Distinct Blue (`#2196F3`) used for the timer bar.
 - **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
 - **Unified Notification System (Toasts)**:
     - **Desktop Custom Overlay**: A transparent, always-on-top window positioned at `BottomCenter` for non-intrusive alerts. Replaces standard OS notifications for precise timing control.
@@ -140,6 +141,28 @@ To ensure secure and ergonomic device pairing on mobile:
     - `Icons.Default.Done`: Confirm/Submit pairing.
     - `Icons.Default.Close`: Cancel/Exit pairing.
 
+### Dynamic Kap Animations (Android)
+To provide tactile and satisfying feedback for macro execution:
+- **Deduction Animation**: 
+    - **Path**: Linear flight from the App Bar balance to the center of the clicked macro button.
+    - **Visuals**: Icon scales down (`1.2f` to `0.5f`) and fades out during flight.
+    - **Timing**: 600ms duration.
+- **Grace Period "Boomerang" Animation**:
+    - **Path**: A 1000ms quadratic Bezier U-turn. The Kap icon travels 80% of the distance toward the macro button before performing a sharp turn and returning to the balance.
+    - **Control Point**: Calculated as `P0 + 1.6 * (Target - P0)` to create an overshoot effect that peaks at the 80% mark.
+    - **Visuals**: Pulsing scale (`1.0f -> 1.4f -> 1.0f`) at the peak of the turn to emphasize the "rejection."
+- **Reward Spread**:
+    - **Path**: Multiple Kaps burst from the trigger point (e.g., center-bottom) and arch toward the balance using randomized quadratic Bezier paths.
+    - **Text**: A high-contrast Gold (`#FFFFD700`) "+100" text floats upward with a linear fade.
+
+### Grace Timer Bar (Android)
+The grace period is visualized as a "Kap Slider" in the App Bar:
+- **Thickness**: High-visibility `8.dp` height.
+- **Width**: `64.dp` container.
+- **Thumb**: A `14.dp` Kap icon that slides along the progress line as the timer counts down.
+- **Color**: Solid Blue (`#2196F3`) progress with a `20%` alpha track.
+- **Behavior**: Appears immediately after a Kap is spent; disappears when the 10-second window closes.
+
 ### Desktop (Swing/Compose Bridge)
 - **JSON Editor**: The `RSyntaxTextArea` (Swing) component is dynamically themed to match the Compose UI.
   - Dark Blue Theme -> `dark.xml`
@@ -179,7 +202,7 @@ The UI is designed to be fully navigable via D-Pad and Left Stick:
     - **$ Tags**: Relative price indicators ($ to $$$$$) pinned to the top-right of purchase cards.
     - **ACTIVE**: Primary-colored badge for currently owned tiers.
 - **Benefit Lists**: Displayed as small-text bullet points with check icons (`Icons.Default.Check`) below the product description.
-- **Currency**: Tokens are represented by `Icons.Default.CurrencyExchange` in `GoldCurrencyColor` (0xFFFFD700).
+- **Currency**: Kaps are represented by `painterResource(Res.drawable.macropadIcon64)` in `GoldCurrencyColor` (0xFFFFD700).
 
 ### Marketplace Status
 - **Marketplace Coming Soon**: Displays a `Storefront` icon with a description about future community macro packs.

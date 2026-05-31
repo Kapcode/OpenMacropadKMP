@@ -105,7 +105,7 @@ class MainActivity : ComponentActivity() {
         // Move discovery and heavy initialization to immediately after binding ViewModel
         lifecycleScope.launch(Dispatchers.IO) {
             clientDiscovery.start()
-            TokenManager.getInstance(this@MainActivity)
+            KapManager.getInstance(this@MainActivity)
             try {
                 IdentityManager().getIdentityPublicKey()
             } catch (e: Exception) {

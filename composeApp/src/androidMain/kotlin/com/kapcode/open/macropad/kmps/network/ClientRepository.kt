@@ -5,7 +5,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import com.kapcode.open.macropad.kmps.ServerStorage
-import com.kapcode.open.macropad.kmps.TokenManager
+import com.kapcode.open.macropad.kmps.KapManager
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
@@ -47,7 +47,7 @@ class ClientRepository(private val context: Context) {
     ) {
         clientJob?.cancel()
         Log.i("ClientRepository", "Previous connection job cancelled. Starting new connection to $ipAddress")
-        clientJob = scope.launch {
+        clientJob = scope.launch connectionLoop@{
             var backoffMillis = 1000L
             val maxBackoffMillis = 16000L
             var retryCount = 0
@@ -90,12 +90,15 @@ class ClientRepository(private val context: Context) {
                     var lastHeartbeat = System.currentTimeMillis()
                     var currentVerificationCode: String? = null
 
-                    val tokenManager = TokenManager.getInstance(context)
-                    tempClient.send(dataMessage("currency_update", tokenManager.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+                    val kapManager = KapManager.getInstance(context)
+                    tempClient.send(dataMessage("currency_update", kapManager.kapBalance.value.toLong().toString().encodeToByteArray()).toBytes())
 
+                    var isFullyConnected = false
                     val macroFetchJob = launch {
                         while (isActive) {
-                            tempClient.send(getMacrosRequest().toBytes())
+                            if (isFullyConnected) {
+                                tempClient.send(getMacrosRequest().toBytes())
+                            }
                             delay(5000)
                         }
                     }
@@ -106,7 +109,7 @@ class ClientRepository(private val context: Context) {
                             if (System.currentTimeMillis() - lastHeartbeat > 40000) {
                                 Log.w("ClientRepository", "Heartbeat timeout! Reconnecting...")
                                 tempClient.close()
-                                this@launch.cancel()
+                                this@connectionLoop.cancel()
                             }
                         }
                     }
@@ -143,6 +146,7 @@ class ClientRepository(private val context: Context) {
                                             }
                                             ControlCommand.PAIRING_APPROVED -> {
                                                 Log.i("ClientRepository", "Pairing approved!")
+                                                isFullyConnected = true
                                                 onUpdate("Connected", initialServerName ?: ipAddress, null, null)
                                                 
                                                 // Trigger macro fetch and currency sync immediately upon approval
@@ -151,20 +155,20 @@ class ClientRepository(private val context: Context) {
                                                     Log.d("ClientRepository", "Requesting macros and syncing currency after approval/auth")
                                                     this@ClientRepository.client?.send(textMessage("getMacros").toBytes())
                                                     
-                                                    val tm = TokenManager.getInstance(context)
-                                                    this@ClientRepository.client?.send(dataMessage("currency_update", tm.tokenBalance.value.toLong().toString().encodeToByteArray()).toBytes())
+                                                    val km = KapManager.getInstance(context)
+                                                    this@ClientRepository.client?.send(dataMessage("currency_update", km.kapBalance.value.toLong().toString().encodeToByteArray()).toBytes())
                                                 }
                                             }
                                             ControlCommand.PAIRING_REJECTED -> {
                                                 onMacrosReceived(emptyList())
                                                 onUpdate("Pairing Denied", initialServerName, params["reason"] ?: "Server rejected pairing.", null)
-                                                this@launch.cancel()
+                                                this@connectionLoop.cancel()
                                             }
                                             ControlCommand.BANNED -> {
                                                 onMacrosReceived(emptyList())
                                                 val reason = params["reason"] ?: "Device is banned"
                                                 onUpdate("Banned", initialServerName, reason, null)
-                                                this@launch.cancel()
+                                                this@connectionLoop.cancel()
                                             }
                                             ControlCommand.MARKETPLACE_LIST -> {
                                                 // We'll handle this in onData for now since it might be a large JSON blob
@@ -172,7 +176,7 @@ class ClientRepository(private val context: Context) {
                                             ControlCommand.DISCONNECT -> {
                                                 onMacrosReceived(emptyList())
                                                 onUpdate("Disconnected", initialServerName, params["reason"] ?: "Disconnected by Server.", null)
-                                                this@launch.cancel()
+                                                this@connectionLoop.cancel()
                                             }
                                             ControlCommand.EXECUTION_START -> {
                                                 params["macro"]?.let { onExecutionStart(it) }
@@ -201,6 +205,7 @@ class ClientRepository(private val context: Context) {
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
                                             Log.i("ClientRepository", "Received ${macroNames.size} macros. Marking as Connected.")
                                             
+                                            isFullyConnected = true
                                             // 1. Reset disconnect state if macros are found
                                             // 2. Set connected status
                                             // 3. Notify UI
@@ -269,8 +274,8 @@ class ClientRepository(private val context: Context) {
                     retryCount++
                     if (retryCount > maxRetries) {
                         onUpdate("Failed", null, "Max retries reached: ${e.message}", null)
-                        this@launch.cancel()
-                        return@launch
+                        this@connectionLoop.cancel()
+                        return@connectionLoop
                     }
                     onUpdate("Connecting...", null, "Retrying ($retryCount/$maxRetries)...", null)
                 } finally {

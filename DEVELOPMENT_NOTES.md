@@ -89,9 +89,9 @@ Automated macros could cause loss of system control if they ran too long or went
 
 ## 10. Android Freemium Model
 
-### Challenge: Rewarded Ad-Based Token System
+### Challenge: Rewarded Ad-Based Kap System
 - **Problem**: Monetization without a paywall.
-- **Solution**: Created a `TokenManager` singleton using `SharedPreferences` to manage a token-based economy where users earn tokens by watching AdMob rewarded ads.
+- **Solution**: Created a `KapManager` singleton using `SharedPreferences` to manage a Kap-based economy where users earn Kaps by watching AdMob rewarded ads.
 
 ## Architecture Overview
 
@@ -352,17 +352,17 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Solution**:
     - **Two-Step Macro Picker**: Refactored the `MacroPicker` into a stateful, two-step dialog. Step 1 selects the macro from the list; Step 2 presents the available widget variants with descriptive icons. This ensures users can configure their dashboard without needing a separate "Edit Properties" screen.
 
-## 29. De-bouncing and Token Sync Reliability
+## 29. De-bouncing and Kap Sync Reliability
 
-### Challenge: Multiple Token Deductions per Macro
-- **Problem**: Users reported 2 to 4 tokens being removed for a single macro press.
+### Challenge: Multiple Kap Deductions per Macro
+- **Problem**: Users reported 2 to 4 Kaps being removed for a single macro press.
 - **Root Causes**:
     1.  **UI Ghost Touches**: Rapid accidental taps or proximity sensor fluctuations triggered multiple commands.
-    2.  **Duplicate Logic**: Tokens were being deducted both in the initial `sendMacro` call AND in the `onExecutionStart` callback.
+    2.  **Duplicate Logic**: Kaps were being deducted both in the initial `sendMacro` call AND in the `onExecutionStart` callback.
 - **Solution**:
     1.  **Button De-bouncing**: Added a 1000ms cooldown to `MacroButton` in `MacroButtonsScreen.kt`.
     2.  **Slam Fire De-bouncing**: Added an `isHandlingSlam` flag with a 500ms cooldown in `ClientActivity.kt`.
-    3.  **Single-Source Truth**: Moved all token deduction logic strictly to the `onExecutionStart` callback. The `sendMacro` function now only sends the request; tokens are only spent once the server confirms the macro has actually started.
+    3.  **Single-Source Truth**: Moved all Kap deduction logic strictly to the `onExecutionStart` callback. The `sendMacro` function now only sends the request; Kaps are only spent once the server confirms the macro has actually started.
     4.  **Automatic Refunds**: If a macro fails after starting, the client now automatically refunds the tokens and notifies the server to decrement the global "Total Spent" metric.
 
 ### Challenge: Currency Balance Not Syncing on Connection
@@ -494,7 +494,7 @@ Automated macros could cause loss of system control if they ran too long or went
 ## 52. Google Play Billing Integration
 
 ### Challenge: Modernizing the Freemium Model
-- **Problem**: The app relied solely on rewarded ads for tokens, which lacked a permanent solution for power users who wanted to remove ads or gain permanent "Pro" access.
+- **Problem**: The app relied solely on rewarded ads for Kaps, which lacked a permanent solution for power users who wanted to remove ads or gain permanent "Pro" access.
 - **Solution**:
     - **Google Play Billing Library 7.x**: Integrated the latest Billing Library to support In-App Products (one-time) and Subscriptions.
     - **Product Suite**:
@@ -731,3 +731,25 @@ Automated macros could cause loss of system control if they ran too long or went
     2.  **Internal Testing Track**: The signed APK (matching the current `versionCode`) MUST be uploaded to an **Internal Testing** or **Closed Testing** track in the Google Play Console.
     3.  **Tester Opt-in**: The device's primary Google account MUST be added as a tester in the track, and the user MUST navigate to the opt-in URL provided by the Console to accept the test.
     4.  **License Testing**: In the Play Console (Setup > License Testing), ensure the tester's email is added to allow test purchases.
+
+## 59. Coordinate-Aware UI Animations (Android)
+
+### Challenge: Mapping Global Coordinates to Overlay
+- **Problem**: Flying Kap icons need to land precisely on macro buttons, but buttons are deep in a scrollable list/grid while the animation overlay must be at the root to avoid clipping.
+- **Solution**:
+    - **Position Tracking**: Implemented a `trackWidgetPosition` modifier that uses `onGloballyPositioned` and `positionInRoot()` to report the button's coordinates to the `ClientScreen`.
+    - **Global Manager**: Created `KapAnimationManager` to hold `balancePosition` (the destination) and a list of `FlyEvent`s.
+    - **Overlay Clipping**: Wrapped the entire `ClientScreen` content in a `Box` with `KapAnimationOverlay()` as the top-most child, ensuring icons fly over all other UI elements.
+
+### Challenge: The "Boomerang" Bezier Path
+- **Problem**: The user requested a "U-turn" animation where the Kap flies 80% of the way to the button and returns. Simple linear interpolation didn't feel "natural."
+- **Solution**: 
+    - **Quadratic Bezier**: Used a quadratic Bezier where $P_0$ (start) and $P_2$ (end) are both the balance position.
+    - **Control Point Math**: To ensure the peak of the curve reaches 80% of the distance to the macro button ($T$), the control point $P_1$ was calculated as: $P_1 = P_0 + 1.6 \times (T - P_0)$.
+    - **Perpendicular Offset**: Added a small perpendicular offset to $P_1$ relative to the path vector to give the U-turn a slight "width," preventing the icon from simply retracing its steps perfectly.
+
+### Challenge: Double Animation Race Condition
+- **Problem**: Triggering animations via `executingMacros` changes caused both the deduction (straight) and grace skip (boomerang) animations to play simultaneously.
+- **Solution**: 
+    - **Decoupled Triggers**: Introduced `deductionTriggerCount` and `graceTriggerCount` to `ClientUiState`.
+    - **Explicit Dispatch**: `ClientViewModel` now explicitly increments only the relevant counter based on the result of the `KapManager.spendKapsWithResult` call. This guarantees exactly one animation per macro execution.

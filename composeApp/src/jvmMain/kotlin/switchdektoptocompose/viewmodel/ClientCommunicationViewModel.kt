@@ -121,13 +121,21 @@ class ClientCommunicationViewModel(
         val metadata = serverViewModel.server.getMetadata(clientId)
         
         _pendingPairingRequests.update { requests ->
-            if (requests.any { it.id == clientId }) requests
-            else requests + ClientInfo(
-                id = clientId, 
-                name = clientName, 
-                verificationCode = verificationCode,
-                metadata = metadata
-            )
+            if (requests.any { it.id == clientId }) {
+                // If it exists but metadata was missing, update it
+                requests.map { 
+                    if (it.id == clientId && it.metadata == null && metadata != null) {
+                        it.copy(metadata = metadata)
+                    } else it 
+                }
+            } else {
+                requests + ClientInfo(
+                    id = clientId, 
+                    name = clientName, 
+                    verificationCode = verificationCode,
+                    metadata = metadata
+                )
+            }
         }
         
         ConnectionHistoryManager.logEvent(clientId, clientName, "Pairing Request", metadata = metadata)
@@ -221,10 +229,23 @@ class ClientCommunicationViewModel(
         consoleViewModel.addLog(LogLevel.Info, "Unbanned all devices (including temporary bans)")
     }
 
+    fun clearConnectionHistory() {
+        ConnectionHistoryManager.clearHistory()
+        updateHistoryState()
+        consoleViewModel.addLog(LogLevel.Info, "Cleared connection history.")
+    }
+
     fun removeTrustedDevice(clientId: String) {
         TrustedDeviceManager.removeTrustedDevice(clientId)
         _trustedDevices.value = TrustedDeviceManager.getTrustedDevices()
-        consoleViewModel.addLog(LogLevel.Info, "Removed trusted device: $clientId")
+        
+        // Security Fix: Explicitly disconnect and remove temporary trust to prevent session inheritance
+        serverViewModel.server.removeTemporaryTrust(clientId)
+        viewModelScope.launch {
+            serverViewModel.server.disconnectClient(clientId, "Trust Revoked")
+        }
+        
+        consoleViewModel.addLog(LogLevel.Info, "Removed trusted device: $clientId (Active session disconnected)")
     }
 
     fun onUpgradeRequest(clientId: String, jarBytes: ByteArray, hash: String, isSimulation: Boolean) {
@@ -293,7 +314,7 @@ class ClientCommunicationViewModel(
                             devices.map { if (it.id == clientId) it.copy(currency = amount) else it }
                         }
                         // Use Info level for currency sync to help verify it's working
-                        consoleViewModel.addLog(LogLevel.Info, "Token balance sync from $clientId: $amount")
+                        consoleViewModel.addLog(LogLevel.Info, "Kap balance sync from $clientId: $amount")
                     } catch (e: Exception) {
                         consoleViewModel.addLog(LogLevel.Error, "Invalid currency update from $clientId")
                     }

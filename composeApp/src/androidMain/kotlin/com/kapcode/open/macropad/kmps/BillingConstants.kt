@@ -1,9 +1,9 @@
 package com.kapcode.open.macropad.kmps
 
 object BillingConstants {
-    const val TOKENS_PER_REWARDED_AD = 100
-    const val TOKENS_PER_MACRO_PRESS = 1
-    const val STARTING_TOKENS = 500
+    const val KAPS_PER_REWARDED_AD = 100
+    const val KAPS_PER_MACRO_PRESS = 1
+    const val STARTING_KAPS = 500
     const val GRACE_PERIOD_MS = 10000L
 
     // Google Play Billing Product IDs

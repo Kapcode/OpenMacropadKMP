@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -42,6 +43,9 @@ import com.kapcode.open.macropad.kmps.settings.SettingsScreen
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
+import com.kapcode.open.macropad.kmps.ui.components.LocalKapAnimationManager
+import com.kapcode.open.macropad.kmps.ui.components.KapAnimationManager
+import com.kapcode.open.macropad.kmps.ui.components.KapAnimationOverlay
 import com.kapcode.open.macropad.kmps.ui.MarketplaceScreen
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -64,7 +68,7 @@ fun ClientScreen(
     onCancelTriggerSet: (() -> Unit) -> Unit = {},
     onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
     onQrScannerToggle: (Boolean) -> Unit = {},
-    tokenManager: TokenManager? = null,
+    kapManager: KapManager? = null,
     onExecutionFailedToast: (String) -> Unit = {}
 ) {
     val connectionStatus = uiState.connectionStatus
@@ -160,6 +164,28 @@ fun ClientScreen(
     }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val animationManager = remember { KapAnimationManager() }
+    val lastClickedPositions = remember { mutableMapOf<String, Offset>() }
+
+    LaunchedEffect(uiState.deductionTriggerCount) {
+        if (uiState.deductionTriggerCount > 0) {
+            val macro = uiState.lastDeductionMacro
+            val pos = lastClickedPositions[macro]
+            if (pos != null) {
+                animationManager.triggerDeduction(pos)
+            }
+        }
+    }
+
+    LaunchedEffect(uiState.graceTriggerCount) {
+        if (uiState.graceTriggerCount > 0) {
+            val macro = uiState.lastGraceMacro
+            val pos = lastClickedPositions[macro]
+            if (pos != null) {
+                animationManager.triggerGraceSkip(pos)
+            }
+        }
+    }
 
     LaunchedEffect(uiState.currentTab) {
         val tabName = when (uiState.currentTab) {
@@ -171,727 +197,734 @@ fun ClientScreen(
         MacroApplication.analyticsManager.trackScreen(tabName, "ClientScreen")
     }
 
-    Scaffold(
-        topBar = {
-            CommonAppBar(
-                title = if (showSettings) stringResource(Res.string.settings) else stringResource(Res.string.app_name),
-                onSettingsClick = { showSettings = !showSettings },
-                currency = uiState.currency,
-                isQrScannerActive = showQrScanner && !showSettings,
-                isAutoZoomEnabled = isAutoZoomEnabled_State,
-                onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
-                isAutoFocusEnabled = isAutoFocusEnabled_State,
-                onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
-                onZoomIn = {
-                    clientViewModel.setAutoZoomEnabled(false)
-                    activeCamera?.let { cam ->
-                        val zoomState = cam.cameraInfo.zoomState.value
-                        val maxZoom = zoomState?.maxZoomRatio ?: 1f
-                        val newZoom = (manualZoomRatio_State + 0.2f).coerceAtMost(maxZoom)
-                        clientViewModel.setManualZoomRatio(newZoom)
-                        cam.cameraControl.setZoomRatio(newZoom)
-                    }
-                },
-                onZoomOut = {
-                    clientViewModel.setAutoZoomEnabled(false)
-                    activeCamera?.let { cam ->
-                        val zoomState = cam.cameraInfo.zoomState.value
-                        val minZoom = zoomState?.minZoomRatio ?: 1f
-                        val newZoom = (manualZoomRatio_State - 0.2f).coerceAtLeast(minZoom)
-                        clientViewModel.setManualZoomRatio(newZoom)
-                        cam.cameraControl.setZoomRatio(newZoom)
-                    }
-                },
-                onCloseScanner = { onQrScannerToggle(false) },
-                isCoordinateCaptureActive = uiState.isCoordinateCaptureActive,
-                onCoordinateCaptureToggle = { clientViewModel.setCoordinateCaptureActive(it) },
-                isPro = settingsViewModel.isPro.collectAsState().value,
-                isServerPro = settingsViewModel.serverProTimeRemaining.collectAsState().value > 0, // Simplified check
-                serverProTimeRemaining = settingsViewModel.serverProTimeRemaining.collectAsState().value,
-                isAdFree = settingsViewModel.isAdFree.collectAsState().value,
-                isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
-                billingManager = billingManager,
-                onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) },
-                onAdFreePurchaseClick = { settingsViewModel.setIsAdFree(!settingsViewModel.isAdFree.value) },
-                navigationIcon = {
-                    if (showSettings) {
-                        IconButton(onClick = { showSettings = false }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                    } else {
-                        IconButton(onClick = {
-                            scope.launch {
-                                onGetMacros()
-                                drawerState.open()
+    CompositionLocalProvider(LocalKapAnimationManager provides animationManager) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            Scaffold(
+                topBar = {
+                    CommonAppBar(
+                        title = if (showSettings) stringResource(Res.string.settings) else stringResource(Res.string.app_name),
+                        onSettingsClick = { showSettings = !showSettings },
+                        currency = uiState.currency,
+                        isQrScannerActive = showQrScanner && !showSettings,
+                        isAutoZoomEnabled = isAutoZoomEnabled_State,
+                        onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                        isAutoFocusEnabled = isAutoFocusEnabled_State,
+                        onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
+                        onZoomIn = {
+                            clientViewModel.setAutoZoomEnabled(false)
+                            activeCamera?.let { cam ->
+                                val zoomState = cam.cameraInfo.zoomState.value
+                                val maxZoom = zoomState?.maxZoomRatio ?: 1f
+                                val newZoom = (manualZoomRatio_State + 0.2f).coerceAtMost(maxZoom)
+                                clientViewModel.setManualZoomRatio(newZoom)
+                                cam.cameraControl.setZoomRatio(newZoom)
                             }
-                        }) {
-                            Icon(Icons.Default.Menu, contentDescription = "Macros")
-                        }
-                    }
-                },
-                actions = {
-                    if (!showSettings && macros.isNotEmpty() && slamFireEnabled) {
-                        var expandedSingle by remember { mutableStateOf(false) }
-                        var expandedDouble by remember { mutableStateOf(false) }
-                        var showSlamInfoDialog by remember { mutableStateOf<String?>(null) }
-
-                        if (showSlamInfoDialog != null) {
-                            AlertDialog(
-                                onDismissRequest = { showSlamInfoDialog = null },
-                                title = { 
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.TouchApp, null)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(if (showSlamInfoDialog == "single") "Slam Fire: Single Tap" else "Slam Fire: Double Tap")
-                                    }
-                                },
-                                text = {
-                                    Text(
-                                        if (showSlamInfoDialog == "single") {
-                                            "A single physical trigger (proximity sensor or volume key) will execute the selected macro immediately."
-                                        } else {
-                                            "A rapid double physical trigger will execute this separate macro."
-                                        }
-                                    )
-                                },
-                                confirmButton = {
-                                    Button(onClick = { 
-                                        if (showSlamInfoDialog == "single") expandedSingle = true else expandedDouble = true
-                                        showSlamInfoDialog = null 
-                                    }) {
-                                        Text("Select Macro")
-                                    }
-                                },
-                                dismissButton = {
-                                    TextButton(onClick = { showSlamInfoDialog = null }) {
-                                        Text("Dismiss")
-                                    }
+                        },
+                        onZoomOut = {
+                            clientViewModel.setAutoZoomEnabled(false)
+                            activeCamera?.let { cam ->
+                                val zoomState = cam.cameraInfo.zoomState.value
+                                val minZoom = zoomState?.minZoomRatio ?: 1f
+                                val newZoom = (manualZoomRatio_State - 0.2f).coerceAtLeast(minZoom)
+                                clientViewModel.setManualZoomRatio(newZoom)
+                                cam.cameraControl.setZoomRatio(newZoom)
+                            }
+                        },
+                        onCloseScanner = { onQrScannerToggle(false) },
+                        isCoordinateCaptureActive = uiState.isCoordinateCaptureActive,
+                        onCoordinateCaptureToggle = { clientViewModel.setCoordinateCaptureActive(it) },
+                        isPro = settingsViewModel.isPro.collectAsState().value,
+                        isServerPro = settingsViewModel.serverProTimeRemaining.collectAsState().value > 0, // Simplified check
+                        serverProTimeRemaining = settingsViewModel.serverProTimeRemaining.collectAsState().value,
+                        isAdFree = settingsViewModel.isAdFree.collectAsState().value,
+                        isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
+                        billingManager = billingManager,
+                        onProPurchaseClick = { settingsViewModel.setIsPro(!settingsViewModel.isPro.value) },
+                        onAdFreePurchaseClick = { settingsViewModel.setIsAdFree(!settingsViewModel.isAdFree.value) },
+                        navigationIcon = {
+                            if (showSettings) {
+                                IconButton(onClick = { showSettings = false }) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                                 }
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier
-                                .width(180.dp)
-                                .horizontalScroll(rememberScrollState()),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Box {
-                                TextButton(
-                                    onClick = { showSlamInfoDialog = "single" },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                                ) {
-                                    Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(2.dp))
-                                    Text(
-                                        text = settingsViewModel.slamFireSelectedMacro.collectAsState().value ?: "None",
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
+                            } else {
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        onGetMacros()
+                                        drawerState.open()
+                                    }
+                                }) {
+                                    Icon(Icons.Default.Menu, contentDescription = "Macros")
                                 }
-                                DropdownMenu(expanded = expandedSingle, onDismissRequest = { expandedSingle = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text("None (OK)") },
-                                        onClick = {
-                                            settingsViewModel.setSlamFireSelectedMacro(null)
-                                            expandedSingle = false
-                                        }
-                                    )
-                                    macros.forEach { macro ->
-                                        DropdownMenuItem(
-                                            text = { Text(macro) },
-                                            onClick = {
-                                                settingsViewModel.setSlamFireSelectedMacro(macro)
-                                                expandedSingle = false
+                            }
+                        },
+                        actions = {
+                            if (!showSettings && macros.isNotEmpty() && slamFireEnabled) {
+                                var expandedSingle by remember { mutableStateOf(false) }
+                                var expandedDouble by remember { mutableStateOf(false) }
+                                var showSlamInfoDialog by remember { mutableStateOf<String?>(null) }
+
+                                if (showSlamInfoDialog != null) {
+                                    AlertDialog(
+                                        onDismissRequest = { showSlamInfoDialog = null },
+                                        title = { 
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(Icons.Default.TouchApp, null)
+                                                Spacer(Modifier.width(8.dp))
+                                                Text(if (showSlamInfoDialog == "single") "Slam Fire: Single Tap" else "Slam Fire: Double Tap")
                                             }
-                                        )
-                                    }
-                                }
-                            }
-
-                            Box {
-                                TextButton(
-                                    onClick = { expandedDouble = true },
-                                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
-                                ) {
-                                    Icon(Icons.Default.DoubleArrow, null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(2.dp))
-                                    Text(
-                                        text = settingsViewModel.slamFireDoubleSelectedMacro.collectAsState().value ?: "Cancel",
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                DropdownMenu(expanded = expandedDouble, onDismissRequest = { expandedDouble = false }) {
-                                    DropdownMenuItem(
-                                        text = { Text("None (Cancel)") },
-                                        onClick = {
-                                            settingsViewModel.setSlamFireDoubleSelectedMacro(null)
-                                            expandedDouble = false
+                                        },
+                                        text = {
+                                            Text(
+                                                if (showSlamInfoDialog == "single") {
+                                                    "A single physical trigger (proximity sensor or volume key) will execute the selected macro immediately."
+                                                } else {
+                                                    "A rapid double physical trigger will execute this separate macro."
+                                                }
+                                            )
+                                        },
+                                        confirmButton = {
+                                            Button(onClick = { 
+                                                if (showSlamInfoDialog == "single") expandedSingle = true else expandedDouble = true
+                                                showSlamInfoDialog = null 
+                                            }) {
+                                                Text("Select Macro")
+                                            }
+                                        },
+                                        dismissButton = {
+                                            TextButton(onClick = { showSlamInfoDialog = null }) {
+                                                Text("Dismiss")
+                                            }
                                         }
                                     )
-                                    macros.forEach { macro ->
-                                        DropdownMenuItem(
-                                            text = { Text(macro) },
-                                            onClick = {
-                                                settingsViewModel.setSlamFireDoubleSelectedMacro(macro)
-                                                expandedDouble = false
+                                }
+
+                                Row(
+                                    modifier = Modifier
+                                        .width(180.dp)
+                                        .horizontalScroll(rememberScrollState()),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Box {
+                                        TextButton(
+                                            onClick = { showSlamInfoDialog = "single" },
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                        ) {
+                                            Icon(Icons.Default.TouchApp, null, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(2.dp))
+                                            Text(
+                                                text = settingsViewModel.slamFireSelectedMacro.collectAsState().value ?: "None",
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        DropdownMenu(expanded = expandedSingle, onDismissRequest = { expandedSingle = false }) {
+                                            DropdownMenuItem(
+                                                text = { Text("None (OK)") },
+                                                onClick = {
+                                                    settingsViewModel.setSlamFireSelectedMacro(null)
+                                                    expandedSingle = false
+                                                }
+                                            )
+                                            macros.forEach { macro ->
+                                                DropdownMenuItem(
+                                                    text = { Text(macro) },
+                                                    onClick = {
+                                                        settingsViewModel.setSlamFireSelectedMacro(macro)
+                                                        expandedSingle = false
+                                                    }
+                                                )
                                             }
-                                        )
+                                        }
+                                    }
+
+                                    Box {
+                                        TextButton(
+                                            onClick = { expandedDouble = true },
+                                            contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
+                                        ) {
+                                            Icon(Icons.Default.DoubleArrow, null, modifier = Modifier.size(16.dp))
+                                            Spacer(Modifier.width(2.dp))
+                                            Text(
+                                                text = settingsViewModel.slamFireDoubleSelectedMacro.collectAsState().value ?: "Cancel",
+                                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                style = MaterialTheme.typography.labelSmall,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        DropdownMenu(expanded = expandedDouble, onDismissRequest = { expandedDouble = false }) {
+                                            DropdownMenuItem(
+                                                text = { Text("None (Cancel)") },
+                                                onClick = {
+                                                    settingsViewModel.setSlamFireDoubleSelectedMacro(null)
+                                                    expandedDouble = false
+                                                }
+                                            )
+                                            macros.forEach { macro ->
+                                                DropdownMenuItem(
+                                                    text = { Text(macro) },
+                                                    onClick = {
+                                                        settingsViewModel.setSlamFireDoubleSelectedMacro(macro)
+                                                        expandedDouble = false
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
                         }
+                    )
+                },
+                bottomBar = {
+                    val configuration = LocalConfiguration.current
+                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                    val isConnected = connectionStatus == "Connected" && macros.isNotEmpty()
+                    val isPro = settingsViewModel.isPro.collectAsState().value
+                    val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
+                    val isAdFree = settingsViewModel.isAdFree.collectAsState().value
+                    val adsDisabled = isPro || isServerPro || isAdFree
+                    val isMarketplaceTab = uiState.currentTab == 2
+                    val shouldShowAd = !showSettings && !isLandscape && isConnected && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible && !isMarketplaceTab
+
+                    if (shouldShowAd) {
+                        BottomAppBar { AdmobBanner() }
                     }
                 }
-            )
-        },
-        bottomBar = {
-            val configuration = LocalConfiguration.current
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val isConnected = connectionStatus == "Connected" && macros.isNotEmpty()
-            val isPro = settingsViewModel.isPro.collectAsState().value
-            val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
-            val isAdFree = settingsViewModel.isAdFree.collectAsState().value
-            val adsDisabled = isPro || isServerPro || isAdFree
-            val isMarketplaceTab = uiState.currentTab == 2
-            val shouldShowAd = !showSettings && !isLandscape && isConnected && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible && !isMarketplaceTab
-
-            if (shouldShowAd) {
-                BottomAppBar { AdmobBanner() }
-            }
-        }
-    ) { innerPadding ->
-        if (showSettings) {
-            SettingsScreen(
-                viewModel = settingsViewModel,
-                modifier = Modifier.padding(innerPadding)
-            ) {
-                ClientSettingsSection(clientViewModel = clientViewModel)
-            }
-        } else {
-            ModalNavigationDrawer(
-                drawerState = drawerState,
-                drawerContent = {
-                    ModalDrawerSheet {
-                        LazyColumn {
-                            items(macros) { macro ->
-                                Text(text = macro, modifier = Modifier.padding(all = 16.dp))
-                            }
-                        }
+            ) { innerPadding ->
+                if (showSettings) {
+                    SettingsScreen(
+                        viewModel = settingsViewModel,
+                        modifier = Modifier.padding(innerPadding)
+                    ) {
+                        ClientSettingsSection(clientViewModel = clientViewModel)
                     }
-                },
-                gesturesEnabled = drawerState.isOpen
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        if (connectionStatus == "Connected") {
-                            TabRow(selectedTabIndex = uiState.currentTab) {
-                                Tab(
-                                    selected = uiState.currentTab == 0,
-                                    onClick = { clientViewModel.setTab(0) },
-                                    text = { Text(stringResource(Res.string.dashboard)) }
-                                )
-                                Tab(
-                                    selected = uiState.currentTab == 1,
-                                    onClick = { clientViewModel.setTab(1) },
-                                    text = { Text(stringResource(Res.string.active_pack)) }
-                                )
-                                Tab(
-                                    selected = uiState.currentTab == 2,
-                                    onClick = {
-                                        clientViewModel.setTab(2)
-                                        clientViewModel.requestMarketplace()
-                                    },
-                                    text = { Text(stringResource(Res.string.marketplace)) }
-                                )
+                } else {
+                    ModalNavigationDrawer(
+                        drawerState = drawerState,
+                        drawerContent = {
+                            ModalDrawerSheet {
+                                LazyColumn {
+                                    items(macros) { macro ->
+                                        Text(text = macro, modifier = Modifier.padding(all = 16.dp))
+                                    }
+                                }
                             }
-                        }
-
-                        if (uiState.currentTab == 1) {
-                            SearchBar(
-                                query = uiState.searchQuery,
-                                onQueryChange = { clientViewModel.setSearchQuery(it) }
-                            )
-                            NavigationHeader(
-                                packs = uiState.filteredPacks,
-                                activePack = uiState.activePack,
-                                onPackSelected = { clientViewModel.setActivePack(it) }
-                            )
-                        }
-
-                        Box(modifier = Modifier.weight(1f)) {
-                            if (connectionStatus == "Connected" && !showQrScanner) {
-                                Box(modifier = Modifier.fillMaxSize()) {
-                                    val displayWidgets = if (uiState.currentTab == 1) {
-                                        uiState.activePack?.widgets ?: emptyList()
-                                    } else {
-                                        uiState.dashboardMacros.ifEmpty { 
-                                            // Fallback to basic buttons for raw macros if dashboard is empty
-                                            macros.mapIndexed { index, name -> 
-                                                GridWidget(
-                                                    id = "raw_$name",
-                                                    macroId = name,
-                                                    label = name,
-                                                    color = 0xFF6200EE, // Default purple
-                                                    row = index / 2,
-                                                    col = index % 2
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    if (uiState.currentTab == 1 && uiState.installedPacks.isEmpty()) {
-                                        EmptyPacksPlaceholder(onNavigateToMarket = {
-                                            clientViewModel.setTab(2)
-                                            clientViewModel.requestMarketplace()
-                                        })
-                                    } else if (uiState.currentTab == 2) {
-                                        if (uiState.isMarketplaceLoading) {
-                                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                CircularProgressIndicator()
-                                            }
-                                        } else {
-                                            val isPro = settingsViewModel.isPro.collectAsState().value
-                                            val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
-                                            val isAdFree = settingsViewModel.isAdFree.collectAsState().value
-                                            val adsDisabled = isPro || isServerPro || isAdFree
-                                            
-                                            MarketplaceScreen(
-                                                items = uiState.marketplaceItems,
-                                                isPro = uiState.isPro,
-                                                isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
-                                                onProToggle = { clientViewModel.setIsPro(it) },
-                                                onDownload = { clientViewModel.downloadMarketplaceItem(it) },
-                                                adsDisabled = adsDisabled
-                                            )
-                                        }
-                                    } else {
-                                            MacroButtonsScreen(
-                                                widgets = displayWidgets,
-                                                modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier,
-                                                executingMacros = executingMacros,
-                                                failedMacros = failedMacros,
-                                                isEditMode = uiState.isEditMode,
-                                                isPro = settingsViewModel.isPro.collectAsState().value || settingsViewModel.isServerProActive.collectAsState().value,
-                                                currency = uiState.currency,
-                                                onWidgetInteraction = onWidgetInteraction,
-                                                onWidgetLongClick = { widget ->
-                                                    if (uiState.currentTab == 0) {
-                                                        clientViewModel.removeFromDashboard(widget.id)
-                                                    } else {
-                                                        clientViewModel.addToDashboard(widget)
-                                                    }
-                                                },
-                                                onRemoveWidget = { widget ->
-                                                    if (uiState.currentTab == 0) {
-                                                        clientViewModel.removeFromDashboard(widget.id)
-                                                    }
-                                                },
-                                                onMoveWidget = { from, to ->
-                                                    if (uiState.currentTab == 0) {
-                                                        clientViewModel.moveDashboardMacro(from, to)
-                                                    }
-                                                }
-                                            )
-                                    }
-
-                                    if (showMacroPicker) {
-                                        MacroPicker(
-                                            macros = macros,
-                                            onMacroSelected = { macroName, type ->
-                                                clientViewModel.addToDashboard(
-                                                    GridWidget(
-                                                        id = "dash_${System.currentTimeMillis()}",
-                                                        macroId = macroName,
-                                                        label = macroName,
-                                                        type = type,
-                                                        color = 0xFF6200EE,
-                                                        row = 0,
-                                                        col = 0
-                                                    )
-                                                )
+                        },
+                        gesturesEnabled = drawerState.isOpen
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding),
+                            color = MaterialTheme.colorScheme.background
+                        ) {
+                            Column(modifier = Modifier.fillMaxSize()) {
+                                if (connectionStatus == "Connected") {
+                                    TabRow(selectedTabIndex = uiState.currentTab) {
+                                        Tab(
+                                            selected = uiState.currentTab == 0,
+                                            onClick = { clientViewModel.setTab(0) },
+                                            text = { Text(stringResource(Res.string.dashboard)) }
+                                        )
+                                        Tab(
+                                            selected = uiState.currentTab == 1,
+                                            onClick = { clientViewModel.setTab(1) },
+                                            text = { Text(stringResource(Res.string.active_pack)) }
+                                        )
+                                        Tab(
+                                            selected = uiState.currentTab == 2,
+                                            onClick = {
+                                                clientViewModel.setTab(2)
+                                                clientViewModel.requestMarketplace()
                                             },
-                                            onDismiss = { showMacroPicker = false }
+                                            text = { Text(stringResource(Res.string.marketplace)) }
                                         )
                                     }
-                                    
-                                    if (uiState.isEditMode) {
-                                        FloatingActionButton(
-                                            onClick = { clientViewModel.setEditMode(false) },
-                                            modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 88.dp, end = 16.dp),
-                                            containerColor = MaterialTheme.colorScheme.secondary
-                                        ) {
-                                            Icon(Icons.Default.Check, contentDescription = "Done")
-                                        }
-                                    }
-                                    
-                                    if (uiState.currentTab == 0) {
-                                        FloatingActionButton(
-                                            onClick = { 
-                                                if (uiState.isEditMode) {
-                                                    showMacroPicker = true
-                                                } else {
-                                                    clientViewModel.setEditMode(true)
-                                                }
-                                            },
-                                            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                                            containerColor = if (uiState.isEditMode) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
-                                        ) {
-                                            Icon(if (uiState.isEditMode) Icons.Default.Add else Icons.Default.Edit, contentDescription = if (uiState.isEditMode) "Add" else "Edit")
-                                        }
-                                    }
-                                    
-                                    if (!uiState.isMacroExecutionEnabled) {
-                                        Surface(
-                                            modifier = Modifier.fillMaxSize(),
-                                            color = Color.Black.copy(alpha = 0.3f)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Card(
-                                                    colors = CardDefaults.cardColors(
-                                                        containerColor = MaterialTheme.colorScheme.errorContainer,
-                                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                                    ),
-                                                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-                                                ) {
-                                                    Row(
-                                                        modifier = Modifier.padding(16.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Icon(Icons.Default.Block, contentDescription = null)
-                                                        Spacer(Modifier.width(8.dp))
-                                                        Text(
-                                                            stringResource(Res.string.execution_disabled),
-                                                            style = MaterialTheme.typography.titleMedium,
-                                                            fontWeight = FontWeight.Bold
+                                }
+
+                                if (uiState.currentTab == 1) {
+                                    SearchBar(
+                                        query = uiState.searchQuery,
+                                        onQueryChange = { clientViewModel.setSearchQuery(it) }
+                                    )
+                                    NavigationHeader(
+                                        packs = uiState.filteredPacks,
+                                        activePack = uiState.activePack,
+                                        onPackSelected = { clientViewModel.setActivePack(it) }
+                                    )
+                                }
+
+                                Box(modifier = Modifier.weight(1f)) {
+                                    if (connectionStatus == "Connected" && !showQrScanner) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            val displayWidgets = if (uiState.currentTab == 1) {
+                                                uiState.activePack?.widgets ?: emptyList()
+                                            } else {
+                                                uiState.dashboardMacros.ifEmpty { 
+                                                    // Fallback to basic buttons for raw macros if dashboard is empty
+                                                    macros.mapIndexed { index, name -> 
+                                                        GridWidget(
+                                                            id = "raw_$name",
+                                                            macroId = name,
+                                                            label = name,
+                                                            color = 0xFF6200EE, // Default purple
+                                                            row = index / 2,
+                                                            col = index % 2
                                                         )
                                                     }
                                                 }
                                             }
-                                        }
-                                    }
-                                }
-                            } else if (showQrScanner) {
-                                Box(
-                                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    if (isScannerTimedOut) {
-                                        Column(
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Center
-                                        ) {
-                                            Icon(
-                                                Icons.Default.BatteryAlert,
-                                                contentDescription = null,
-                                                modifier = Modifier.size(64.dp),
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            Text(
-                                                "Scanner Timed Out",
-                                                style = MaterialTheme.typography.headlineSmall
-                                            )
-                                            Text(
-                                                "Paused to save battery after $scannerTimeoutHours hours.",
-                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Spacer(Modifier.height(24.dp))
-                                            Button(onClick = { clientViewModel.setScannerTimedOut(false) }) {
-                                                Icon(Icons.Default.Refresh, contentDescription = null)
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("Resume Scanning")
-                                            }
-                                        }
-                                    } else {
-                                        val configuration = LocalConfiguration.current
-                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                        Box(
-                                            modifier = if (isLandscape) {
-                                                Modifier.fillMaxHeight().aspectRatio(1f)
+
+                                            if (uiState.currentTab == 1 && uiState.installedPacks.isEmpty()) {
+                                                EmptyPacksPlaceholder(onNavigateToMarket = {
+                                                    clientViewModel.setTab(2)
+                                                    clientViewModel.requestMarketplace()
+                                                })
+                                            } else if (uiState.currentTab == 2) {
+                                                if (uiState.isMarketplaceLoading) {
+                                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                                        CircularProgressIndicator()
+                                                    }
+                                                } else {
+                                                    val isPro = settingsViewModel.isPro.collectAsState().value
+                                                    val isServerPro = settingsViewModel.isServerProActive.collectAsState().value
+                                                    val isAdFree = settingsViewModel.isAdFree.collectAsState().value
+                                                    val adsDisabled = isPro || isServerPro || isAdFree
+                                                    
+                                                    MarketplaceScreen(
+                                                        items = uiState.marketplaceItems,
+                                                        isPro = uiState.isPro,
+                                                        isDeveloperMode = settingsViewModel.isDeveloperMode.collectAsState().value,
+                                                        onProToggle = { clientViewModel.setIsPro(it) },
+                                                        onDownload = { clientViewModel.downloadMarketplaceItem(it) },
+                                                        adsDisabled = adsDisabled
+                                                    )
+                                                }
                                             } else {
-                                                Modifier.fillMaxWidth().aspectRatio(1f)
-                                            }
-                                        ) {
-                                            QrCodeScanner(
-                                                onCodeScanned = { code: String ->
-                                                    onPairingCodeEntered(code)
-                                                    onQrScannerToggle(false)
-                                                },
-                                                onClose = { onQrScannerToggle(false) },
-                                                isAutoZoomEnabled = isAutoZoomEnabled_State,
-                                                isAutoFocusEnabled = isAutoFocusEnabled_State,
-                                                manualZoomRatio = manualZoomRatio_State,
-                                                manualFocusDistance = manualFocusDistance_State,
-                                                onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
-                                                onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
-                                                onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
-                                                onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
-                                                onCameraReady = { activeCamera = it },
-                                                isLowPowerMode = isLowPowerScannerMode
-                                            )
-                                        }
-                                    }
-                                }
-                            } else {
-                                val scrollState = rememberScrollState()
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(16.dp)
-                                        .verticalScroll(scrollState),
-                                    verticalArrangement = Arrangement.Center,
-                                    horizontalAlignment = Alignment.CenterHorizontally
-                                ) {
-                                    if (connectionStatus != "Connected" && connectionStatus != "Authenticating" && connectionStatus != "Connecting..." && serverHistory.isNotEmpty()) {
-                                        Column(
-                                            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
-                                            horizontalAlignment = Alignment.Start
-                                        ) {
-                                            Text(
-                                                stringResource(Res.string.reconnect_quick),
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.primary
-                                            )
-                                            Spacer(Modifier.height(8.dp))
-                                            val distinctHistory = serverHistory
-                                                .distinctBy { it.displayName } // Filter by name as well since that's what the user sees
-                                                .take(3)
-                                            LazyRow(
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                modifier = Modifier.fillMaxWidth()
-                                            ) {
-                                                items(distinctHistory) { server ->
-                                                    SuggestionChip(
-                                                        onClick = {
-                                                            if (tokenManager != null) {
-                                                                clientViewModel.updateConnection("Connecting...", server.displayName, null, null)
-                                                                clientViewModel.connectToServer(
-                                                                    server = server,
-                                                                    deviceName = android.os.Build.MODEL,
-                                                                    tokenManager = tokenManager,
-                                                                    settingsViewModel = settingsViewModel,
-                                                                    context = context,
-                                                                    onExecutionFailedToast = onExecutionFailedToast
-                                                                )
+                                                    MacroButtonsScreen(
+                                                        widgets = displayWidgets,
+                                                        modifier = if (!uiState.isMacroExecutionEnabled) Modifier.alpha(0.5f) else Modifier,
+                                                        executingMacros = executingMacros,
+                                                        failedMacros = failedMacros,
+                                                        isEditMode = uiState.isEditMode,
+                                                        isPro = settingsViewModel.isPro.collectAsState().value || settingsViewModel.isServerProActive.collectAsState().value,
+                                                        currency = uiState.currency,
+                                                        onWidgetInteraction = { widget, pos ->
+                                                            lastClickedPositions[widget.macroId] = pos
+                                                            onWidgetInteraction(widget)
+                                                        },
+                                                        onWidgetLongClick = { widget ->
+                                                            if (uiState.currentTab == 0) {
+                                                                clientViewModel.removeFromDashboard(widget.id)
+                                                            } else {
+                                                                clientViewModel.addToDashboard(widget)
                                                             }
                                                         },
-                                                        label = { Text(server.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                                                        icon = { Icon(Icons.Default.History, null, modifier = Modifier.size(16.dp)) }
+                                                        onRemoveWidget = { widget ->
+                                                            if (uiState.currentTab == 0) {
+                                                                clientViewModel.removeFromDashboard(widget.id)
+                                                            }
+                                                        },
+                                                        onMoveWidget = { from, to ->
+                                                            if (uiState.currentTab == 0) {
+                                                                clientViewModel.moveDashboardMacro(from, to)
+                                                            }
+                                                        }
                                                     )
+                                            }
+
+                                            if (showMacroPicker) {
+                                                MacroPicker(
+                                                    macros = macros,
+                                                    onMacroSelected = { macroName, type ->
+                                                        clientViewModel.addToDashboard(
+                                                            GridWidget(
+                                                                id = "dash_${System.currentTimeMillis()}",
+                                                                macroId = macroName,
+                                                                label = macroName,
+                                                                type = type,
+                                                                color = 0xFF6200EE,
+                                                                row = 0,
+                                                                col = 0
+                                                            )
+                                                        )
+                                                    },
+                                                    onDismiss = { showMacroPicker = false }
+                                                )
+                                            }
+                                            
+                                            if (uiState.isEditMode) {
+                                                FloatingActionButton(
+                                                    onClick = { clientViewModel.setEditMode(false) },
+                                                    modifier = Modifier.align(Alignment.BottomEnd).padding(bottom = 88.dp, end = 16.dp),
+                                                    containerColor = MaterialTheme.colorScheme.secondary
+                                                ) {
+                                                    Icon(Icons.Default.Check, contentDescription = "Done")
+                                                }
+                                            }
+                                            
+                                            if (uiState.currentTab == 0) {
+                                                FloatingActionButton(
+                                                    onClick = { 
+                                                        if (uiState.isEditMode) {
+                                                            showMacroPicker = true
+                                                        } else {
+                                                            clientViewModel.setEditMode(true)
+                                                        }
+                                                    },
+                                                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                                                    containerColor = if (uiState.isEditMode) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+                                                ) {
+                                                    Icon(if (uiState.isEditMode) Icons.Default.Add else Icons.Default.Edit, contentDescription = if (uiState.isEditMode) "Add" else "Edit")
+                                                }
+                                            }
+                                            
+                                            if (!uiState.isMacroExecutionEnabled) {
+                                                Surface(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    color = Color.Black.copy(alpha = 0.3f)
+                                                ) {
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Card(
+                                                            colors = CardDefaults.cardColors(
+                                                                containerColor = MaterialTheme.colorScheme.errorContainer,
+                                                                contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                                            ),
+                                                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                                                        ) {
+                                                            Row(
+                                                                modifier = Modifier.padding(16.dp),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Icon(Icons.Default.Block, contentDescription = null)
+                                                                Spacer(Modifier.width(8.dp))
+                                                                Text(
+                                                                    stringResource(Res.string.execution_disabled),
+                                                                    style = MaterialTheme.typography.titleMedium,
+                                                                    fontWeight = FontWeight.Bold
+                                                                )
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
-
-                                    if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
-                                        var enteredCode by remember { mutableStateOf("") }
-                                        val focusRequester = remember { FocusRequester() }
-                                        val keyboardController = LocalSoftwareKeyboardController.current
-                                        val focusManager = LocalFocusManager.current
-                                        val configuration = LocalConfiguration.current
-                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                        val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
-
-                                        LaunchedEffect(Unit) {
-                                            if (connectionStatus == "Pending Approval") {
-                                                focusRequester.requestFocus()
-                                            }
-                                        }
-
-                                        Column(
-                                            modifier = Modifier.fillMaxSize(),
-                                            horizontalAlignment = Alignment.CenterHorizontally,
-                                            verticalArrangement = Arrangement.Bottom
+                                    } else if (showQrScanner) {
+                                        Box(
+                                            modifier = Modifier.fillMaxSize().padding(16.dp),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            if (connectionStatus == "Code Matched") {
+                                            if (isScannerTimedOut) {
                                                 Column(
-                                                    modifier = Modifier.weight(1f),
                                                     horizontalAlignment = Alignment.CenterHorizontally,
                                                     verticalArrangement = Arrangement.Center
                                                 ) {
                                                     Icon(
-                                                        Icons.Default.CheckCircle,
+                                                        Icons.Default.BatteryAlert,
                                                         contentDescription = null,
-                                                        tint = Color(0xFF008000),
-                                                        modifier = Modifier.size(64.dp)
+                                                        modifier = Modifier.size(64.dp),
+                                                        tint = MaterialTheme.colorScheme.error
                                                     )
                                                     Spacer(Modifier.height(16.dp))
                                                     Text(
-                                                        stringResource(Res.string.code_matched),
-                                                        style = MaterialTheme.typography.headlineSmall,
-                                                        color = Color(0xFF008000)
+                                                        "Scanner Timed Out",
+                                                        style = MaterialTheme.typography.headlineSmall
                                                     )
-                                                    Spacer(Modifier.height(8.dp))
                                                     Text(
-                                                        stringResource(Res.string.code_matched_instruction),
-                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                        "Paused to save battery after $scannerTimeoutHours hours.",
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                        style = MaterialTheme.typography.bodyMedium
                                                     )
+                                                    Spacer(Modifier.height(24.dp))
+                                                    Button(onClick = { clientViewModel.setScannerTimedOut(false) }) {
+                                                        Icon(Icons.Default.Refresh, contentDescription = null)
+                                                        Spacer(Modifier.width(8.dp))
+                                                        Text("Resume Scanning")
+                                                    }
                                                 }
                                             } else {
-                                                if (!isKeyboardOpen) {
-                                                    Column(
-                                                        modifier = Modifier.weight(1f),
-                                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                                        verticalArrangement = Arrangement.Center
-                                                    ) {
-                                                        Text(
-                                                            stringResource(Res.string.pairing_code_instruction),
-                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                                                        )
-                                                        Spacer(Modifier.height(16.dp))
-                                                        CircularProgressIndicator()
-                                                        Spacer(Modifier.height(24.dp))
-                                                        OutlinedButton(
-                                                            onClick = { onQrScannerToggle(true) }
-                                                        ) {
-                                                            Icon(Icons.Default.QrCodeScanner, contentDescription = null)
-                                                            Spacer(Modifier.width(8.dp))
-                                                            Text(stringResource(Res.string.scan_qr_code))
-                                                        }
+                                                val configuration = LocalConfiguration.current
+                                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                                Box(
+                                                    modifier = if (isLandscape) {
+                                                        Modifier.fillMaxHeight().aspectRatio(1f)
+                                                    } else {
+                                                        Modifier.fillMaxWidth().aspectRatio(1f)
                                                     }
-                                                }
-
-                                                Row(
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.Center,
-                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                                                 ) {
-                                                    IconButton(onClick = onBackToMain) {
-                                                        Icon(Icons.Default.Close, contentDescription = "Cancel")
-                                                    }
-
-                                                    OutlinedTextField(
-                                                        value = enteredCode,
-                                                        onValueChange = {
-                                                            if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                                                                enteredCode = it
-                                                                if (it.length == 6) {
-                                                                    onPairingCodeEntered(it)
-                                                                }
-                                                            }
+                                                    QrCodeScanner(
+                                                        onCodeScanned = { code: String ->
+                                                            onPairingCodeEntered(code)
+                                                            onQrScannerToggle(false)
                                                         },
-                                                        label = { if (!isKeyboardOpen) Text(stringResource(Res.string.six_digit_code)) },
-                                                        placeholder = { if (isKeyboardOpen) Text("Code") },
-                                                        singleLine = true,
-                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                        modifier = Modifier
-                                                            .width(if (isLandscape && isKeyboardOpen) 120.dp else 180.dp)
-                                                            .focusRequester(focusRequester)
+                                                        onClose = { onQrScannerToggle(false) },
+                                                        isAutoZoomEnabled = isAutoZoomEnabled_State,
+                                                        isAutoFocusEnabled = isAutoFocusEnabled_State,
+                                                        manualZoomRatio = manualZoomRatio_State,
+                                                        manualFocusDistance = manualFocusDistance_State,
+                                                        onManualZoomChange = { clientViewModel.setManualZoomRatio(it) },
+                                                        onManualFocusChange = { clientViewModel.setManualFocusDistance(it) },
+                                                        onAutoZoomToggle = { clientViewModel.setAutoZoomEnabled(it) },
+                                                        onAutoFocusToggle = { clientViewModel.setAutoFocusEnabled(it) },
+                                                        onCameraReady = { activeCamera = it },
+                                                        isLowPowerMode = isLowPowerScannerMode
                                                     )
-
-                                                    IconButton(
-                                                        onClick = {
-                                                            if (isKeyboardOpen) {
-                                                                keyboardController?.hide()
-                                                                focusManager.clearFocus()
-                                                            } else {
-                                                                focusRequester.requestFocus()
-                                                                keyboardController?.show()
-                                                            }
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        val scrollState = rememberScrollState()
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .padding(16.dp)
+                                                .verticalScroll(scrollState),
+                                            verticalArrangement = Arrangement.Center,
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            if (connectionStatus != "Connected" && connectionStatus != "Authenticating" && connectionStatus != "Connecting..." && serverHistory.isNotEmpty()) {
+                                                Column(
+                                                    modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+                                                    horizontalAlignment = Alignment.Start
+                                                ) {
+                                                    Text(
+                                                        stringResource(Res.string.reconnect_quick),
+                                                        style = MaterialTheme.typography.labelLarge,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                    Spacer(Modifier.height(8.dp))
+                                                    val distinctHistory = serverHistory
+                                                        .distinctBy { it.displayName } // Filter by name as well since that's what the user sees
+                                                        .take(3)
+                                                    LazyRow(
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    ) {
+                                                        items(distinctHistory) { server ->
+                                                            SuggestionChip(
+                                                                onClick = {
+                                                                    if (kapManager != null) {
+                                                                        clientViewModel.updateConnection("Connecting...", server.displayName, null, null)
+                                                                        clientViewModel.connectToServer(
+                                                                            server = server,
+                                                                            deviceName = android.os.Build.MODEL,
+                                                                            kapManager = kapManager,
+                                                                            settingsViewModel = settingsViewModel,
+                                                                            context = context,
+                                                                            onExecutionFailedToast = onExecutionFailedToast
+                                                                        )
+                                                                    }
+                                                                },
+                                                                label = { Text(server.displayName, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                                                icon = { Icon(Icons.Default.History, null, modifier = Modifier.size(16.dp)) }
+                                                            )
                                                         }
-                                                    ) {
-                                                        Icon(
-                                                            if (isKeyboardOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                                                            contentDescription = "Toggle Keyboard"
-                                                        )
-                                                    }
-
-                                                    IconButton(onClick = { onQrScannerToggle(true) }) {
-                                                        Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
-                                                    }
-
-                                                    Button(
-                                                        onClick = { onPairingCodeEntered(enteredCode) },
-                                                        enabled = enteredCode.length == 6,
-                                                        contentPadding = PaddingValues(0.dp),
-                                                        modifier = Modifier.size(48.dp)
-                                                    ) {
-                                                        Icon(Icons.Default.Done, contentDescription = "Submit")
                                                     }
                                                 }
+                                            }
 
-                                                if (isKeyboardOpen) {
-                                                    LaunchedEffect(Unit) {
+                                            if (connectionStatus == "Pending Approval" || connectionStatus == "Code Matched") {
+                                                var enteredCode by remember { mutableStateOf("") }
+                                                val focusRequester = remember { FocusRequester() }
+                                                val keyboardController = LocalSoftwareKeyboardController.current
+                                                val focusManager = LocalFocusManager.current
+                                                val configuration = LocalConfiguration.current
+                                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                                val isKeyboardOpen = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
+                                                LaunchedEffect(Unit) {
+                                                    if (connectionStatus == "Pending Approval") {
                                                         focusRequester.requestFocus()
                                                     }
                                                 }
-                                            }
 
-                                            if (!isKeyboardOpen) {
-                                                Text(
-                                                    stringResource(Res.string.verification_required),
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    modifier = Modifier.padding(bottom = 8.dp)
-                                                )
-                                            }
-                                        }
-                                    } else if (disconnectReason != null && connectionStatus != "Connecting..." && connectionStatus != "Authenticating") {
-                                        val configuration = LocalConfiguration.current
-                                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                                        
-                                        if (isLandscape) {
-                                            Row(
-                                                modifier = Modifier.fillMaxSize(),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.Center
-                                            ) {
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                Column(
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                                    verticalArrangement = Arrangement.Bottom
+                                                ) {
+                                                    if (connectionStatus == "Code Matched") {
+                                                        Column(
+                                                            modifier = Modifier.weight(1f),
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                            verticalArrangement = Arrangement.Center
+                                                        ) {
+                                                            Icon(
+                                                                Icons.Default.CheckCircle,
+                                                                contentDescription = null,
+                                                                tint = Color(0xFF008000),
+                                                                modifier = Modifier.size(64.dp)
+                                                            )
+                                                            Spacer(Modifier.height(16.dp))
+                                                            Text(
+                                                                stringResource(Res.string.code_matched),
+                                                                style = MaterialTheme.typography.headlineSmall,
+                                                                color = Color(0xFF008000)
+                                                            )
+                                                            Spacer(Modifier.height(8.dp))
+                                                            Text(
+                                                                stringResource(Res.string.code_matched_instruction),
+                                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                            )
+                                                        }
+                                                    } else {
+                                                        if (!isKeyboardOpen) {
+                                                            Column(
+                                                                modifier = Modifier.weight(1f),
+                                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                                verticalArrangement = Arrangement.Center
+                                                            ) {
+                                                                Text(
+                                                                    stringResource(Res.string.pairing_code_instruction),
+                                                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                                                )
+                                                                Spacer(Modifier.height(16.dp))
+                                                                CircularProgressIndicator()
+                                                                Spacer(Modifier.height(24.dp))
+                                                                OutlinedButton(
+                                                                    onClick = { onQrScannerToggle(true) }
+                                                                ) {
+                                                                    Icon(Icons.Default.QrCodeScanner, contentDescription = null)
+                                                                    Spacer(Modifier.width(8.dp))
+                                                                    Text(stringResource(Res.string.scan_qr_code))
+                                                                }
+                                                            }
+                                                        }
+
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.Center,
+                                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                                        ) {
+                                                            IconButton(onClick = onBackToMain) {
+                                                                Icon(Icons.Default.Close, contentDescription = "Cancel")
+                                                            }
+
+                                                            OutlinedTextField(
+                                                                value = enteredCode,
+                                                                onValueChange = {
+                                                                    if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                                                                        enteredCode = it
+                                                                        if (it.length == 6) {
+                                                                            onPairingCodeEntered(it)
+                                                                        }
+                                                                    }
+                                                                },
+                                                                label = { if (!isKeyboardOpen) Text(stringResource(Res.string.six_digit_code)) },
+                                                                placeholder = { if (isKeyboardOpen) Text("Code") },
+                                                                singleLine = true,
+                                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                                modifier = Modifier
+                                                                    .width(if (isLandscape && isKeyboardOpen) 120.dp else 180.dp)
+                                                                    .focusRequester(focusRequester)
+                                                            )
+
+                                                            IconButton(
+                                                                onClick = {
+                                                                    if (isKeyboardOpen) {
+                                                                        keyboardController?.hide()
+                                                                        focusManager.clearFocus()
+                                                                    } else {
+                                                                        focusRequester.requestFocus()
+                                                                        keyboardController?.show()
+                                                                    }
+                                                                }
+                                                            ) {
+                                                                Icon(
+                                                                    if (isKeyboardOpen) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
+                                                                    contentDescription = "Toggle Keyboard"
+                                                                )
+                                                            }
+
+                                                            IconButton(onClick = { onQrScannerToggle(true) }) {
+                                                                Icon(Icons.Default.QrCodeScanner, contentDescription = "Scan QR")
+                                                            }
+
+                                                            Button(
+                                                                onClick = { onPairingCodeEntered(enteredCode) },
+                                                                enabled = enteredCode.length == 6,
+                                                                contentPadding = PaddingValues(0.dp),
+                                                                modifier = Modifier.size(48.dp)
+                                                            ) {
+                                                                Icon(Icons.Default.Done, contentDescription = "Submit")
+                                                            }
+                                                        }
+
+                                                        if (isKeyboardOpen) {
+                                                            LaunchedEffect(Unit) {
+                                                                focusRequester.requestFocus()
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (!isKeyboardOpen) {
+                                                        Text(
+                                                            stringResource(Res.string.verification_required),
+                                                            style = MaterialTheme.typography.labelSmall,
+                                                            modifier = Modifier.padding(bottom = 8.dp)
+                                                        )
+                                                    }
+                                                }
+                                            } else if (disconnectReason != null && connectionStatus != "Connecting..." && connectionStatus != "Authenticating") {
+                                                val configuration = LocalConfiguration.current
+                                                val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                                
+                                                if (isLandscape) {
+                                                    Row(
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.Center
+                                                    ) {
+                                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                            Icon(
+                                                                Icons.AutoMirrored.Filled.ArrowBack, 
+                                                                contentDescription = null, 
+                                                                modifier = Modifier.size(64.dp),
+                                                                tint = MaterialTheme.colorScheme.error
+                                                            )
+                                                        }
+                                                        Spacer(Modifier.width(32.dp))
+                                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                            Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.headlineMedium)
+                                                            Spacer(Modifier.height(8.dp))
+                                                            Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
+                                                            Spacer(Modifier.height(16.dp))
+                                                            Button(onClick = onBackToMain) {
+                                                                Text(stringResource(Res.string.back_to_server_list))
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
                                                     Icon(
                                                         Icons.AutoMirrored.Filled.ArrowBack, 
                                                         contentDescription = null, 
                                                         modifier = Modifier.size(64.dp),
                                                         tint = MaterialTheme.colorScheme.error
                                                     )
-                                                }
-                                                Spacer(Modifier.width(32.dp))
-                                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                                    Spacer(Modifier.height(16.dp))
                                                     Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.headlineMedium)
                                                     Spacer(Modifier.height(8.dp))
                                                     Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
-                                                    Spacer(Modifier.height(16.dp))
+                                                    Spacer(Modifier.height(32.dp))
                                                     Button(onClick = onBackToMain) {
                                                         Text(stringResource(Res.string.back_to_server_list))
                                                     }
                                                 }
-                                            }
-                                        } else {
-                                            Icon(
-                                                Icons.AutoMirrored.Filled.ArrowBack, 
-                                                contentDescription = null, 
-                                                modifier = Modifier.size(64.dp),
-                                                tint = MaterialTheme.colorScheme.error
-                                            )
-                                            Spacer(Modifier.height(16.dp))
-                                            Text(stringResource(Res.string.disconnected), style = MaterialTheme.typography.headlineMedium)
-                                            Spacer(Modifier.height(8.dp))
-                                            Text(disconnectReason, style = MaterialTheme.typography.bodyLarge)
-                                            Spacer(Modifier.height(32.dp))
-                                            Button(onClick = onBackToMain) {
-                                                Text(stringResource(Res.string.back_to_server_list))
+                                            } else {
+                                                CircularProgressIndicator()
+                                                Spacer(Modifier.height(16.dp))
+                                                Text("Connected to:")
+                                                Text(
+                                                    serverName ?: "N/A",
+                                                    style = MaterialTheme.typography.headlineMedium
+                                                )
+                                                Text("Status: $connectionStatus")
                                             }
                                         }
-                                    } else {
-                                        CircularProgressIndicator()
-                                        Spacer(Modifier.height(16.dp))
-                                        Text("Connected to:")
-                                        Text(
-                                            serverName ?: "N/A",
-                                            style = MaterialTheme.typography.headlineMedium
-                                        )
-                                        Text("Status: $connectionStatus")
                                     }
                                 }
                             }
@@ -899,6 +932,7 @@ fun ClientScreen(
                     }
                 }
             }
+            KapAnimationOverlay()
         }
     }
 }

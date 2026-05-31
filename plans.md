@@ -1,40 +1,24 @@
-Implementation Plan - Modularize Session Management and Hardware Trigger Logic
-Goal
-Modularize session management and hardware trigger logic by extracting platform-agnostic interfaces into commonMain to decouple business logic from platform-specific implementations.
-Proposed Changes
-commonMain
-SessionManager.kt
-•
-Verify existing interface and models (AuthStatus, ConnectedClient).
-[NEW] HardwareTriggerManager.kt
-•
-Define HardwareTriggerManager interface with platform-agnostic methods for sensor and key events.
-jvmMain
-MacroKtorServer.kt
-•
-Implement SessionManager.
-•
-Remove internal AuthStatus and ConnectedClient classes.
-•
-Update logic to use common types.
-androidMain
-SlamFireManager.kt
-•
-Refactor to implement HardwareTriggerManager.
-•
-Ensure Android-specific logic (Sensors, KeyEvents) is encapsulated within the implementation.
-UI / ViewModels
-SettingsViewModel.kt
-•
-Update to use the new interfaces and common types.
-Verification Plan
-Automated Tests
-•
-Run Gradle build for both Android and JVM targets:
-◦
-./gradlew :composeApp:assembleDebug (Android)
-◦
-./gradlew :composeApp:jvmJar (JVM)
-Manual Verification
-•
-Review code changes for consistency and adherence to the modularization goal.
+# MacroKapKMP Roadmap & Plans
+
+## ✅ Completed Milestones
+- [x] **Android Orientation Handling**: Support for seamless rotation without state loss.
+- [x] **Global Rebranding**: "Tokens" -> "Kaps" across all logic, strings, and docs.
+- [x] **Iconography Refresh**: Removed programmatic tinting; transitioned to `macropadIcon64`.
+- [x] **Dynamic UI Animations**:
+    - [x] Straight flight for deductions.
+    - [x] "Boomerang" (U-turn) flight for grace-period executions.
+    - [x] Reward spread and floating text animations.
+- [x] **Grace Period Visuals**:
+    - [x] 10-second free-window logic.
+    - [x] High-visibility blue timer bar.
+    - [x] Thick progress indicator (8dp) with Kap icon thumb.
+
+## 🚀 Active Development
+- [ ] **Golden Keycap Asset Integration**: Replace generic icons with high-fidelity themed assets.
+- [ ] **Macro Templates**: Add predefined templates for popular software (OBS, Photoshop).
+- [ ] **End-to-End Testing**: Automated verification of the cryptographic handshake.
+
+## 📅 Future Roadmap
+- [ ] **iOS Client**: Initial porting to iOS using Compose Multiplatform for iOS.
+- [ ] **Fleet Mode Enhancements**: Remote device status monitoring from the server.
+- [ ] **Marketplace Expansion**: Community-driven macro pack sharing.

@@ -78,6 +78,9 @@ class SettingsViewModel {
     private val _isDeveloperMode = MutableStateFlow(false)
     val isDeveloperMode = _isDeveloperMode.asStateFlow()
 
+    private val _legalAccepted = MutableStateFlow(false)
+    val legalAccepted = _legalAccepted.asStateFlow()
+
     fun setTheme(theme: AppTheme) {
         _theme.value = theme
     }
@@ -157,6 +160,10 @@ class SettingsViewModel {
 
     fun setDeveloperMode(enabled: Boolean) {
         _isDeveloperMode.value = enabled
+    }
+
+    fun setLegalAccepted(accepted: Boolean) {
+        _legalAccepted.value = accepted
     }
 
     fun updateServerHistory(server: TrustedServer) {

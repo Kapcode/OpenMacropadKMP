@@ -7,29 +7,34 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+
+import org.jetbrains.compose.resources.painterResource
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
 
 @Composable
 fun RewardConfirmDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
-    tokensPerAd: Int
+    kapsPerAd: Int
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         icon = {
             Icon(
-                imageVector = Icons.Default.PlayCircle,
+                painter = painterResource(Res.drawable.macropadIcon64),
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
+                tint = Color.Unspecified,
                 modifier = Modifier.size(48.dp)
             )
         },
         title = {
             Text(
-                text = "Earn Tokens",
+                text = "Earn Kaps",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth()
@@ -41,13 +46,13 @@ fun RewardConfirmDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Watch a short video to earn $tokensPerAd tokens for free.",
+                    text = "Watch a short video to earn $kapsPerAd Kaps for free.",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Tokens allow you to execute macros without a Pro subscription.",
+                    text = "Kaps allow you to execute macros without a Pro subscription.",
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -61,7 +66,7 @@ fun RewardConfirmDialog(
                     containerColor = MaterialTheme.colorScheme.primary
                 )
             ) {
-                Text("Watch Video (+$tokensPerAd)")
+                Text("Watch Video (+$kapsPerAd)")
             }
         },
         dismissButton = {

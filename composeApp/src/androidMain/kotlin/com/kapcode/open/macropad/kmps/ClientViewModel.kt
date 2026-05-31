@@ -48,7 +48,11 @@ data class ClientUiState(
     val isEditMode: Boolean = false,
     val isCoordinateCaptureActive: Boolean = false,
     val isPro: Boolean = false,
-    val serverHistory: List<TrustedServer> = emptyList()
+    val serverHistory: List<TrustedServer> = emptyList(),
+    val graceTriggerCount: Int = 0,
+    val lastGraceMacro: String? = null,
+    val deductionTriggerCount: Int = 0,
+    val lastDeductionMacro: String? = null
 )
 
 class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
@@ -62,7 +66,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         isSecure: Boolean,
         discoveryFingerprint: String?,
         serverName: String? = null,
-        tokenManager: TokenManager,
+        kapManager: KapManager,
         settingsViewModel: SettingsViewModel,
         context: Context,
         onExecutionFailedToast: (String) -> Unit
@@ -111,12 +115,21 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 onMacroExecutionStart(macro)
                 val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
                 if (!isProActive) {
-                    val result = tokenManager.spendTokensWithResult(BillingConstants.TOKENS_PER_MACRO_PRESS)
+                    val result = kapManager.spendKapsWithResult(BillingConstants.KAPS_PER_MACRO_PRESS)
                     if (result > 0) {
+                        onMacroDeductionTriggered(macro)
                         repository.sendData("currency_spent", result.toString())
+                        if (settingsViewModel.enableToasts.value) {
+                            Toast.makeText(context, "Spent $result Kap", Toast.LENGTH_SHORT).show()
+                        }
+                    } else if (result == 0) {
+                        onMacroGraceTriggered(macro)
+                        if (settingsViewModel.enableToasts.value) {
+                            Toast.makeText(context, "Kap skipped (Grace Period) - macro ran!", Toast.LENGTH_SHORT).show()
+                        }
                     }
                     if (result >= 0) {
-                        repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                        repository.sendData("currency_update", kapManager.kapBalance.value.toString())
                     }
                 }
             },
@@ -127,9 +140,9 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 onMacroExecutionFailed(macro)
                 val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
                 if (!isProActive) {
-                    tokenManager.awardTokens(BillingConstants.TOKENS_PER_MACRO_PRESS)
-                    repository.sendData("currency_spent", (-BillingConstants.TOKENS_PER_MACRO_PRESS).toString())
-                    repository.sendData("currency_update", tokenManager.tokenBalance.value.toString())
+                    kapManager.awardKaps(BillingConstants.KAPS_PER_MACRO_PRESS)
+                    repository.sendData("currency_spent", (-BillingConstants.KAPS_PER_MACRO_PRESS).toString())
+                    repository.sendData("currency_update", kapManager.kapBalance.value.toString())
                 }
                 onExecutionFailedToast("Macro '$macro' failed: $error")
             },
@@ -159,9 +172,9 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun sendMacro(macroName: String) {
         val isProActive = uiState.value.isPro || MacroApplication.settingsViewModel.isServerProActive.value
-        val tokenManager = TokenManager.getInstance(MacroApplication.instance)
+        val kapManager = KapManager.getInstance(MacroApplication.instance)
         
-        if (isProActive || tokenManager.canAfford(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
+        if (isProActive || kapManager.canAfford(BillingConstants.KAPS_PER_MACRO_PRESS)) {
             repository.sendMacro(macroName)
         } else {
             onMacroExecutionFailed(macroName)
@@ -323,7 +336,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     fun connectToServer(
         server: TrustedServer,
         deviceName: String,
-        tokenManager: TokenManager,
+        kapManager: KapManager,
         settingsViewModel: SettingsViewModel,
         context: Context,
         onExecutionFailedToast: (String) -> Unit
@@ -335,7 +348,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             isSecure = server.isSecure,
             discoveryFingerprint = if (server.serverId.contains(":")) null else server.serverId,
             serverName = server.displayName,
-            tokenManager = tokenManager,
+            kapManager = kapManager,
             settingsViewModel = settingsViewModel,
             context = context,
             onExecutionFailedToast = onExecutionFailedToast
@@ -407,6 +420,20 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         _uiState.update { it.copy(
             executingMacros = it.executingMacros - macro,
             failedMacros = it.failedMacros + macro
+        ) }
+    }
+
+    fun onMacroGraceTriggered(macro: String) {
+        _uiState.update { it.copy(
+            graceTriggerCount = it.graceTriggerCount + 1,
+            lastGraceMacro = macro
+        ) }
+    }
+
+    fun onMacroDeductionTriggered(macro: String) {
+        _uiState.update { it.copy(
+            deductionTriggerCount = it.deductionTriggerCount + 1,
+            lastDeductionMacro = macro
         ) }
     }
 }

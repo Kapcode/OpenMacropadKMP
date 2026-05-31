@@ -30,3 +30,7 @@ keystore.properties
 keystore.p12
 *.jks
 google-services.json
+
+# Task and Walkthrough Artifacts
+.artifacts/
+

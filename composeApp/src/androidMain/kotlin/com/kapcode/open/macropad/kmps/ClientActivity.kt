@@ -192,8 +192,8 @@ class ClientActivity : ComponentActivity() {
         setContent {
             val theme by settingsViewModel.theme.collectAsState()
             val uiState by clientViewModel.uiState.collectAsState()
-            val tokenManager = remember { TokenManager.getInstance(this@ClientActivity) }
-            val tokenBalance by tokenManager.tokenBalance.collectAsState()
+            val kapManager = remember { KapManager.getInstance(this@ClientActivity) }
+            val kapBalance by kapManager.kapBalance.collectAsState()
 
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
                 CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
@@ -205,7 +205,7 @@ class ClientActivity : ComponentActivity() {
                         isSecure = isSecure,
                         discoveryFingerprint = discoveryFingerprint,
                         serverName = serverName,
-                        tokenManager = tokenManager,
+                        kapManager = kapManager,
                         settingsViewModel = settingsViewModel,
                         context = this@ClientActivity,
                         onExecutionFailedToast = { message ->
@@ -214,15 +214,15 @@ class ClientActivity : ComponentActivity() {
                     )
                 }
 
-                LaunchedEffect(tokenBalance) {
-                    clientViewModel.syncCurrency(tokenBalance.toLong())
+                LaunchedEffect(kapBalance) {
+                    clientViewModel.syncCurrency(kapBalance.toLong())
                 }
 
                 ClientScreen(
                     uiState = uiState,
                     settingsViewModel = settingsViewModel,
                     clientViewModel = clientViewModel,
-                    currency = tokenBalance.toLong(),
+                    currency = kapBalance.toLong(),
                     billingManager = billingManager,
                     onQrScannerToggle = { show ->
                         if (show) {
@@ -256,7 +256,7 @@ class ClientActivity : ComponentActivity() {
                     onOkayTriggerSet = { trigger -> onOkayPressed = trigger },
                     onCancelTriggerSet = { trigger -> onCancelPressed = trigger },
                     onSlamTriggerSet = { trigger -> onSlamTriggered = trigger },
-                    tokenManager = tokenManager,
+                    kapManager = kapManager,
                     onExecutionFailedToast = { message ->
                         Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
                     }

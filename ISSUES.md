@@ -4,8 +4,8 @@ This document tracks identified security risks that have not yet been fully miti
 
 ## 🔴 High Priority
 
-### 1. Token Balance Sync Delay on Initial Connection
-- **Description**: The Desktop console UI shows "0" tokens for a connected client immediately after a successful handshake. The correct balance only appears after the client performs an action that triggers a `currency_update` (like executing a macro or changing settings).
+### 1. Kap Balance Sync Delay on Initial Connection
+- **Description**: The Desktop console UI shows "0" Kaps for a connected client immediately after a successful handshake. The correct balance only appears after the client performs an action that triggers a `currency_update` (like executing a macro or changing settings).
 - **Impact**: Server administrators see an inaccurate "0" balance for new sessions, making it difficult to audit client status until activity occurs.
 - **Root Cause**: The initial `currency_update` sent by the client during the `onUpdate` ("Connected") phase is either arriving before the server's UI is ready to display it or is being swallowed during the transition from the "Pairing" to "Authenticated" state.
 - **Status**: ✅ **Fixed**. Updated `ClientActivity.kt` to send a `currency_update` message immediately upon transitioning to the "Connected" state, ensuring the server ledger is populated during initial handshake.

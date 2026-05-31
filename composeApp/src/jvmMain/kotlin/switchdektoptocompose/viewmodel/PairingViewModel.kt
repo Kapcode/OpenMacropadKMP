@@ -25,7 +25,7 @@ class PairingViewModel(
     val fleetModeEnabled = settingsViewModel.fleetModeEnabled
     val fleetGridVisibility = settingsViewModel.fleetGridVisibility
 
-    private val viewModelScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
+    private val viewModelScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
 
     init {
         pendingPairingRequests
@@ -35,23 +35,30 @@ class PairingViewModel(
 
     /**
      * Updates QR bitmaps for the given requests.
-     * Uses a lock-free approach to ensure we don't regenerate existing bitmaps.
+     * Ensures we regenerate if the verification code changes (e.g. on reconnect)
+     * and cleans up stale bitmaps.
      */
     fun updateQrBitmaps(requests: List<ClientInfo>) {
-        if (requests.isEmpty()) return
-        
         viewModelScope.launch {
             val current = _qrBitmaps.value
-            val needsUpdate = requests.any { !current.containsKey(it.id) }
+            val activeIds = requests.map { it.id }.toSet()
             
-            if (needsUpdate) {
-                val updatedMap = current.toMutableMap()
-                requests.forEach { request ->
-                    if (!updatedMap.containsKey(request.id)) {
-                        val qr = QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400)
-                        updatedMap[request.id] = qr
+            // 1. Clean up stale bitmaps and start with active ones
+            val updatedMap = current.filterKeys { it in activeIds }.toMutableMap()
+            var changed = updatedMap.size != current.size
+            
+            // 2. Add or update bitmaps
+            requests.forEach { request ->
+                if (!updatedMap.containsKey(request.id)) {
+                    val qr = withContext(Dispatchers.Default) {
+                        QrCodeGenerator.generateQrCode(request.verificationCode ?: "", 400)
                     }
+                    updatedMap[request.id] = qr
+                    changed = true
                 }
+            }
+            
+            if (changed) {
                 _qrBitmaps.value = updatedMap
             }
         }

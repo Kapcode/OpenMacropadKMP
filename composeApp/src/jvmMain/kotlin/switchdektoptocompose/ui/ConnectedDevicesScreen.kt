@@ -18,7 +18,10 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
@@ -50,6 +53,14 @@ fun ConnectedDevicesScreen(
         trustedDevices.filterKeys { it !in connectedIds }
     }
 
+    val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
+    val goldColor = if (isLight) Color(0xFFB8860B) else Color(0xFFFFD700) // Darker gold for light theme
+    val textShadow = Shadow(
+        color = Color.Black.copy(alpha = if (isLight) 0.3f else 0.8f),
+        offset = Offset(1f, 1f),
+        blurRadius = 2f
+    )
+
     Column(modifier = modifier.fillMaxSize()) {
         SectionHeader(
             icon = Icons.Default.Sensors,
@@ -61,13 +72,13 @@ fun ConnectedDevicesScreen(
                     Icons.Default.CurrencyExchange, 
                     null, 
                     modifier = Modifier.size(16.dp), 
-                    tint = Color(0xFFFFD700)
+                    tint = goldColor
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
                     "Total Spent: $totalCurrencySpent",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color(0xFFFFD700),
+                    style = MaterialTheme.typography.labelSmall.copy(shadow = textShadow),
+                    color = goldColor,
                     fontWeight = FontWeight.Bold
                 )
             }
@@ -157,13 +168,13 @@ fun ConnectedDevicesScreen(
                                             Icons.Default.CurrencyExchange,
                                             contentDescription = null,
                                             modifier = Modifier.size(14.dp),
-                                            tint = Color(0xFFFFD700)
+                                            tint = goldColor
                                         )
                                         Spacer(Modifier.width(2.dp))
                                         Text(
                                             "${device.currency}",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = Color(0xFFFFD700),
+                                            style = MaterialTheme.typography.labelLarge.copy(shadow = textShadow),
+                                            color = goldColor,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }

@@ -116,6 +116,14 @@ class SettingsStorage(context: Context) {
         return prefs.getBoolean("pro_enabled", false)
     }
 
+    fun saveLegalAccepted(accepted: Boolean) {
+        prefs.edit().putBoolean("legal_accepted", accepted).apply()
+    }
+
+    fun getLegalAccepted(): Boolean {
+        return prefs.getBoolean("legal_accepted", false)
+    }
+
     fun saveDashboardMacros(widgets: List<GridWidget>) {
         val json = Json.encodeToString(widgets)
         prefs.edit().putString("dashboard_widgets", json).apply()
@@ -180,6 +188,7 @@ class SettingsStorage(context: Context) {
         viewModel.setEnableBackgroundToasts(getBackgroundToastsEnabled())
         viewModel.setServerHistory(getServerHistory())
         viewModel.setIsPro(getProEnabled())
+        viewModel.setLegalAccepted(getLegalAccepted())
         clientViewModel.setIsPro(getProEnabled())
         clientViewModel.setDashboardMacros(getDashboardMacros())
 
@@ -195,6 +204,7 @@ class SettingsStorage(context: Context) {
         viewModel.slamFireDoubleThreshold.onEach { saveSlamFireDoubleThreshold(it) }.launchIn(scope)
         viewModel.enableToasts.onEach { saveToastsEnabled(it) }.launchIn(scope)
         viewModel.enableBackgroundToasts.onEach { saveBackgroundToastsEnabled(it) }.launchIn(scope)
+        viewModel.legalAccepted.onEach { saveLegalAccepted(it) }.launchIn(scope)
         viewModel.isPro.onEach { 
             saveProEnabled(it)
             clientViewModel.setIsPro(it)

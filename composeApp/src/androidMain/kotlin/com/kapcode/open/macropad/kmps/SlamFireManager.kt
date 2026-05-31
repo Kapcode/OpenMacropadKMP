@@ -105,11 +105,11 @@ class SlamFireManager(
     private fun invokeSlam(isDouble: Boolean) {
         if (isHandlingSlam) return
 
-        val tokenManager = TokenManager.getInstance(context)
+        val kapManager = KapManager.getInstance(context)
         val isProActive = settingsViewModel.isPro.value || settingsViewModel.isServerProActive.value
         
-        if (!isProActive && !tokenManager.canAfford(BillingConstants.TOKENS_PER_MACRO_PRESS)) {
-            // Not enough tokens to fire macro
+        if (!isProActive && !kapManager.canAfford(BillingConstants.KAPS_PER_MACRO_PRESS)) {
+            // Not enough Kaps to fire macro
             return
         }
 
