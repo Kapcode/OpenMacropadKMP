@@ -47,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
+import java.util.concurrent.atomic.AtomicBoolean
 import com.google.android.gms.ads.MobileAds
 import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
@@ -87,6 +88,7 @@ class MainActivity : ComponentActivity() {
     private var onOkayPressed: (() -> Unit)? = null
 
     private lateinit var slamFireManager: SlamFireManager
+    private val isMobileAdsInitializeCalled = AtomicBoolean(false)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
@@ -102,6 +104,16 @@ class MainActivity : ComponentActivity() {
         billingManager = BillingManager.getInstance(this)
         billingManager.startConnection(settingsViewModel)
 
+        val consentManager = ConsentManager(this)
+        consentManager.gatherConsent { error ->
+            if (error != null) {
+                Log.w(TAG, "Consent gathering failed: $error")
+            }
+            if (consentManager.canRequestAds) {
+                initializeMobileAds()
+            }
+        }
+
         // Move discovery and heavy initialization to immediately after binding ViewModel
         lifecycleScope.launch(Dispatchers.IO) {
             clientDiscovery.start()
@@ -111,7 +123,11 @@ class MainActivity : ComponentActivity() {
             } catch (e: Exception) {
                 Log.e(TAG, "IdentityManager initialization failed", e)
             }
-            MobileAds.initialize(this@MainActivity)
+            // initializeMobileAds() will be called from consentManager if possible
+            // but we can also call it here if canRequestAds is already true
+            if (consentManager.canRequestAds) {
+                initializeMobileAds()
+            }
         }
 
         slamFireManager = SlamFireManager(this, settingsViewModel, lifecycleScope) { isDouble ->
@@ -160,6 +176,15 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+        }
+    }
+
+    private fun initializeMobileAds() {
+        if (isMobileAdsInitializeCalled.getAndSet(true)) {
+            return
+        }
+        lifecycleScope.launch(Dispatchers.IO) {
+            MobileAds.initialize(this@MainActivity)
         }
     }
 

@@ -44,6 +44,8 @@ actual object DeviceInfo {
         get() {
             return try {
                 // Settings.Secure.ANDROID_ID is stable across uninstalls for the same app signing key.
+                // We use this as a unique device identifier for pairing and secure identity.
+                // It is hashed (SHA-256) to maintain privacy while ensuring stable uniqueness.
                 val androidId = Settings.Secure.getString(
                     MacroApplication.instance.contentResolver, 
                     Settings.Secure.ANDROID_ID

@@ -31,7 +31,7 @@ object BillingConstants {
     const val ADMOB_BANNER_PRO_DIALOG_UNIT_ID = ADMOB_TEST_BANNER_ID
     const val ADMOB_BANNER_SETTINGS_UNIT_ID = ADMOB_TEST_BANNER_ID
 
-    const val IS_TEST_MODE = true
+    const val IS_TEST_MODE = false
 
     fun getBannerId(location: AdLocation): String {
         if (IS_TEST_MODE) return ADMOB_TEST_BANNER_ID

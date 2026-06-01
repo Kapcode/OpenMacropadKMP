@@ -26,6 +26,7 @@ import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
 import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.components.LegalDialog
+import com.kapcode.open.macropad.kmps.settings.LegalSettingsSection
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 import com.kapcode.open.macropad.kmps.models.TrustedServer
 import kotlinx.coroutines.delay
@@ -143,7 +144,9 @@ fun MainUI(
                 SettingsScreen(
                     viewModel = settingsViewModel,
                     modifier = Modifier.padding(innerPadding)
-                )
+                ) {
+                    LegalSettingsSection()
+                }
             } else {
                 if (isGlobalLoading) {
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

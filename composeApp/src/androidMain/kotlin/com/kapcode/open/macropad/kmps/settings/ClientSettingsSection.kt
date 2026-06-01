@@ -10,7 +10,19 @@ import androidx.compose.ui.unit.dp
 
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.fillMaxWidth
 import com.kapcode.open.macropad.kmps.ClientViewModel
+import com.kapcode.open.macropad.kmps.ui.components.LegalDialog
+import org.jetbrains.compose.resources.stringResource
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
 
 @Composable
 fun ClientSettingsSection(clientViewModel: ClientViewModel) {
@@ -31,5 +43,7 @@ fun ClientSettingsSection(clientViewModel: ClientViewModel) {
             modifier = Modifier.padding(top = 4.dp),
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+
+        LegalSettingsSection()
     }
 }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Disable cleartext traffic for all domains by default for Google Play compliance -->
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

@@ -40,6 +40,7 @@ kotlin {
             implementation(libs.androidx.core.splashscreen)
             implementation(libs.ktor.client.okhttp)
             implementation(libs.google.play.services.ads)
+            implementation(libs.user.messaging.platform)
             implementation(libs.billing)
             implementation(project.dependencies.platform(libs.firebase.bom))
             implementation(libs.firebase.analytics)
