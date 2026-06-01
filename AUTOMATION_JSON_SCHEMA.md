@@ -20,7 +20,7 @@ Polymorphic type used to define what triggers an automation.
 ### KeyHold
 - `type`: "KeyHold"
 - `keyName`: String
-- `durationMs`: String (Flexible: accepts numbers or strings)
+- `durationMs`: String (Flexible)
 
 ### MultiTap
 - `type`: "MultiTap"
@@ -70,62 +70,66 @@ Groups actions with an optional condition.
 
 ## AutomationAction
 
-Polymorphic type for actions. Uses `type` as the JSON discriminator.
+Polymorphic type for actions. Uses **`kind`** as the JSON discriminator (to avoid conflicts with `type` property in subclasses).
 
 ### MacroAction
-- `type`: "MacroAction"
+- `kind`: "MacroAction"
 - `macroId`: String
 
 ### ScriptAction
-- `type`: "ScriptAction"
+- `kind`: "ScriptAction"
+- `script`: String
+
+### ScriptEvent
+- `kind`: "ScriptEvent"
 - `script`: String
 
 ### LayerShift
-- `type`: "LayerShift"
+- `kind`: "LayerShift"
 - `layerId`: String
 - `isMomentary`: Boolean
 
 ### KeyEvent
-- `type`: "KeyEvent"
+- `kind`: "KeyEvent"
 - `keyName`: String
 - `actionType`: String ("PRESS", "RELEASE", "TYPE")
 
 ### MouseEvent
-- `type`: "MouseEvent"
+- `kind`: "MouseEvent"
 - `x`: String (Flexible)
 - `y`: String (Flexible)
 - `actionType`: String ("MOVE", "CLICK")
 - `isAnimated`: Boolean (Default: false)
 
 ### MouseButtonEvent
-- `type`: "MouseButtonEvent"
+- `kind`: "MouseButtonEvent"
 - `buttonNumber`: String (Flexible)
 - `actionType`: String ("PRESS", "RELEASE", "CLICK")
 
 ### ScrollEvent
-- `type`: "ScrollEvent"
+- `kind`: "ScrollEvent"
 - `amount`: String (Flexible)
 
 ### DelayEvent
-- `type`: "DelayEvent"
+- `kind`: "DelayEvent"
 - `durationMs`: String (Flexible)
 
 ### SetAutoDelay
-- `type`: "SetAutoDelay"
+- `kind`: "SetAutoDelay"
 - `delayMs`: String (Flexible)
 
 ### SetVariable
-- `type`: "SetVariable"
+- `kind`: "SetVariable"
 - `name`: String
 - `value`: String
 
 ### MouseKeyboard
-- `type`: "MouseKeyboard"
+- `kind`: "MouseKeyboard"
 - `actionType`: String
 - `parameters`: Map<String, String>
 
 ### ControllerButton
-- `type`: "ControllerButton"
+- `kind`: "ControllerButton"
 - `button`: String
 - `controllerIndex`: String (Default: "0")
 - `actionType`: String (Default: "PRESS")

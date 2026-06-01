@@ -18,31 +18,19 @@ The application supports two primary themes: **Dark Blue** (default) and **Light
 | **Status (Success)** | `#008000` (High Contrast) | `#00FF00` (Standard Green) |
 | **Gold Standard** | `#FFFFD700` | `#FFFFD700` |
 
-**Key Principle**: Use `SurfaceVariant` for grouping related controls (e.g., Device List, Console background) to provide depth without using heavy shadows. All currency-related text and icons (CurrencyExchange) strictly use the **Gold Standard** (`#FFFFD700`) to denote monetization and value.
+**Key Principle**: Use `SurfaceVariant` for grouping related controls to provide depth without using heavy shadows. All currency-related text and icons (CurrencyExchange) strictly use the **Gold Standard** (`#FFFFD700`) to denote monetization and value.
 
 ### Iconography
 - **Library**: Material Symbols / Icons.
-- **Directional Icons**: Use `AutoMirrored` variants (e.g., `ArrowBack`, `ExitToApp`) to support RTL layouts automatically.
-- **Brand Icon**: A high-resolution 512px icon is used for desktop taskbars and Android splash screens to ensure crispness across all DPI levels.
-
-### Rich Widget Components
-- **Macro Buttons**: Fixed-height (90dp) tiles with centered labels and icons.
-- **Toggles**: Feature a built-in `Switch` component. The background color or elevation shift denotes the "On" state.
-- **Sliders**: 
-    - **Horizontal**: Standard width with integrated slider.
-    - **Vertical**: Double-height (180dp) tiles for fine-grained vertical control.
-- **Dynamic Contrast**: Text and icons automatically adjust between White (`#FFFFFF`) and Black (`#000000`) based on the calculated luminance of the widget's background color to ensure accessibility on custom-colored buttons.
+- **Directional Icons**: Use `AutoMirrored` variants (e.g., `ArrowBack`, `ExitToApp`) to support RTL layouts.
+- **Brand Icon**: A high-resolution 512px icon is used for desktop taskbars and Android splash screens.
 
 ## 2. Shared Interaction & Feedback
 
-### Terminal-Inspired Aesthetics (Cross-Platform)
-To create a unified "tech-forward" feel, both platforms use terminal-inspired animations for background processes:
+### Terminal-Inspired Aesthetics
 - **Blinking Cursor (`> _`)**: Used during initialization or as a "heartbeat" indicator.
-  - **Component**: `BlinkingCursor` (Common).
   - **Animation**: 400ms cycle (200ms ON / 200ms OFF).
-  - **Color**: `MaterialTheme.colorScheme.primary`.
 - **Three-Dot Progress**: Used specifically for active network scanning or discovery.
-  - **Component**: `ThreeDotsLoading` (Common).
   - **Animation**: Staggered scaling (600ms per dot).
 
 ### Status Feedback
@@ -50,166 +38,64 @@ To create a unified "tech-forward" feel, both platforms use terminal-inspired an
     - **Success/Active**: Standard Green in Dark Theme, High-Contrast Green (`#008000`) in Light Theme.
     - **Error/Stopped**: Material 3 Error color (`#BA1A1A`).
     - **Grace Period**: Distinct Blue (`#2196F3`) used for the timer bar.
-- **Snackbars**: Standardized across both platforms for macro execution feedback (Start, Finish, E-Stop).
-- **Unified Notification System (Toasts)**:
-    - **Desktop Custom Overlay**: A transparent, always-on-top window positioned at `BottomCenter` for non-intrusive alerts. Replaces standard OS notifications for precise timing control.
-    - **Android Native Toasts**: Leverages the Android `Toast` API for consistent mobile feedback.
-    - **Granular Targeting**: Alerts can be routed to the **Server Only**, **Selected Clients Only**, or **Both**, managed via individual device checkboxes in settings.
-    - **Contextual Awareness**: Option to include application names (e.g., "Floorp") in activation messages.
-    - **Configurable Persistence**: A master "Toast Duration" setting (ms) synchronizes display times across all platforms.
+- **Toasts & Notifications**:
+    - **Desktop**: Custom transparent overlay at `BottomCenter`.
+    - **Android**: Native `Toast` API.
 
 ### Desktop Motion & Layout
-- **Root Split Pane**: The Desktop layout uses a primary horizontal split between the **Left Sidebar** (Console/Inspector) and the **Main Workspace** (Connections/Macros).
-- **Macro Manager Refactoring**: The Macro Manager screen utilizes collapsible, high-contrast headers (`SectionHeader`) for "Packs Manager" and "Macro Manager".
-    - **Headers**: Use solid `Surface` color (Black in Dark mode, White in Light mode) for prominent visual grouping.
-    - **Content Items**: Use a subtle `SurfaceVariant` background with tiled patterns (Keyboard keys for Macros, Library books for Packs) to distinguish from headers.
-    - **Search**: Independent search bars are integrated into each header for local filtering.
-- **Nested Split Panes**: Within the Main Workspace, a vertical split separates **Connections** (left) from **Macros** (right).
-- **Ghost Image Resizing**: To provide real-time visual feedback, splitters display a "Ghost Image" (a semi-transparent representation of the new divider position) during active dragging.
-- **Dynamic Splitter Highlighting**: All split panes use custom-styled "pill" handles (pulltabs). These handles feature dynamic transparency:
-    - **Idle**: 5% alpha.
-    - **Hover**: 20% alpha.
-    - **Pressed/Dragging**: 40% alpha.
-- **Configurable Exit Behavior**: The application provides three exit strategies:
-    - **Ask**: Displays a three-way confirmation dialog (Exit to Tray, Just Exit, or Cancel).
-    - **Exit to Tray**: Automatically minimizes the application to the system tray.
-    - **Just Exit**: Terminates the process immediately.
-- **Minimize Animation**: Uses a **Quadratic Ease-In** animation that scales and translates the window toward the system tray area when "Exit to Tray" is triggered (respecting the `animateToTray` setting).
-- **Tray Interaction**: Single-click on the tray icon toggles window visibility; right-click provides an OS-native context menu. Manual "Exit" triggers from the tray or UI header bypass the "Tray" setting to ensure the user can always fully quit the application.
-
-### Integrated Inspection & Context Awareness
-- **Live Variable Inspector**: The Inspector pane provides a real-time, scrolling dashboard of system variables:
-    - **Window Context**: Current/Last process names and full window titles.
-    - **Input Context**: Real-time mouse coordinates and pixel colors.
-    - **System Context**: Clipboard text and system timers.
-- **Visual Routine Builder**: A shared, block-based UI for creating complex automation.
-    - **Triggers**: Supports a "stack" of multiple triggers per routine.
-    - **Actions**: Provides dedicated editors for low-level keyboard/mouse events, scripts, and macro execution.
-    - **Variables**: Integrated `VariablePickerField` allows selecting system variables with live previews directly in the dropdown.
+- **Root Split Pane**: Primary horizontal split between Sidebar and Main Workspace.
+- **Macro Manager**: Collapsible `SectionHeader`s for "Packs" and "Macros" with tiled item backgrounds.
+- **Split Pane Feedback**: "Ghost Image" during dragging and dynamic transparency for handles (5% idle, 20% hover, 40% dragging).
+- **Exit Behavior**: Three strategies (**Ask**, **Tray**, **Exit**).
+- **Minimize Animation**: Quadratic Ease-In scaling and translation toward the system tray.
 
 ## 3. Accessibility & Usability
 
 ### High-Visibility Scrollbars
-To assist users on touchscreens or with hidden system scrollbars, all major scrollable areas (Settings, Macro Timeline, Event Dialogs, Console Toolbar) use:
 - **Thickness**: `8.dp`
 - **Visibility**: Persistent or high-contrast against the background.
-- **Console Toolbar**: Specifically uses a `HorizontalScrollbar` with `onPointerEvent` for mouse-wheel scrolling support.
 
 ### Contrast Requirements
-- In the **Light Blue** theme, success/running indicators use a darkened green (`#008000`) instead of bright green to ensure readability against the light surface variant.
-
-### Progressive Disclosure (Tooltips)
-- **Settings**: Descriptions for complex security toggles (e.g., Device Discovery, One-Time Approvals ONLY) are moved into `TooltipArea` components. This reduces visual noise and "mental load" in the settings screen while keeping information available on-demand.
+- In **Light Blue** theme, success indicators use darkened green (`#008000`) for accessibility.
 
 ## 4. Platform-Specific Design
 
 ### Android
-- **Splash Screen**: Follows the Android 12+ standard using `androidx.core:core-splashscreen`.
-- **Adaptive Icons**: 512px source wrapped in a 192dp container to fit within the OS-enforced "safe circle" without clipping or "black ring" artifacts.
-- **Navigation Order**: The main navigation uses a bottom-bar or top-tab system with the following order:
-    1.  **[0] My Dashboard**: The primary, user-curated view.
-    2.  **[1] Active Pack**: Context-aware macros based on the current desktop process.
-    3.  **[2] Marketplace**: Full-screen overlay or dedicated tab for downloading new packs.
+- **Splash Screen**: Android 12+ standard with proper adaptive icon (512px source in 192dp container).
+- **Navigation**: 3-tab system: **[0] My Dashboard**, **[1] Active Pack**, **[2] Marketplace**.
 
 ### Dashboard & Edit Mode (Android)
-To allow users to customize their experience, the "My Dashboard" tab features an interactive grid:
-- **Long-Press Activation**: Users initiate "Edit Mode" by long-pressing any macro in the dashboard.
-- **Visual Feedback (Dragging)**:
-    - **Scaling**: The dragged item scales to `1.1f` to appear "lifted" from the surface.
-    - **Rotation**: A subtle `2-degree` rotation is applied to create a "loose" or "floating" feel.
-    - **Shadows**: Elevation is increased while dragging to distinguish the active item from the grid.
-- **Dynamic Reordering**: The grid automatically shifts items to fill gaps in real-time as the dragged macro moves over other positions.
-- **Macro Picker**: A prominent **Floating Action Button (FAB)** opens a stateful, two-step dialog:
-    1.  **Macro Selection**: Choose the macro from the server.
-    2.  **Variant Selection**: Choose the widget type (Button, Toggle, or Slider).
-- **Drag-to-Trash**: 
-    - When a drag operation starts in Edit Mode, a **Trash Can** icon appears at the bottom center of the screen.
-    - **Collision Awareness**: The trash can scales up (`1.5x`) and turns red (`MaterialTheme.colorScheme.error`) when a widget is hovered over it.
-    - **Confirmation**: Dropping an item onto the trash can immediately removes it from the dashboard.
-- **Persistence**: Any additions, removals, or reordering are immediately persisted to local storage using a JSON-based schema in `SharedPreferences`.
+- **Long-Press**: Activates "Edit Mode" with item scaling (`1.1f`) and subtle rotation (`2 degrees`).
+- **Drag-and-Drop**: Real-time grid reordering.
+- **Drag-to-Trash**: A red, scaling trash can icon appears at the bottom during drags.
+- **Macro Picker**: Stateful two-step dialog (Select Macro -> Select Variant).
 
 ### Mobile Pairing & QR Scanning
-To ensure secure and ergonomic device pairing on mobile:
-- **Keyboard-Aware Layout**: Use `WindowInsets.ime` to detect keyboard state. Pinned instructions are placed at the top, and critical action fields (like Manual IP entry) are pinned to the bottom. Central content (QR Scanner) uses `Modifier.weight(1f)` to shrink gracefully when the keyboard is visible.
-- **CameraX Interactions**:
-    - **Pinch-to-Zoom**: Enabled for scanning at a distance.
-    - **Tap-to-Focus**: Allows users to manually focus on poorly lit or distant screens.
-    - **Auto-Exposure**: Continuously adjusts to varying monitor brightness levels.
-- **Standardized Icons**:
-    - `Icons.Default.QrCodeScanner`: Toggle QR scanning mode.
-    - `Icons.Default.KeyboardArrowUp/Down`: Toggle manual entry keyboard.
-    - `Icons.Default.Done`: Confirm/Submit pairing.
-    - `Icons.Default.Close`: Cancel/Exit pairing.
+- **Keyboard-Aware**: Layout adjusts dynamically using `WindowInsets.ime`.
+- **CameraX**: Supports pinch-to-zoom, tap-to-focus, and auto-exposure.
 
 ### Dynamic Kap Animations (Android)
-To provide tactile and satisfying feedback for macro execution:
-- **Deduction Animation**: 
-    - **Path**: Linear flight from the App Bar balance to the center of the clicked macro button.
-    - **Visuals**: Icon scales down (`1.2f` to `0.5f`) and fades out during flight.
-    - **Timing**: 600ms duration.
-- **Grace Period "Boomerang" Animation**:
-    - **Path**: A 1000ms quadratic Bezier U-turn. The Kap icon travels 80% of the distance toward the macro button before performing a sharp turn and returning to the balance.
-    - **Control Point**: Calculated as `P0 + 1.6 * (Target - P0)` to create an overshoot effect that peaks at the 80% mark.
-    - **Visuals**: Pulsing scale (`1.0f -> 1.4f -> 1.0f`) at the peak of the turn to emphasize the "rejection."
-- **Reward Spread**:
-    - **Path**: Multiple Kaps burst from the trigger point (e.g., center-bottom) and arch toward the balance using randomized quadratic Bezier paths.
-    - **Text**: A high-contrast Gold (`#FFFFD700`) "+100" text floats upward with a linear fade.
+- **Deduction**: Linear flight (600ms) from balance to button.
+- **Boomerang**: 1000ms quadratic Bezier U-turn for grace-period executions (peaks at 80% distance).
+- **Reward Spread**: Multiple Kaps burst and arch toward balance with floating gold "+100" text.
 
 ### Grace Timer Bar (Android)
-The grace period is visualized as a "Kap Slider" in the App Bar:
-- **Thickness**: High-visibility `8.dp` height.
-- **Width**: `64.dp` container.
-- **Thumb**: A `14.dp` Kap icon that slides along the progress line as the timer counts down.
-- **Color**: Solid Blue (`#2196F3`) progress with a `20%` alpha track.
-- **Behavior**: Appears immediately after a Kap is spent; disappears when the 10-second window closes.
-
-### Desktop (Swing/Compose Bridge)
-- **JSON Editor**: The `RSyntaxTextArea` (Swing) component is dynamically themed to match the Compose UI.
-  - Dark Blue Theme -> `dark.xml`
-  - Light Blue Theme -> `idea.xml`
-- **Dialogs**: All modal interactions use `Window` (replacing `DialogWindow` for better minimization behavior) or custom `Surface`-based overlays to ensure they remain top-level over Swing-based components.
+- **Thickness**: `8.dp`
+- **Thumb**: Sliding Kap icon.
+- **Color**: Solid Blue (`#2196F3`) progress.
 
 ## 5. Gamepad & Controller Interaction
 
 ### Connectivity & Status
-To provide immediate feedback on controller status, the application utilizes a persistent **GamepadStatusIndicator** in the `TopAppBar`.
-
-- **Visual States**:
-    - **No Controllers**: The gamepad icon is semi-transparent (`0.38f` alpha) or matches the `onSurfaceVariant` color to indicate inactivity.
-    - **Controller Connected**: The icon switches to `MaterialTheme.colorScheme.primary` or the **Success (Green)** status color (respecting theme-specific contrast).
-    - **Active Input**: During button presses or stick movement, the indicator can provide a subtle "pulse" or highlight to confirm the application is receiving signals.
-
-### Focus & Navigation (Common)
-The UI is designed to be fully navigable via D-Pad and Left Stick:
-- **Focus Rings**: Focused elements MUST display a high-contrast focus ring (using `MaterialTheme.colorScheme.primary`).
-- **Dead Zones**: Software-level dead zones are applied to analog sticks to prevent "drift" during UI navigation.
-- **Button Mapping**:
-    - **Accept**: Bottom face button (e.g., 'A' / Cross).
-    - **Back/Cancel**: Right face button (e.g., 'B' / Circle).
-    - **Menu**: 'Start' or 'Menu' button.
+- **GamepadStatusIndicator**: Persistent in `TopAppBar`.
+- **States**: Semi-transparent (Disconnected), Primary/Success Color (Connected), Pulse (Active Input).
 
 ## 6. Monetization & Marketplace UI
 
 ### Purchase Cards & Ads
-- **Highlighting**: Use `primaryContainer` for tiers the user *doesn't* yet own to draw attention.
-- **Sticky Ad Footers**: All banner ads on scrollable screens (Marketplace, Settings) MUST be implemented as sticky footers. They stay visible at the bottom of the screen while content scrolls behind/above them.
-- **Universal Ad Logic**: Ads MUST be hidden if any of the following are true:
-    - `isPro` (local purchase) is active.
-    - `isAdFree` (local purchase) is active.
-    - `isServerProActive` (shared status from server) is active.
+- **Sticky Ad Footers**: Banner ads at the bottom of major screens, suppressed for Pro/Ad-Free users.
 - **Badges**:
-    - **WATCH AD**: Used for free rewarded options.
-    - **$ Tags**: Relative price indicators ($ to $$$$$) pinned to the top-right of purchase cards.
-    - **ACTIVE**: Primary-colored badge for currently owned tiers.
-
-### Sticky Ad Footers (Android)
-To maximize monetization without disrupting content flow:
-- **Consistent Placement**: Banner ads on major screens (Main, Client, Marketplace, Settings) are implemented as sticky footers.
-- **Location-Specific IDs**: Each placement uses a unique Ad Unit ID (defined by `AdLocation`) for precise performance analytics.
-- **Suppression Logic**: Ads are dynamically hidden for `Pro` or `Ad-Free` users by checking states in `BillingManager`.
-
-- **Benefit Lists**: Displayed as small-text bullet points with check icons (`Icons.Default.Check`) below the product description.
-- **Currency**: Kaps are represented by `painterResource(Res.drawable.macropadIcon64)` in `GoldCurrencyColor` (0xFFFFD700).
-
-### Marketplace Status
-- **Marketplace Coming Soon**: Displays a `Storefront` icon with a description about future community macro packs.
+    - **WATCH AD**: For free rewarded options.
+    - **$ Tags**: Relative price indicators ($ to $$$$$).
+    - **ACTIVE**: For owned tiers.
+- **Dynamic Prices**: Localized prices from Google Play shown in purchase dialogs.

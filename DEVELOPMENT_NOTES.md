@@ -395,10 +395,8 @@ Automated macros could cause loss of system control if they ran too long or went
 - [x] **Extreme Android Startup Optimization**: Reduced cold start from ~20s to ~1.2s by enabling R8 in debug, removing blocking Content Providers, and using lazy initialization.
 - [x] **UI Feedback**: Implemented `BlinkingCursor` and `ThreeDotsLoading` with `rememberInfiniteTransition` for reliable feedback during startup and discovery.
 - [x] **Slam Fire Trigger Logic**: Implemented a "Slam Fire" hardware trigger system using the Android Proximity Sensor.
-    - **Double Slam Detection**: Uses a 300ms (configurable) threshold to distinguish between single and double triggers.
-    - **Contextual UI Control**: Integrated with the QR scanner (Single=Open, Double=Close) during the discovery phase.
-    - **Persistence**: Built a `SettingsStorage` handler using `SharedPreferences` to persist Slam Fire bindings, thresholds, and overall app state across activity restarts.
-    - **Toast Management**: Centralized `showSlamToast` to prevent UI "pileup" when triggering hardware inputs rapidly.
+- [x] **Lunch Menu Feature**: Added a specialized screen and ViewModel for lunch menu management (experimental).
+- [x] **Documentation Overhaul**: Performed a comprehensive audit and update of all project Markdown files to ensure correctness, cross-referencing, and technical accuracy.
 - [x] **Dashboard Persistence**: Implemented local persistence for the "My Dashboard" tab using `SharedPreferences` and Flow-based sync.
 - [x] **Context-Aware Resolution**: Implemented automatic "Active Pack" switching based on the Desktop's active process broadcast.
 - [x] **Advanced Gestures**: Refactored macro buttons to use `pointerInput` for reliable long-press detection.

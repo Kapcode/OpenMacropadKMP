@@ -14,94 +14,68 @@ MacroKapKMP is a Kotlin Multiplatform project that transforms your Android devic
 
 ### Desktop Server
 *   **Macro Editor:** A visual timeline editor for creating macros with a dedicated `MacroTimelineViewModel`.
-*   **Architectural Excellence:** Refactored into a robust, package-organized structure (UI, ViewModels, Logic, Models, DI) for maximum maintainability.
+*   **Architectural Excellence:** Clean, multi-layered package structure (UI, ViewModels, Logic, Models, DI) for maximum maintainability.
 *   **Centralized DI:** Uses a `ViewModelFactory` to manage ViewModel lifecycles and complex dependencies.
 *   **Event Types:** Support for keyboard events, mouse clicks, cursor movements, scrolling, and delays.
-*   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background.
+*   **Global Hotkeys:** Trigger macros using physical keyboard keys while the application is in the background via **JNativeHook**.
 *   **System Tray Integration**: Run the server in the background with a state-aware tray icon, context menu, and a flexible three-option exit system (**Ask, Exit to Tray, Just Exit**).
-*   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning** for seamless setup. Includes persistent whitelisting/banning, **native OS keyring integration** (via `SecretManager`) for identity protection, hardware-backed keystore management on Android, "Device Discovery" control, and an "Ask Every Time (One-Time Approvals ONLY)" mode for maximum security.
-*   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices. Features a **Smart Multi-QR Grid** that automatically calculates optimal row/column density based on window size and visibility toggles to prevent UI overlap. Includes a **Spatial Grid Selector** to persistently enable/disable specific grid positions (Corners and Centers).
-*   **Gold Standard Currency**: A unified monetization system across Desktop and Android. All currency-related icons and values are displayed in high-contrast Gold (`#FFFFD700`).
-*   **Split Pane Console**: Redesigned Desktop sidebar with a `MoveableVerticalSplitPane` and custom-styled **Pill-Shaped Pulltabs**, dividing "Current Sessions" and "Recent Activity" for better auditing and oversight. Splitters now feature **Ghost Image** feedback for resizing and **Hover/Press highlights** (5% to 40% alpha) for better discoverability.
-*   **Lifecycle Management**: Support for in-app application restarts (via `ProcessBuilder`) and a standardized **three-way Exit Dialog** for graceful shutdowns and background persistence.
-*   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger.
-    *   **Single Slam**: Execute a primary macro or "OK" action.
-    *   **Double Slam**: Execute a secondary macro or "Cancel/Back" action with configurable timing thresholds.
-    *   **Context Aware**: Automatically acts as a QR scanner toggle during setup, then transitions to macro triggering once connected.
-*   **Animation & Polish**: Smooth window transitions to the tray (respecting user preferences), high-quality 512px taskbar icons, and Material 3 dialog notifications.
-*   **Safety Mechanisms**: Includes a configurable emergency stop (E-Stop) and collision detection to prevent multiple macros from running at once.
-*   **Inspector:** Utility to identify screen coordinates and pixel colors.
-*   **Console:** Real-time logging of macro execution and client connections. Includes **Auto-scroll** toggle, **Timestamps**, and an optional **Log to File** mode for deep debugging. The toolbar supports **mouse-wheel horizontal scrolling** and features a high-visibility **custom scrollbar**.
-*   **Advanced Automation Engine:** A professional-grade stateful automation suite integrated with **GraalVM** for high-performance JavaScript scripting.
-    *   **Logic-Driven Routines**: Create "If/Then" logic based on system variables (e.g., "If window is Photoshop AND mouse_y > 800").
+*   **Security & Device Management**: Features a Physical Consent Pairing system with 6-digit verification codes and **QR Code scanning**. Includes persistent whitelisting/banning, **native OS keyring integration** (via `SecretManager`) for identity protection, "Device Discovery" control, and an "Ask Every Time" mode.
+*   **Sync (Fleet) Mode**: A high-reliability pairing system designed for mass-provisioning devices with a **Smart Multi-QR Grid**.
+*   **Gold Standard Currency**: A unified monetization system across Desktop and Android. All currency-related elements use high-contrast Gold (`#FFFFD700`).
+*   **Split Pane Console**: Redesigned Desktop sidebar with a `MoveableVerticalSplitPane` and custom-styled **Pill-Shaped Pulltabs**, dividing "Current Sessions" and "Recent Activity".
+*   **Lifecycle Management**: Support for in-app application restarts and a standardized **three-way Exit Dialog**.
+*   **Advanced Automation Engine**: A professional-grade stateful automation suite integrated with **GraalVM** for high-performance JavaScript scripting.
+    *   **Logic-Driven Routines**: Create "If/Then" logic based on system variables.
     *   **Multi-Trigger Stacks**: Assign multiple independent triggers (Hotkeys, sequences, or state changes) to a single routine.
     *   **Live Variable Inspector**: Real-time sidebar dashboard for monitoring mouse coordinates, pixel colors, window titles, and system clipboard state.
-    *   **Granular Performance Tuning**: Individual polling rate controls for Window, Input, and System data to balance responsiveness with CPU load.
+*   **Integrated Gamepad Support**: Utilize game controllers as macro triggers via **Jamepad**.
 
 ### Android Client
-*   **Rich Widget Support:** Interface to execute desktop macros from a mobile device with real-time execution feedback. Supports multiple widget variants:
-    *   **Buttons**: Traditional triggers with Material Icon support.
-    *   **Toggles**: Stateful switches that reflect server-side status.
-    *   **Sliders**: Horizontal and Vertical sliders for continuous control (e.g., volume, brightness) with `LIVE` or `ON_RELEASE` update modes.
-*   **Dual-Mode Interface**: Features two primary views:
-    *   **Active Pack**: Context-aware grid that automatically swaps based on the focused application on the Desktop.
-    *   **My Dashboard**: A user-curated collection of favorite macros persisted to local storage.
-*   **Editable Dashboard:** Fully customizable "My Dashboard" tab. Users can add macros from any connected server pack using the **Macro Picker** dialog, choose their preferred **Widget Variant**, and remove them via **Drag-to-Trash**.
-*   **Drag-and-Drop Reordering:** Intuitive long-press gesture to enter "Edit Mode," allowing users to rearrange macros in their dashboard with real-time visual feedback (scaling and rotation).
-*   **Search & Filtering**: Real-time search bar for filtering macro packs and finding specific automation tools.
-*   **Kap System:** A rewarded ad-supported model for macro execution.
-*   **Discovery:** Automatic discovery of servers on the local network.
-*   **Gold Standard Kap Sync:** Seamlessly synchronizes the Android `KapManager` balance with the Server's global ledger. Reports `currency_spent` events in real-time to maintain an accurate cross-platform audit of expenditure.
-*   **Grace Period System:** Features a 10-second "Grace Period" after spending a Kap. Any additional macros executed within this window are free of charge. Includes a high-visibility, **thick blue timer bar** in the App Bar with a sliding Kap icon thumb.
-*   **Dynamic UI Animations:** Implemented a coordinate-aware animation system for real-time feedback:
-    *   **Deduction (Straight Flight)**: Kaps fly directly from your balance to the clicked button when spent.
-    *   **Grace Skip (Boomerang)**: During the grace period, Kaps perform a 1000ms "U-turn" or boomerang flight—traveling 80% of the way to the button before returning to the balance—to visually signal a free execution.
-    *   **Award Effects**: Flying Kaps and floating "+100" text effects for rewarded actions.
-*   **Security:** Supports TLS/SSL (WSS) for encrypted communication and out-of-band TOFU verification. Uses stable hardware fingerprints (`MANUFACTURER|MODEL|BOARD|HARDWARE`) to ensure reliable device identification.
+*   **Rich Widget Support:** Execute desktop macros from a mobile device with real-time feedback. Supports **Buttons**, **Toggles**, and **Sliders**.
+*   **Dual-Mode Interface**: Features **Active Pack** (context-aware grid based on focused desktop app) and **My Dashboard** (user-curated favorite macros).
+*   **Editable Dashboard:** Fully customizable grid with **Drag-and-Drop Reordering** and **Drag-to-Trash** deletion.
+*   **Slam Fire Hardware Triggers**: Utilize the device's **Proximity Sensor** as a hands-free, high-speed physical trigger (Single/Double Slam).
+*   **Discovery**: Automatic discovery of servers on the local network via UDP.
+*   **Google Play Billing**: Support for Pro and Ad-Free tiers via In-App Purchases and Subscriptions.
+*   **Kap System**: A rewarded ad-supported model for macro execution with a 10-second **Grace Period** and high-visibility timer bar.
+*   **Dynamic UI Animations**: Coordinate-aware animations for flying Kaps and reward effects.
+*   **Security:** Supports TLS/SSL (WSS) with **Certificate Pinning** and stable hardware fingerprints.
 
 ## Installation and Usage
 
 ### Prerequisites
 *   **JDK 17 or higher:** Required to build and run from source.
 *   **Android 8.0+**: Required for the mobile client.
-*   **R8 Minification**: Recommended for Android production builds to significantly reduce startup latency.
 
 ### Building from Source
 
 #### Desktop
-1. Ensure `JAVA_HOME` is set to your JDK installation.
-2. Run the application using the Gradle wrapper:
-   ```bash
-   ./gradlew :composeApp:run
-   ```
+```bash
+./gradlew :composeApp:run
+```
 
 #### Android
 1. Open the project in Android Studio.
-2. Build and deploy the `composeApp` module to your device.
-3. **Performance Tip**: For the fastest startup times (e.g. ~8s on Amazon Fire 8 10th Gen vs ~15s without), use the `debugR8` build variant or a `release` build to enable R8 minification.
+2. Build and deploy the `composeApp` module.
+3. **Performance Tip**: Use the `release` build or a variant with R8 enabled (like `debugR8` if configured) for significantly faster startup times.
 
 ### Linux Setup
-To use global hotkeys on Linux, the user must be part of the `input` group:
+To use global hotkeys on Linux:
 1. Run: `sudo usermod -a -G input $USER`
-2. Log out and log back in for the change to take effect.
+2. Log out and log back in.
 
 ## Architecture
 
-This project uses Kotlin Multiplatform (KMP) to share code between platforms:
-*   **commonMain**: Shared business logic, models, and UI themes.
-*   **jvmMain**: Desktop server implementation using Compose for Desktop, Ktor 3.x, JNativeHook, and Java AWT Robot. Organized into a clean, multi-layered package structure (`ui`, `viewmodel`, `model`, `logic`, `di`).
-*   **androidMain**: Android client implementation using standard Android components and AdMob.
+This project uses Kotlin Multiplatform (KMP):
+*   **commonMain**: Shared business logic, models, network protocols, and UI themes.
+*   **jvmMain**: Desktop server implementation using Compose for Desktop, Ktor 3.x, JNativeHook, and Jamepad.
+*   **androidMain**: Android client implementation using Jetpack Compose, CameraX, and Google Play Billing.
 
 ## Help & Feedback
 
-If you encounter any issues, have questions, or would like to suggest new features, please feel free to:
-
-*   **Open an Issue:** Report bugs or request features via the [GitHub Issues](https://github.com/kapcode/MacroKapKMPKMP/issues) tracker.
-*   **Security Concerns:** For security-related reports, please refer to [SECURITY.md](SECURITY.md).
-*   **Contributions:** Pull requests are welcome! For technical guidance and project standards, refer to the [Developer Documentation](#developer-documentation) and [AGENTS.md](AGENTS.md).
-
-## Developer Documentation
-For detailed technical notes on the implementation, including the migration from Ktor 2 to Ktor 3, refer to [DEVELOPMENT_NOTES.md](DEVELOPMENT_NOTES.md). For a guide on the codebase structure, see [CODE_MAP.md](CODE_MAP.md).
+*   **Open an Issue:** Report bugs via the [GitHub Issues](https://github.com/kapcode/MacroKapKMPKMP/issues) tracker.
+*   **Security Concerns:** Refer to [SECURITY.md](SECURITY.md).
+*   **Technical Navigation:** See [CODE_MAP.md](CODE_MAP.md) and [AGENTS.md](AGENTS.md).
 
 ## License
 This project is licensed under the GNU General Public License v3.0. See the [LICENSE](LICENSE) file for details.

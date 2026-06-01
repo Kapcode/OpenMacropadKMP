@@ -1,24 +1,20 @@
 # MacroKapKMP Roadmap & Plans
 
 ## ✅ Completed Milestones
-- [x] **Android Orientation Handling**: Support for seamless rotation without state loss.
-- [x] **Global Rebranding**: "Tokens" -> "Kaps" across all logic, strings, and docs.
-- [x] **Iconography Refresh**: Removed programmatic tinting; transitioned to `macropadIcon64`.
-- [x] **Dynamic UI Animations**:
-    - [x] Straight flight for deductions.
-    - [x] "Boomerang" (U-turn) flight for grace-period executions.
-    - [x] Reward spread and floating text animations.
-- [x] **Grace Period Visuals**:
-    - [x] 10-second free-window logic.
-    - [x] High-visibility blue timer bar.
-    - [x] Thick progress indicator (8dp) with Kap icon thumb.
+- [x] **Documentation Overhaul**: Comprehensive update of all Markdown files for technical accuracy and product state synchronization.
+- [x] **Security Hardening**: Implementation of TLS with Pinning, Challenge-Response Auth, and OS-Native Keyring integration.
+- [x] **Monetization Engine**: Integration of Google Play Billing and AdMob with centralized constants.
+- [x] **Dynamic UI Animations**: Coordinate-aware flying Kaps and grace period "boomerang" effects.
+- [x] **Android Performance**: Nuclear startup optimization (reduced from 20s to ~1.2s).
+- [x] **Advanced Automation**: GraalVM JavaScript scripting and Visual Routine Builder.
+- [x] **Gamepad Support**: Integrated controller triggers via Jamepad.
 
 ## 🚀 Active Development
-- [ ] **Golden Keycap Asset Integration**: Replace generic icons with high-fidelity themed assets.
-- [ ] **Macro Templates**: Add predefined templates for popular software (OBS, Photoshop).
+- [ ] **Golden Keycap Asset Integration**: Replacing generic icons with high-fidelity themed assets.
 - [ ] **End-to-End Testing**: Automated verification of the cryptographic handshake.
+- [ ] **iOS Client Port**: Initial exploration of Compose Multiplatform for iOS.
 
 ## 📅 Future Roadmap
-- [ ] **iOS Client**: Initial porting to iOS using Compose Multiplatform for iOS.
-- [ ] **Fleet Mode Enhancements**: Remote device status monitoring from the server.
-- [ ] **Marketplace Expansion**: Community-driven macro pack sharing.
+- [ ] **Macro Templates**: Predefined sets for OBS, Photoshop, and creative suites.
+- [ ] **Fleet Mode Enhancements**: Remote monitoring and mass-provisioning tools.
+- [ ] **Marketplace Expansion**: Community sharing hub for macro packs.

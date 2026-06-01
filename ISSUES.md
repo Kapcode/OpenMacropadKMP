@@ -1,123 +1,56 @@
-# Known Security Issues & Vulnerability Backlog
+# Known Issues & Backlog
 
-This document tracks identified security risks that have not yet been fully mitigated. For resolved issues, see [SECURITY.md](SECURITY.md).
+This document tracks identified bugs, security risks, and pending tasks.
 
 ## 🔴 High Priority
+- [ ] **Background Connectivity (Android)**: Maintain a heartbeat connection while the app is in the background to avoid reconnect delays.
+- [ ] **UDP Discovery Polish**: Improve reliability on complex local network topologies (multiple subnets).
+- [ ] **iOS Client Port**: Initial porting to iOS using Compose Multiplatform.
 
-### 1. Kap Balance Sync Delay on Initial Connection
-- **Description**: The Desktop console UI shows "0" Kaps for a connected client immediately after a successful handshake. The correct balance only appears after the client performs an action that triggers a `currency_update` (like executing a macro or changing settings).
-- **Impact**: Server administrators see an inaccurate "0" balance for new sessions, making it difficult to audit client status until activity occurs.
-- **Root Cause**: The initial `currency_update` sent by the client during the `onUpdate` ("Connected") phase is either arriving before the server's UI is ready to display it or is being swallowed during the transition from the "Pairing" to "Authenticated" state.
-- **Status**: ✅ **Fixed**. Updated `ClientActivity.kt` to send a `currency_update` message immediately upon transitioning to the "Connected" state, ensuring the server ledger is populated during initial handshake.
-
-### 2. Desktop "X" Close Button Optimization
-- **Description**: Clicking the standard "X" (close) button on the Desktop application immediately terminates the process or minimizes to tray based on settings, without a unified confirmation dialog that offers all options.
-- **Status**: ✅ **Fixed**. Implemented a three-option `exitBehavior` system (**Ask, Exit to Tray, Just Exit**) that is consistently applied across the Window [X] button, Tray Menu, and UI Header.
-
-### 3. Routine Builder NPE on Condition Change
-- **Description**: Switching between different condition types in the `VisualRoutineBuilder` would occasionally throw a `NullPointerException` if the condition state was not handled atomically.
-- **Status**: ✅ **Fixed**. Implemented safe state-copying and explicit null-handling in the builder UI.
-
-### 4. Tab Focus Traversal in Desktop TextFields
-- **Description**: Pressing the Tab key in an `OutlinedTextField` on Desktop would type a tab character into the field instead of moving focus to the next item.
-- **Status**: ✅ **Fixed**. Implemented a custom `tabFocus()` modifier that intercepts the Tab key event and manually triggers the `FocusManager`.
-
-### 5. Fragmented Ad Configurations
-- **Description**: Ad IDs were scattered and hardcoded.
-- **Status**: ✅ **Fixed**. Centralized all Ad IDs into `BillingConstants.kt` in `commonMain` and implemented `AdLocation` for granular tracking.
+## 🟡 Medium Priority
+- [ ] **Macro Templates**: Predefined templates for popular software (OBS, Photoshop, VS Code).
+- [ ] **Automatic Updates**: Background update checker for the desktop client.
+- [ ] **Fleet Mode Enhancements**: Remote device status monitoring from the server.
 
 ---
 
 ## ✅ Resolved
 
-### 1. Security Audit of Pairing Process
-- **Description**: Conducted a formal security audit of the pairing handshake and manual approval flow.
-- **Improvements**:
-    - **Brute-Force Protection**: Implemented a "3-strikes" rule for the 6-digit pairing code. Any device exceeding 3 incorrect attempts is automatically banned.
-    - **State Hardening**: Improved robustness of `approveDevice` to handle edge cases where a pending request might be missing or already cleared, preventing potential null pointer exceptions or inconsistent states.
-    - **Identity Binding**: Re-verified that `clientId` is cryptographically bound to hardware metadata to prevent spoofing during the pairing phase.
-- **Status**: ✅ **Fixed**.
+### 1. Kap Balance Sync Delay
+- **Fixed**: Updated `ClientActivity.kt` to send `currency_update` immediately upon connection.
 
-### 2. Trust On First Use (TOFU) Gap
-- **Description**: During the initial pairing of a new device, the client must "trust" the server's identity certificate without prior verification.
-- **Status**: ✅ **Fixed**. Implemented out-of-band verification using a 6-digit code. The server generates a code and sends it to the client; both display it prominently during pairing for the user to verify.
+### 2. Desktop "X" Close Button
+- **Fixed**: Consistently applied `exitBehavior` across all exit triggers.
 
-### 3. Local Denial of Service (Keystore Corruption)
-- **Description**: Although we have implemented "Self-Healing" with backups, a malicious local process can repeatedly delete or corrupt the `server_keystore.p12` file.
-- **Abuse Scenario**: The user is forced into a loop of resetting their identity and re-pairing devices, rendering the application unusable.
-- **Status**: ✅ **Fixed**. Strengthened the "Reset Identity" flow with a mandatory "RESET" string confirmation to prevent accidental or rapid-fire resets.
+### 3. Routine Builder NPE
+- **Fixed**: Implemented safe state-copying in the builder UI.
 
-### 4. Keystore Password Brute Force
-- **Description**: If the `server_keystore.p12` file is stolen, it can be subjected to offline brute-force or dictionary attacks.
-- **Abuse Scenario**: An attacker guesses the password stored in `local.properties` or a weak user-defined password.
-- **Status**: ✅ **Fixed**. Increased the auto-generated keystore password entropy to 64 bytes (Base64 encoded) and ensured it is stored in the OS-native secure keyring.
+### 4. Tab Focus Traversal (Desktop)
+- **Fixed**: Custom `tabFocus()` modifier for text fields.
 
-### 5. Unsafe Deserialization (Vulnerability 1)
-- **Description**: Network protocol used Java `ObjectInputStream`, which is vulnerable to remote code execution (RCE).
-- **Status**: ✅ **Fixed**. Migrated to `kotlinx.serialization` (JSON).
+### 5. Fragmented Ad Configurations
+- **Fixed**: Centralized Ad IDs in `BillingConstants.kt`.
 
-### 6. ClientId Spoofing (Vulnerability 2)
-- **Description**: Server relied on self-reported `clientId` for authentication.
-- **Status**: ✅ **Fixed**. Implemented Cryptographic Challenge-Response (ECDSA).
+### 6. Security Audit (Pairing Process)
+- **Fixed**: Brute-force protection (3-strikes), state hardening, and identity binding.
 
-### 7. Pairing Code Interception (Vulnerability 3)
-- **Description**: 6-digit verification code was sent over the network to the client.
-- **Status**: ✅ **Fixed**. Implemented Out-of-band Verification (Server UI only).
+### 7. Trust On First Use (TOFU) Gap
+- **Fixed**: Out-of-band verification with 6-digit PIN and QR code.
 
-### 8. Authentication Bypass via Raw Frames
-- **Description**: Text frames could bypass security checks.
-- **Status**: ✅ **Fixed**. Hardened server/client to ignore `Frame.Text`.
+### 8. Keystore Password Protection
+- **Fixed**: Entropy increased to 64 bytes and stored in OS-native secure keyring.
 
-### 9. Immutability of Keys in RAM (String Leakage)
-- **Description**: Sensitive cryptographic keys, IVs, and the "Golden Key" password are often handled as `String` objects or converted to Strings for logging/Base64 encoding. 
-- **Status**: ✅ **Fixed**. Sensitive data handling now uses `CharArray` and explicit zeroing to prevent RAM leakage.
+### 9. Unsafe Deserialization
+- **Fixed**: Migrated to `kotlinx.serialization` (JSON).
 
-### 10. Lack of Hardware-Backed Security on JVM
-- **Description**: The JVM server previously stored identity keys in a software-encrypted file.
-- **Status**: ✅ **Fixed**. Integrated `java-keyring` to store the server's keystore password in OS-native secure storage.
+### 10. ClientId Spoofing
+- **Fixed**: Cryptographic Challenge-Response (ECDSA).
 
-### 11. Dialog Minimization Behavior
-- **Description**: Minimizing a `DialogWindow` caused main window issues.
-- **Status**: ✅ **Fixed**. Transitioned to independent `Window` components (via `AppDialog`). Added `closeOnMinimize` logic and `ConsoleViewModel` integration to provide snackbar feedback when a dialog is automatically closed due to minimization.
+### 11. Authentication Bypass via Raw Frames
+- **Fixed**: Hardened server/client to ignore `Frame.Text`.
 
-### 12. Console Interaction & Padding
-- **Description**: The Console text area lacked sufficient bottom padding.
-- **Status**: ✅ **Fixed**. Increased bottom padding to `200.dp` in `Console.kt`.
+### 12. Hardware Metadata Binding
+- **Fixed**: Bound Client ID to stable hardware fingerprint.
 
-### 13. Macro Currency Deduction Timing
-- **Description**: Currency could be deducted even if a macro failed to execute.
-- **Status**: ✅ **Fixed**. Implemented `EXECUTION_START`, `EXECUTION_COMPLETE`, and `EXECUTION_FAILED` feedback loop. The Android client now tracks execution state and only deducts tokens upon successful command submission, with visual feedback for successes and failures.
-
-### 14. Inspector Screenshot Limit
-- **Description**: No limit on active screenshots in the Inspector.
-- **Status**: ✅ **Fixed**. Implemented a configurable screenshot limit (default 10) in `InspectorViewModel`.
-
-### 15. UDP Discovery Flooding
-- **Description**: A malicious actor could flood the network with fake server discovery packets to confuse the client UI or cause a Denial of Service on the discovery listener.
-- **Status**: ✅ **Fixed**. Implemented multi-stage rate limiting in `ClientDiscovery.kt` (Android):
-    - Global rate limit (500ms) for all discovery packets.
-    - Per-IP rate limit (2s) to prevent single-source flooding.
-    - 5-minute temporary blacklist for IPs sending malformed or invalid discovery packets.
-
-### 16. Identity Cloning (Hardware Metadata Binding)
-- **Description**: If an attacker clones a trusted device's Identity Key (e.g., via root access), they could potentially impersonate that device from different hardware.
-- **Status**: ✅ **Fixed**. Implemented Hardware Metadata Binding. The Client ID is now cryptographically bound to specific hardware attributes (`Manufacturer|Model|Fingerprint`). The JVM server verifies this metadata during the `AUTH_RESPONSE` handshake and rejects connections if the hardware profile does not match the registered device.
-
-### 17. Lack of Connection Auditing
-- **Description**: Users lacked a way to audit previous connection attempts, rejections, or disconnections, making it harder to spot unauthorized access attempts.
-- **Status**: ✅ **Fixed**. Implemented persistent "Recent Connections" logs. The server now records all connection-related events (Connect, Disconnect, Approve, Reject, Ban) with timestamps, client IDs, device names, and hardware metadata in a local `connection_history.json` file, accessible via the "Connected Devices" screen in the Desktop console.
-
----
-
-## 🟢 Monitoring
-
-### 18. Security Rating & Human Risk
-- **Current Security Rating**: **High**. 
-- **Analysis**: This project uses **TLS with Pinning**, **Hardware-backed EC Keys**, and **Cryptographic Challenge-Response Authentication**.
-- **Primary Remaining Risk (User Error)**: The biggest vulnerability is accidental or social-engineered approval of a malicious device. If an attacker triggers a pairing request while the user is actively interacting with the Desktop UI, the user may inadvertently click "Allow" without verifying the device details.
-- **Detriments of Compromise**: Once a device is trusted, it inherits the full capability to execute any configured macro. Since macros simulate keyboard input and system commands, a compromised trust relationship allows an attacker to remotely control the host computer with the same privileges as the active user. This could result in:
-    - **Remote Command Execution**: Running terminal commands or scripts.
-    - **Data Exfiltration**: Typing commands to upload files or leak sensitive information.
-    - **Credential Theft**: Using simulated keystrokes to interact with password managers or login prompts.
-- **Mitigation**: Users must strictly verify that the **Device Name** and **6-digit Pairing Code** displayed on their phone exactly match the Desktop prompt before approving.
-- **Auditing**: Implemented "Recent Connections" logs in `DesktopViewModel` and `ConnectionHistoryManager` to help users audit device activity, including successes, rejections, and bans with hardware metadata.
+### 13. Documentation Consistency
+- **Fixed**: Comprehensive audit and update of all `.md` files for correctness and cross-referencing.
