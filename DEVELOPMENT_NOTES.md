@@ -751,5 +751,12 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Challenge: Double Animation Race Condition
 - **Problem**: Triggering animations via `executingMacros` changes caused both the deduction (straight) and grace skip (boomerang) animations to play simultaneously.
 - **Solution**: 
-    - **Decoupled Triggers**: Introduced `deductionTriggerCount` and `graceTriggerCount` to `ClientUiState`.
-    - **Explicit Dispatch**: `ClientViewModel` now explicitly increments only the relevant counter based on the result of the `KapManager.spendKapsWithResult` call. This guarantees exactly one animation per macro execution.
+## 60. AdMob Centralization & Modernization
+
+### Challenge: Fragmented Ad Configuration
+- **Problem**: AdMob Ad Unit IDs were hardcoded across multiple files (`AdView.kt`, `RewardedAd.kt`), and the App ID was only in the `AndroidManifest.xml`, making it difficult to manage and switch between test and production environments.
+- **Solution**:
+    - **Shared Constants**: Moved `BillingConstants.kt` from `androidMain` to `commonMain` to serve as the project-wide "Source of Truth" for monetization.
+    - **Location-Specific IDs**: Introduced the `AdLocation` enum. This allows the app to use distinct Ad Unit IDs for the Main UI, Client Screen, Marketplace, Pro Dialog, and Settings. This granularity enables precise performance tracking in the AdMob console.
+    - **Global Test Toggle**: Added an `IS_TEST_MODE` flag in `BillingConstants`. When true, the app automatically swaps all production IDs for Google's official test IDs, preventing accidental policy violations during development.
+    - **Unified Permission Set**: Added `com.google.android.gms.permission.AD_ID` (required for Android 13+) and `android.permission.WAKE_LOCK` to the manifest to ensure full ad SDK functionality and stability during video playback.

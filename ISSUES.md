@@ -22,6 +22,10 @@ This document tracks identified security risks that have not yet been fully miti
 - **Description**: Pressing the Tab key in an `OutlinedTextField` on Desktop would type a tab character into the field instead of moving focus to the next item.
 - **Status**: ✅ **Fixed**. Implemented a custom `tabFocus()` modifier that intercepts the Tab key event and manually triggers the `FocusManager`.
 
+### 5. Fragmented Ad Configurations
+- **Description**: Ad IDs were scattered and hardcoded.
+- **Status**: ✅ **Fixed**. Centralized all Ad IDs into `BillingConstants.kt` in `commonMain` and implemented `AdLocation` for granular tracking.
+
 ---
 
 ## ✅ Resolved

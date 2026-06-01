@@ -391,7 +391,7 @@ fun ClientScreen(
                     val shouldShowAd = !showSettings && !isLandscape && isConnected && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible && !isMarketplaceTab
 
                     if (shouldShowAd) {
-                        BottomAppBar { AdmobBanner() }
+                        BottomAppBar { AdmobBanner(location = AdLocation.CLIENT) }
                     }
                 }
             ) { innerPadding ->

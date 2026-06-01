@@ -201,6 +201,13 @@ The UI is designed to be fully navigable via D-Pad and Left Stick:
     - **WATCH AD**: Used for free rewarded options.
     - **$ Tags**: Relative price indicators ($ to $$$$$) pinned to the top-right of purchase cards.
     - **ACTIVE**: Primary-colored badge for currently owned tiers.
+
+### Sticky Ad Footers (Android)
+To maximize monetization without disrupting content flow:
+- **Consistent Placement**: Banner ads on major screens (Main, Client, Marketplace, Settings) are implemented as sticky footers.
+- **Location-Specific IDs**: Each placement uses a unique Ad Unit ID (defined by `AdLocation`) for precise performance analytics.
+- **Suppression Logic**: Ads are dynamically hidden for `Pro` or `Ad-Free` users by checking states in `BillingManager`.
+
 - **Benefit Lists**: Displayed as small-text bullet points with check icons (`Icons.Default.Check`) below the product description.
 - **Currency**: Kaps are represented by `painterResource(Res.drawable.macropadIcon64)` in `GoldCurrencyColor` (0xFFFFD700).
 

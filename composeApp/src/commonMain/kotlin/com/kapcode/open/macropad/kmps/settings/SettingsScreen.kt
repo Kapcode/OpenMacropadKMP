@@ -10,6 +10,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kapcode.open.macropad.kmps.AdLocation
 import com.kapcode.open.macropad.kmps.PlatformAdBanner
 
 /**
@@ -42,7 +43,10 @@ fun SettingsScreen(
         }
         
         if (!adsDisabled) {
-            PlatformAdBanner(modifier = Modifier.padding(bottom = 8.dp))
+            PlatformAdBanner(
+                location = AdLocation.SETTINGS,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         }
     }
 }

@@ -7,6 +7,7 @@ This document serves as a guide for AI assistants to navigate the project effect
 - **`composeApp/`**: The main module containing all code.
     - **`src/commonMain/kotlin/`**: Shared logic between Android and Desktop.
         - **`com.kapcode.open.macropad.kmps/`**: Shared root package.
+            - `BillingConstants.kt`: Centralized source of truth for all monetization constants (Ad IDs, Product IDs).
             - `network/sockets/`: Authenticated & Encrypted WebSocket implementation (Client/Server/Model).
             - `models/`: Shared data models (GridModels, AutomationAST, TrustedServer).
             - `ui/components/`: Shared UI (CommonAppBar, ConnectionItem, LoadingIndicator, SplashScreen, GamepadStatusIndicator).
@@ -36,6 +37,7 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `ui/components/KapAnimations.kt`: Coordinate-aware animation engine for flying Kaps and rewards.
             - `SettingsStorage.kt`: SharedPreferences-backed persistence for user-curated dashboards.
             - `KapManager.kt` & `RewardedAd.kt`: Monetization and persistent Kap storage logic.
+            - `AdView.kt` & `AdBanner.android.kt`: Android-specific AdMob banner implementations.
             - `DeviceInfo.kt` & `IdentityManager.kt`: Android hardware-backed security.
             - `MacroApplication.kt`: Android Application class for initialization.
 

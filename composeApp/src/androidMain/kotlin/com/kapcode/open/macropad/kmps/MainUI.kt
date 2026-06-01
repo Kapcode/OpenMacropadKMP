@@ -134,7 +134,7 @@ fun MainUI(
                 val shouldShowAd = showAd && !isLandscape && !isGlobalLoading && !showSettings && !adsDisabled && !AdVisibilityManager.isForegroundAdVisible
                 
                 if (shouldShowAd) {
-                    BottomAppBar { AdmobBanner() }
+                    BottomAppBar { AdmobBanner(location = AdLocation.MAIN) }
                 }
             }
         ) { innerPadding ->

@@ -18,6 +18,7 @@ object AdVisibilityManager {
 
 @Composable
 fun AdmobBanner(
+    location: AdLocation,
     modifier: Modifier = Modifier,
     adSize: AdSize = AdSize.BANNER
 ) {
@@ -26,7 +27,7 @@ fun AdmobBanner(
         factory = { context ->
             AdView(context).apply {
                 setAdSize(adSize)
-                adUnitId = "ca-app-pub-3940256099942544/6300978111" // Test ad unit ID
+                adUnitId = BillingConstants.getBannerId(location)
                 loadAd(AdRequest.Builder().build())
             }
         }

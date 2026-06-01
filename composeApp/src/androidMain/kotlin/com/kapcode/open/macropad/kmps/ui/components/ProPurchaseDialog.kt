@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.kapcode.open.macropad.kmps.AdLocation
 import com.kapcode.open.macropad.kmps.AdVisibilityManager
 import com.kapcode.open.macropad.kmps.AdmobBanner
 import com.kapcode.open.macropad.kmps.BillingConstants
@@ -80,7 +81,10 @@ fun ProPurchaseDialog(
                         // --- Ad at the top of Sticky Header ---
                         val adsDisabled = isPro || isAdFree || isDeveloperMode
                         if (!adsDisabled) {
-                            AdmobBanner(modifier = Modifier.fillMaxWidth().height(50.dp))
+                            AdmobBanner(
+                                location = AdLocation.PRO_DIALOG,
+                                modifier = Modifier.fillMaxWidth().height(50.dp)
+                            )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
 

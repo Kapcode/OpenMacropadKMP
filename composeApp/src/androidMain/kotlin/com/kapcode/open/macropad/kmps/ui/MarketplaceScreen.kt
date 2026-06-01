@@ -102,6 +102,7 @@ fun MarketplaceScreen(
         // Add a large banner at the bottom of the Marketplace if ads are enabled
         if (!adsDisabled) {
             AdmobBanner(
+                location = AdLocation.MARKETPLACE,
                 modifier = Modifier.padding(bottom = 8.dp),
                 adSize = AdSize.LARGE_BANNER
             )
