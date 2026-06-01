@@ -1,0 +1,66 @@
+package com.kapcode.open.macropad.kmps.desktop.logic
+
+import kotlinx.coroutines.*
+import org.json.JSONObject
+import java.net.DatagramPacket
+import java.net.DatagramSocket
+import java.net.InetAddress
+
+class ServerDiscoveryAnnouncer {
+    private val announcerScope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    private var announcerJob: Job? = null
+    private var socket: DatagramSocket? = null
+
+    fun start(serverName: String, port: Int, isSecure: Boolean) {
+        if (announcerJob?.isActive == true) {
+            return
+        }
+        announcerJob = announcerScope.launch {
+            try {
+                socket = DatagramSocket()
+                socket?.broadcast = true
+                val broadcastAddress = InetAddress.getByName("255.255.255.255")
+
+                val message = ("OMP_DISCOVERY_V1:" + JSONObject().apply {
+                    put("serverName", serverName)
+                    put("port", port)
+                    put("isSecure", isSecure)
+                    if (isSecure) {
+                        val workingDir = com.kapcode.open.macropad.kmps.desktop.utils.ProjectPaths.workingDir
+                        val keystore = com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getOrCreateKeystore(workingDir)
+                        val fingerprint = com.kapcode.open.macropad.kmps.utils.KeystoreUtils.getCertificateFingerprint(keystore)
+                        put("fingerprint", fingerprint)
+                    }
+                }.toString()).toByteArray()
+
+                val packet = DatagramPacket(message, message.size, broadcastAddress, 9998)
+
+                while (isActive) {
+                    if (AppSettings.allowNewConnections) {
+                        try {
+                            socket?.send(packet)
+                        } catch (e: Exception) {
+                            if (e is CancellationException) throw e
+                            if (isActive) {
+                                System.err.println("Error sending discovery packet: ${e.message}")
+                            }
+                        }
+                    }
+                    delay(2000) // Match ClientDiscovery.RATE_LIMIT_MS (2s) for faster discovery
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                System.err.println("Failed to start discovery announcer: ${e.message}")
+            } finally {
+                socket?.close()
+            }
+        }
+    }
+
+    fun stop() {
+        announcerJob?.cancel()
+        socket?.close()
+        announcerJob = null
+        socket = null
+    }
+}

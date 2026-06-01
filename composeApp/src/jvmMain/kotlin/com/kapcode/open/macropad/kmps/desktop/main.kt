@@ -1,0 +1,533 @@
+package com.kapcode.open.macropad.kmps.desktop
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import org.jetbrains.compose.resources.painterResource
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.macropadIcon64
+import androidx.compose.ui.unit.DpSize
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.*
+import com.formdev.flatlaf.FlatDarkLaf
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import kotlinx.coroutines.delay
+import com.kapcode.open.macropad.kmps.desktop.di.ViewModelFactory
+import com.kapcode.open.macropad.kmps.desktop.logic.InspectorManager
+import com.kapcode.open.macropad.kmps.desktop.logic.TriggerListener
+import com.kapcode.open.macropad.kmps.desktop.ui.DesktopApp
+import com.kapcode.open.macropad.kmps.desktop.ui.DesktopWindowState
+import com.kapcode.open.macropad.kmps.desktop.ui.MarketplaceScreen
+import com.kapcode.open.macropad.kmps.desktop.ui.rememberDesktopWindowState
+import javax.swing.UIManager
+
+object AppConfig {
+    var isVerboseOutputEnabled: Boolean = false
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+fun main(args: Array<String>) {
+    // Check if a specific render API is requested via CLI or system property
+    val forcedRenderApi = System.getProperty("skiko.renderApi") ?: args.find { it.startsWith("-render=") }?.substringAfter("=")
+    
+    if (forcedRenderApi == null) {
+        // Default to OPENGL for better performance in VM environments with GPU passthrough.
+        // SOFTWARE rendering often causes the "transparency glitch" where the first frame isn't pushed to the virtual GPU.
+        System.setProperty("skiko.renderApi", "OPENGL")
+    } else {
+        System.setProperty("skiko.renderApi", forcedRenderApi)
+    }
+    
+    application {
+        // Suppress specific log spam from AWT/Swing
+        val originalErr = System.err
+    System.setErr(object : java.io.PrintStream(originalErr, true) {
+        override fun println(x: String?) {
+            if (x != null && x.contains("EditorCopyPasteHelperImpl")) {
+                return
+            }
+            super.println(x)
+        }
+    })
+
+    AppConfig.isVerboseOutputEnabled = args.contains("-o") || args.contains("-output")
+
+    // Set the initial Look and Feel
+    UIManager.setLookAndFeel(FlatDarkLaf())
+
+    val viewModels = ViewModelFactory.createViewModels()
+    val desktopViewModel = viewModels.desktopViewModel
+    val desktopWindowState = rememberDesktopWindowState(
+        settingsViewModel = viewModels.settingsViewModel,
+        layoutViewModel = viewModels.layoutViewModel,
+        onTrayMinimize = { desktopViewModel.rejectAllPendingDevices() }
+    )
+    
+    val settingsViewModel = viewModels.settingsViewModel
+    val serverViewModel = viewModels.serverViewModel
+    val macroTimelineViewModel = viewModels.macroTimelineViewModel
+    val consoleViewModel = viewModels.consoleViewModel
+    val inspectorViewModel = viewModels.inspectorViewModel
+    val macroManagerViewModel = viewModels.macroManagerViewModel
+    val triggerListener = remember {
+        TriggerListener(desktopViewModel) { macroToPlay ->
+            macroManagerViewModel.onPlayMacro(macroToPlay)
+        }
+    }
+    
+    // Pass listener back to serverViewModel
+    remember(triggerListener, serverViewModel) {
+        serverViewModel.triggerListener = triggerListener
+    }
+    val inspectorManager = remember { 
+        InspectorManager(
+            inspectorViewModel, 
+            consoleViewModel,
+            serverViewModel.processWatcher
+        ) 
+    }
+
+    val clientCommunicationViewModel = viewModels.clientCommunicationViewModel
+    val pendingPairingRequests by clientCommunicationViewModel.pendingPairingRequests.collectAsState()
+    val icon = painterResource(Res.drawable.macropadIcon64)
+
+    // Update triggers in the application scope so they stay active even when window is hidden
+    val macroFiles by macroManagerViewModel.macroFiles.collectAsState()
+    val macroPacks by macroManagerViewModel.macroPacks.collectAsState()
+    val eStopKey by settingsViewModel.eStopKey.collectAsState()
+    val copyConsoleShortcut by settingsViewModel.copyConsoleOutputShortcut.collectAsState()
+    val stopKeyShortcut by settingsViewModel.stopKeyShortcut.collectAsState()
+    val inspectKeyShortcut by settingsViewModel.inspectKeyShortcut.collectAsState()
+
+    val activeProcess by serverViewModel.processWatcher.activeProcess.collectAsState()
+
+    LaunchedEffect(activeProcess) {
+        triggerListener.evaluator.currentProcess = activeProcess
+    }
+
+    LaunchedEffect(macroFiles, macroPacks, eStopKey, copyConsoleShortcut, stopKeyShortcut, inspectKeyShortcut) {
+        val routines = macroPacks.filter { it.pack.isActive }.flatMap { it.pack.routines }
+        triggerListener.updateActiveTriggers(
+            macroFiles,
+            eStopKey,
+            copyConsoleShortcut,
+            stopKeyShortcut,
+            inspectKeyShortcut,
+            routines
+        )
+    }
+
+    DisposableEffect(Unit) {
+        desktopViewModel.startServer()
+        triggerListener.startListening()
+        inspectorManager.startListening()
+
+        val shutdownHook = Thread {
+            serverViewModel.stopServer()
+        }
+        Runtime.getRuntime().addShutdownHook(shutdownHook)
+
+        onDispose {
+            desktopViewModel.shutdown()
+            triggerListener.shutdown()
+            inspectorManager.stopListening()
+            serverViewModel.stopServer()
+            try {
+                Runtime.getRuntime().removeShutdownHook(shutdownHook)
+            } catch (e: Exception) {
+                // Ignore, might already be shutting down
+            }
+        }
+    }
+    
+    val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
+    val selectedTheme by settingsViewModel.selectedTheme.collectAsState()
+
+    val activeToast by macroManagerViewModel.activeToast.collectAsState()
+    val showLoggingWarning by consoleViewModel.showLoggingWarning.collectAsState()
+    val pendingUpdate by clientCommunicationViewModel.pendingUpdate.collectAsState()
+    val filePendingDeletion by macroManagerViewModel.filePendingDeletion.collectAsState()
+    val filesPendingDeletion by macroManagerViewModel.filesPendingDeletion.collectAsState()
+    val triggerPendingConfirmation by macroManagerViewModel.triggerPendingConfirmation.collectAsState()
+    val serverError by serverViewModel.serverError.collectAsState()
+    val allowOnceOnly by settingsViewModel.allowOnceOnly.collectAsState()
+
+    LaunchedEffect(selectedTheme) {
+        val laf = if (selectedTheme == "Dark Blue") FlatDarkLaf::class.java.name else com.formdev.flatlaf.FlatLightLaf::class.java.name
+        UIManager.setLookAndFeel(laf)
+        for (window in java.awt.Window.getWindows()) {
+            javax.swing.SwingUtilities.updateComponentTreeUI(window)
+        }
+    }
+
+    // Global Toast Window - Single Stable Instance
+    val toastWindowState = rememberWindowState(
+        width = 400.dp,
+        height = 120.dp
+    )
+    
+    // Sync toast window position to Bottom Right (End) manually to ensure reliability
+    LaunchedEffect(activeToast) {
+        if (activeToast != null) {
+            try {
+                val ge = java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment()
+                val screen = ge.maximumWindowBounds
+                // Calculate position: Screen Width - Window Width - Margin, Screen Height - Window Height - Margin
+                val x = (screen.width - 420).dp
+                val y = (screen.height - 140).dp
+                toastWindowState.position = WindowPosition(x, y)
+            } catch (e: Exception) {
+                toastWindowState.position = WindowPosition(Alignment.BottomEnd)
+            }
+        }
+    }
+
+    Window(
+        visible = activeToast != null,
+        onCloseRequest = {},
+        state = toastWindowState,
+        title = "Notification",
+        transparent = true,
+        undecorated = true,
+        alwaysOnTop = true,
+        focusable = false,
+        resizable = false,
+        icon = icon
+    ) {
+        // Force repaint for transparent windows in VM environments
+        LaunchedEffect(activeToast != null) {
+            if (activeToast != null) {
+                window.revalidate()
+                window.repaint()
+            }
+        }
+
+        AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                color = Color.Transparent
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.Black.copy(alpha = 0.9f))
+                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = activeToast ?: "",
+                        color = Color.White,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+
+    if (desktopWindowState.showMarketplace) {
+        com.kapcode.open.macropad.kmps.desktop.ui.AppDialog(
+            onCloseRequest = { desktopWindowState.toggleMarketplace(false) },
+            state = desktopWindowState.marketplaceWindowState,
+            title = "Marketplace",
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon,
+            resizable = true
+        ) {
+            MarketplaceScreen(
+                viewModel = viewModels.marketplaceViewModel,
+                onBack = { desktopWindowState.toggleMarketplace(false) }
+            )
+        }
+    }
+    
+    Tray(
+        icon = icon,
+        tooltip = "MacroKap Server (Right-click for menu)",
+        onAction = { 
+            desktopWindowState.toggleWindow()
+        },
+        menu = {
+            Item("Show / Hide Window", onClick = { desktopWindowState.toggleWindow() })
+            if (pendingPairingRequests.isNotEmpty()) {
+                Separator()
+                Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
+            }
+            Separator()
+            Item("Shortcuts & Keymap", onClick = { desktopWindowState.toggleShortcuts(true) })
+            Item("Settings", onClick = { desktopWindowState.toggleSettings(true) })
+            Separator()
+            Item("Exit", onClick = {
+                if (exitBehavior == "ASK") {
+                    desktopWindowState.toggleExitDialog(true)
+                    desktopWindowState.showWindow()
+                } else {
+                    exitApplication()
+                }
+            })
+        }
+    )
+
+    if (desktopWindowState.showShortcutsDialog) {
+        com.kapcode.open.macropad.kmps.desktop.ui.ShortcutsDialog(
+            settingsViewModel = settingsViewModel,
+            consoleViewModel = consoleViewModel,
+            selectedTheme = selectedTheme,
+            onDismissRequest = { desktopWindowState.showShortcutsDialog = false },
+            windowState = desktopWindowState.shortcutsWindowState,
+            icon = icon
+        )
+    }
+
+    if (desktopWindowState.showSettingsDialog) {
+        com.kapcode.open.macropad.kmps.desktop.ui.SettingsDialog(
+            desktopViewModel = desktopViewModel,
+            settingsViewModel = settingsViewModel,
+            sharedSettingsViewModel = viewModels.sharedSettingsViewModel,
+            consoleViewModel = consoleViewModel,
+            macroManagerViewModel = macroManagerViewModel,
+            onDismissRequest = { desktopWindowState.toggleSettings(false) },
+            onShowShortcutsRequest = { desktopWindowState.toggleShortcuts(true) },
+            initialScrollToVariables = desktopWindowState.scrollToVariables,
+            initialScrollToSecurity = desktopWindowState.scrollToSecurity,
+            windowState = desktopWindowState.settingsWindowState,
+            icon = icon
+        )
+    }
+
+    if (desktopWindowState.showExitDialog) {
+        com.kapcode.open.macropad.kmps.desktop.ui.ExitConfirmDialog(
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onExitNow = { exitApplication() },
+            onExitToTray = {
+                desktopWindowState.toggleExitDialog(false)
+                desktopWindowState.animateToTray()
+            },
+            onDismiss = {
+                desktopWindowState.toggleExitDialog(false)
+            }
+        )
+    }
+
+    if (showLoggingWarning) {
+        com.kapcode.open.macropad.kmps.desktop.ui.LoggingToFileWarningDialog(
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { consoleViewModel.confirmLoggingToFile() },
+            onDismiss = { consoleViewModel.dismissLoggingWarning() }
+        )
+    }
+
+    if (desktopWindowState.showUpdateConfirmDialog) {
+        pendingUpdate?.let { update ->
+            com.kapcode.open.macropad.kmps.desktop.ui.UpdateConfirmDialog(
+                selectedTheme = selectedTheme,
+                consoleViewModel = consoleViewModel,
+                clientName = update.clientName,
+                isSimulation = update.isSimulation,
+                onAccept = { clientCommunicationViewModel.approveUpdate() },
+                onReject = { clientCommunicationViewModel.rejectUpdate() }
+            )
+        }
+    }
+
+    filePendingDeletion?.let { file ->
+        com.kapcode.open.macropad.kmps.desktop.ui.ConfirmDeleteDialog(
+            file = file,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { macroManagerViewModel.confirmDeletion() },
+            onDismiss = { macroManagerViewModel.cancelDeletion() }
+        )
+    }
+
+    filesPendingDeletion?.let { files ->
+        com.kapcode.open.macropad.kmps.desktop.ui.ConfirmDeleteMultipleDialog(
+            files = files,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onConfirm = { macroManagerViewModel.confirmMultipleDeletion() },
+            onDismiss = { macroManagerViewModel.cancelMultipleDeletion() }
+        )
+    }
+
+    if (desktopWindowState.showNewEventDialog) {
+        com.kapcode.open.macropad.kmps.desktop.ui.NewEventDialog(
+            viewModel = viewModels.newEventViewModel,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onDismissRequest = { desktopWindowState.toggleNewEventDialog(false) },
+            onAddEvent = {
+                val newEventViewModel = viewModels.newEventViewModel
+                val isTrigger = newEventViewModel.isTriggerEvent.value
+                val isEdit = newEventViewModel.isEditMode.value
+                val editIndex = newEventViewModel.editingIndex.value
+
+                if (isTrigger) {
+                    val allowedClients = if (newEventViewModel.isAllTrustedSelected.value) {
+                        "ALL_TRUSTED"
+                    } else {
+                        (newEventViewModel.selectedClients.value +
+                                newEventViewModel.allowedClientsText.value.split(',').filter { it.isNotBlank() })
+                            .joinToString(",")
+                    }
+
+                    macroTimelineViewModel.addOrUpdateTrigger(
+                        keyName = newEventViewModel.triggerKeysText.value,
+                        allowedClients = allowedClients,
+                        triggerType = newEventViewModel.triggerType.value,
+                        holdDurationMs = newEventViewModel.holdDurationMs.value.toLongOrNull() ?: 500,
+                        multiTapCount = newEventViewModel.multiTapCount.value.toIntOrNull() ?: 2,
+                        tapWindowMs = newEventViewModel.tapWindowMs.value.toLongOrNull() ?: 300,
+                        sequenceWindowMs = newEventViewModel.sequenceWindowMs.value.toLongOrNull() ?: 1000,
+                        confirmationRequired = newEventViewModel.confirmationRequired.value
+                    )
+                } else {
+                    val events = newEventViewModel.createEvents()
+                    if (isEdit && editIndex != -1) {
+                        events.firstOrNull()?.let {
+                            macroTimelineViewModel.updateEvent(editIndex, it)
+                        }
+                    } else {
+                        macroTimelineViewModel.addEvents(events)
+                    }
+                }
+                desktopWindowState.toggleNewEventDialog(false)
+            }
+        )
+    }
+
+    if (desktopWindowState.showRecordDialog) {
+        com.kapcode.open.macropad.kmps.desktop.ui.RecordMacroDialog(
+            viewModel = viewModels.recordMacroViewModel,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onDismissRequest = { desktopWindowState.toggleRecordDialog(false) },
+            onStartRecording = {
+                macroManagerViewModel.startRecording(viewModels.recordMacroViewModel)
+                desktopWindowState.toggleRecordDialog(false)
+            }
+        )
+    }
+
+    if (pendingPairingRequests.isNotEmpty()) {
+        com.kapcode.open.macropad.kmps.desktop.ui.PairingRequestDialog(
+            requests = pendingPairingRequests,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            pairingViewModel = viewModels.pairingViewModel,
+            isAlwaysAllowAvailable = !allowOnceOnly,
+            onApprove = { id, name, persistent -> desktopViewModel.approveDevice(id, name, persistent) },
+            onDeny = { id -> desktopViewModel.rejectDevice(id) },
+            onBan = { id, name -> desktopViewModel.banDevice(id, name) },
+            onCancelAll = { desktopViewModel.rejectAllPendingDevices() }
+        )
+    }
+
+    serverError?.let { error ->
+        com.kapcode.open.macropad.kmps.desktop.ui.ServerErrorDialog(
+            error = error,
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            onResetIdentity = {
+                desktopViewModel.clearServerError()
+                desktopViewModel.startServer(forceRecreateKeystore = true)
+            },
+            onDismiss = { desktopViewModel.clearServerError() }
+        )
+    }
+
+    triggerPendingConfirmation?.let { trigger ->
+        AlertDialog(
+            onDismissRequest = { macroManagerViewModel.cancelTrigger() },
+            title = { Text("Confirm Trigger") },
+            text = {
+                Column {
+                    Text("The following macro was triggered:")
+                    Text(
+                        trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text("Trigger Keys: ${trigger.keyCodes}")
+                    Text("Do you want to execute it?")
+                }
+            },
+            confirmButton = {
+                Button(onClick = { macroManagerViewModel.confirmTrigger() }) {
+                    Text("Execute")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { macroManagerViewModel.cancelTrigger() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+
+    Window(
+        visible = desktopWindowState.isWindowVisible,
+        onCloseRequest = {
+            when (exitBehavior) {
+                "TRAY" -> desktopWindowState.animateToTray()
+                "EXIT" -> exitApplication()
+                else -> {
+                    desktopWindowState.toggleExitDialog(true)
+                }
+            }
+        },
+        state = desktopWindowState.windowState,
+        title = "MacroKap (Server)", // Updated title for clarity
+        icon = icon
+    ) {
+        // Force window to front and request focus when shown to avoid "glitched" non-responsive states.
+        // In VM environments, we perform an aggressive "Double-Poke" sequence to ensure the Skia surface renders.
+        LaunchedEffect(desktopWindowState.isWindowVisible) {
+            if (desktopWindowState.isWindowVisible) {
+                repeat(4) { stage ->
+                    window.toFront()
+                    window.requestFocus()
+                    window.revalidate()
+                    window.repaint()
+                    
+                    // On the second stage, "poke" the placement to trigger a layout re-calc at the OS level
+                    if (stage == 1) {
+                         delay(50)
+                         window.isVisible = false
+                         window.isVisible = true
+                    }
+                    
+                    delay(if (stage == 0) 50 else 150)
+                }
+
+                // Final placement stabilization
+                delay(100)
+                desktopWindowState.windowState.placement = WindowPlacement.Maximized
+            }
+        }
+
+        DesktopApp(
+            viewModels = viewModels,
+            desktopWindowState = desktopWindowState,
+            onExit = ::exitApplication
+        )
+    }
+}
+}
