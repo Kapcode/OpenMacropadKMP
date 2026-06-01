@@ -68,8 +68,7 @@ fun ClientScreen(
     onCancelTriggerSet: (() -> Unit) -> Unit = {},
     onSlamTriggerSet: ((Boolean) -> Unit) -> Unit = {},
     onQrScannerToggle: (Boolean) -> Unit = {},
-    kapManager: KapManager? = null,
-    onExecutionFailedToast: (String) -> Unit = {}
+    kapManager: KapManager? = null
 ) {
     val connectionStatus = uiState.connectionStatus
     val serverName = uiState.serverName
@@ -713,9 +712,7 @@ fun ClientScreen(
                                                                             server = server,
                                                                             deviceName = android.os.Build.MODEL,
                                                                             kapManager = kapManager,
-                                                                            settingsViewModel = settingsViewModel,
-                                                                            context = context,
-                                                                            onExecutionFailedToast = onExecutionFailedToast
+                                                                            isPro = settingsViewModel.isPro.value
                                                                         )
                                                                     }
                                                                 },

@@ -745,7 +745,7 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Problem**: The user requested a "U-turn" animation where the Kap flies 80% of the way to the button and returns. Simple linear interpolation didn't feel "natural."
 - **Solution**: 
     - **Quadratic Bezier**: Used a quadratic Bezier where $P_0$ (start) and $P_2$ (end) are both the balance position.
-    - **Control Point Math**: To ensure the peak of the curve reaches 80% of the distance to the macro button ($T$), the control point $P_1$ was calculated as: $P_1 = P_0 + 1.6 \times (T - P_0)$.
+    - **Control Point Math**: To ensure the peak of the curve reaches 80% of the distance to the macro button ($T$), the control point $P_1$ was calculated as: $P_0 + 1.6 \times (T - P_0)$.
     - **Perpendicular Offset**: Added a small perpendicular offset to $P_1$ relative to the path vector to give the U-turn a slight "width," preventing the icon from simply retracing its steps perfectly.
 
 ### Challenge: Double Animation Race Condition
@@ -760,3 +760,31 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Location-Specific IDs**: Introduced the `AdLocation` enum. This allows the app to use distinct Ad Unit IDs for the Main UI, Client Screen, Marketplace, Pro Dialog, and Settings. This granularity enables precise performance tracking in the AdMob console.
     - **Global Test Toggle**: Added an `IS_TEST_MODE` flag in `BillingConstants`. When true, the app automatically swaps all production IDs for Google's official test IDs, preventing accidental policy violations during development.
     - **Unified Permission Set**: Added `com.google.android.gms.permission.AD_ID` (required for Android 13+) and `android.permission.WAKE_LOCK` to the manifest to ensure full ad SDK functionality and stability during video playback.
+
+## 61. Best Practices Alignment & Refactoring
+
+### Challenge: JVM Package Consistency
+- **Problem**: The JVM target used a non-standard, typo-prone package name `switchdektoptocompose`.
+- **Solution**: Refactored the entire `jvmMain` and `jvmTest` source sets to use the unified project package structure: `com.kapcode.open.macropad.kmps.desktop`. This improves professional appearance and IDE compatibility.
+
+### Challenge: ViewModel Coupling (Android)
+- **Problem**: `ClientViewModel` was tightly coupled to Android `Context` and other ViewModels, making it hard to test and maintain.
+- **Solution**: Refactored `ClientViewModel` to use a `Channel`-based event system for UI feedback (Toasts, etc.) and removed direct dependencies on `Context` and `SettingsViewModel` from its core logic.
+
+### Challenge: SwingPanel Lifecycle and Memory Leaks
+- **Problem**: The `RSyntaxTextArea` used within `SwingPanel` on the Desktop was not being properly disposed of, leading to memory leaks and persistent `DocumentListener`s.
+- **Solution**: 
+    - Implemented `DisposableEffect` in `SwingCodeEditor.kt` to explicitly remove listeners when the composable leaves the composition.
+    - Used `textAreaRef` and `listenerRef` state variables to maintain access to the components for cleanup.
+
+### Challenge: Automation Serialization Backward Compatibility
+- **Problem**: Changing several `AutomationAST` fields from numbers to `String` for better flexibility caused crashes when loading older JSON data (e.g., `expected quotation mark but had '5'`).
+- **Solution**: 
+    - Applied a custom `FlexibleStringSerializer` to all relevant fields in `AutomationAST.kt`.
+    - This allows the JSON decoder to transparently treat both JSON numbers and JSON strings as Kotlin `String`s.
+
+### Challenge: Test Reliability in Asynchronous ViewModels
+- **Problem**: `PairingViewModelTest` was failing because QR code generation ran on `Dispatchers.Default`, which wasn't being awaited correctly by `advanceUntilIdle()` in the test environment.
+- **Solution**: 
+    - Refactored `PairingViewModel` to accept a `backgroundDispatcher` via its constructor (defaulting to `Dispatchers.Default`).
+    - Updated tests to inject the `testDispatcher`, ensuring all background work runs on the controlled test environment.

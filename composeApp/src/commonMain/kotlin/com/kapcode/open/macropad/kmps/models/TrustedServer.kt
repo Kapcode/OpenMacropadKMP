@@ -10,4 +10,8 @@ data class TrustedServer(
     val port: Int,
     val isSecure: Boolean,
     val lastConnectedTimestamp: Long
-)
+) {
+    companion object {
+        const val ACTION_SET_DEFAULT = "SET_DEFAULT"
+    }
+}

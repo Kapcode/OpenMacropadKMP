@@ -1,6 +1,6 @@
 package com.kapcode.open.macropad.kmps
 
-import switchdektoptocompose.utils.ProjectPaths
+import com.kapcode.open.macropad.kmps.desktop.utils.ProjectPaths
 import com.kapcode.open.macropad.kmps.utils.KeystoreUtils
 import com.kapcode.open.macropad.kmps.utils.SecretManager
 import java.io.File

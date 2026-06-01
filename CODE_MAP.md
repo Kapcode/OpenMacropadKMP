@@ -16,7 +16,7 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `App.kt`: Main Compose entry point for shared UI.
         - **`MacroKTOR/`**: Ktor 3.x common client utilities (`MacroKtorClient.kt`).
     - **`src/jvmMain/kotlin/`**: Desktop Server implementation (Compose for Desktop).
-        - **`switchdektoptocompose/`**: Main Desktop logic and UI.
+        - **`com.kapcode.open.macropad.kmps.desktop/`**: Main Desktop logic and UI.
             - `di/`: Centralized dependency injection (`ViewModelFactory`).
             - `logic/`: Core automation logic (MacroPlayer, TriggerListener, ServerDiscovery, KeyParser, ControllerManager).
             - `model/`: Desktop-specific state models (MacroModels, ClientInfo).
@@ -46,12 +46,12 @@ This document serves as a guide for AI assistants to navigate the project effect
 | Component | Responsibility | Location |
 | :--- | :--- | :--- |
 | **IdentityManager** | Provides persistent, platform-specific identity keys. Android uses Hardware-backed Keystore; JVM integrates with **native OS keyrings** (macOS Keychain, Windows Credential Manager, Linux Libsecret) via `SecretManager`. | `commonMain/com/.../IdentityManager.kt` |
-| **DesktopWindowState** | Centralizes window visibility, tray transitions, and the three-option exit system (**Ask, Exit to Tray, Just Exit**). Shared between `main.kt` and `DesktopApp`. | `jvmMain/switchdektoptocompose/ui/DesktopWindowState.kt` |
+| **DesktopWindowState** | Centralizes window visibility, tray transitions, and the three-option exit system (**Ask, Exit to Tray, Just Exit**). Shared between `main.kt` and `DesktopApp`. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/ui/DesktopWindowState.kt` |
 | **KeystoreUtils** | Manages JVM-local EC keystores with automated backup, password rotation, and 600 permissions. Works with `SecretManager` for secure password retrieval. | `jvmMain/com/.../utils/KeystoreUtils.kt` |
 | **Server** | Ktor 3.x WebSocket server & SecureSocket. Manages connections and macro execution requests. | `jvmMain/MacroKTOR/` & `commonMain/com/.../network/sockets/` |
 | **DeviceInfo** | Provides stable, unique, and privacy-safe identifiers for the device (Expect/Actual). | `commonMain/com/.../DeviceInfo.kt` |
-| **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/switchdektoptocompose/logic/MacroPlayer.kt` |
-| **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/switchdektoptocompose/logic/TriggerListener.kt` |
+| **MacroPlayer** | Simulates mouse/keyboard input via `java.awt.Robot`. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/MacroPlayer.kt` |
+| **TriggerListener** | Listens for global hotkeys via `JNativeHook`. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/TriggerListener.kt` |
 | **Client** | Connects to server, spends Kaps, and triggers macros. Supports **Rich Widgets** (Buttons, Toggles, Sliders) and **Google Play Billing** (Pro & Ad-Free). Android UI uses a 3-tab system: **[0: Dashboard, 1: Active Pack, 2: Marketplace]**. | `androidMain/com/.../ClientActivity.kt` & `commonMain/com/.../network/sockets/` |
 | **KapManager** | Manages local currency balance with 1000ms/500ms de-bouncing and server sync on connection. Integrates with **Google Play Billing** for purchases. | `androidMain/com/.../KapManager.kt` |
 | **BillingManager** | Manages Google Play Billing lifecycle, product details, and purchase flows for Android. | `androidMain/com/.../BillingManager.kt` |
@@ -60,15 +60,15 @@ This document serves as a guide for AI assistants to navigate the project effect
 | **AutomationAST** | Defines the logic for stateful automation (Triggers, Conditions, Actions). | `commonMain/com/.../models/AutomationAST.kt` |
 | **VariablePicker** | Shared component for selecting system and user variables with live previews. | `commonMain/com/.../ui/components/VariablePicker.kt` |
 | **VisualRoutineBuilder**| Block-based UI for creating automation routines (Shared). | `commonMain/com/.../ui/components/VisualRoutineBuilder.kt` |
-| **RoutineEditorDialog** | Desktop-specific dialog for visual routine editing. | `jvmMain/switchdektoptocompose/ui/RoutineEditorDialog.kt` |
-| **PackManager** | Manages active packs, layers, and context-aware switching on the server. | `jvmMain/switchdektoptocompose/logic/PackManager.kt` |
-| **SequenceEvaluator** | Evaluates complex key sequences (Hold, Multi-tap) and chords for stateful triggers. | `jvmMain/switchdektoptocompose/logic/SequenceEvaluator.kt` |
-| **ControllerManager** | Integrated Gamepad support via Jamepad. Polls hardware at 60fps and maps buttons to macro triggers. | `jvmMain/switchdektoptocompose/logic/ControllerManager.kt` |
+| **RoutineEditorDialog** | Desktop-specific dialog for visual routine editing. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/ui/RoutineEditorDialog.kt` |
+| **PackManager** | Manages active packs, layers, and context-aware switching on the server. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/PackManager.kt` |
+| **SequenceEvaluator** | Evaluates complex key sequences (Hold, Multi-tap) and chords for stateful triggers. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/SequenceEvaluator.kt` |
+| **ControllerManager** | Integrated Gamepad support via Jamepad. Polls hardware at 60fps and maps buttons to macro triggers. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/ControllerManager.kt` |
 | **GamepadStatusIndicator** | Shared UI component showing the connection state of the gamepad in the app bar. | `commonMain/com/.../ui/components/GamepadStatusIndicator.kt` |
-| **AutomationDialogs** | Shared UI components for complex trigger and client configuration. | `jvmMain/switchdektoptocompose/ui/components/MacroDialogComponents.kt` |
+| **AutomationDialogs** | Shared UI components for complex trigger and client configuration. | `jvmMain/com.kapcode.open.macropad.kmps.desktop/ui/components/MacroDialogComponents.kt` |
 | **SettingsStorage** | Manages Android persistence. Includes JSON-based storage for custom dashboards and migration logic. | `androidMain/com/.../SettingsStorage.kt` |
 | **SecureSocket** | Authenticated Handshake with EC (secp256r1) and AES-GCM encryption. | `commonMain/com/.../network/sockets/model/` |
-| **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/switchdektoptocompose/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
+| **Discovery** | Togglable UDP-based server discovery (Announcer on Desktop, Discovery on Android). | `jvmMain/com.kapcode.open.macropad.kmps.desktop/logic/ServerDiscoveryAnnouncer.kt` & `androidMain/com/.../ClientDiscovery.kt` |
 
 ## 📡 Communication Protocol (WebSocket)
 

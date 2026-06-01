@@ -27,6 +27,7 @@ import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
 import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import com.kapcode.open.macropad.kmps.ui.components.LegalDialog
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
 
@@ -171,7 +172,7 @@ fun MainUI(
                         foundServers = serverInfos,
                         isScanning = isScanning,
                         onConnectClick = { serverInfo, deviceName ->
-                            if (serverInfo.name == "SET_DEFAULT") {
+                            if (serverInfo.name == TrustedServer.ACTION_SET_DEFAULT) {
                                 val newDefault = if (serverInfo.address == defaultServerAddress.value) null else serverInfo.address
                                 ServerStorage.setDefaultServer(context, newDefault)
                                 defaultServerAddress.value = newDefault

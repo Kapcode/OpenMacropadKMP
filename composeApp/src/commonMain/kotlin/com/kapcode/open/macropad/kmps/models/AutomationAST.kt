@@ -6,23 +6,28 @@ import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonClassDiscriminator
+import com.kapcode.open.macropad.kmps.utils.FlexibleStringSerializer
 
 @Serializable
 sealed class AutomationTrigger {
     @Serializable
-    data class KeyHold(val keyName: String, val durationMs: String) : AutomationTrigger()
+    data class KeyHold(val keyName: String, @Serializable(with = FlexibleStringSerializer::class) val durationMs: String) : AutomationTrigger()
     
     @Serializable
-    data class MultiTap(val keyName: String, val tapCount: String, val windowMs: String) : AutomationTrigger()
+    data class MultiTap(
+        val keyName: String, 
+        @Serializable(with = FlexibleStringSerializer::class) val tapCount: String, 
+        @Serializable(with = FlexibleStringSerializer::class) val windowMs: String
+    ) : AutomationTrigger()
     
     @Serializable
-    data class Sequence(val keys: List<String>, val windowMs: String) : AutomationTrigger()
+    data class Sequence(val keys: List<String>, @Serializable(with = FlexibleStringSerializer::class) val windowMs: String) : AutomationTrigger()
     
     @Serializable
     data class OnConditionMet(val condition: AutomationCondition) : AutomationTrigger()
 
     @Serializable
-    data class ControllerButton(val button: String, val controllerIndex: String = "0") : AutomationTrigger()
+    data class ControllerButton(val button: String, @Serializable(with = FlexibleStringSerializer::class) val controllerIndex: String = "0") : AutomationTrigger()
 }
 
 @Serializable
@@ -34,13 +39,13 @@ sealed class AutomationCondition {
     data class ActiveWindowTitleIs(val windowTitle: String) : AutomationCondition()
     
     @Serializable
-    data class Equals(val variable: String, val value: String) : AutomationCondition()
+    data class Equals(val variable: String, @Serializable(with = FlexibleStringSerializer::class) val value: String) : AutomationCondition()
     
     @Serializable
-    data class GreaterThan(val variable: String, val value: String) : AutomationCondition()
+    data class GreaterThan(val variable: String, @Serializable(with = FlexibleStringSerializer::class) val value: String) : AutomationCondition()
     
     @Serializable
-    data class LessThan(val variable: String, val value: String) : AutomationCondition()
+    data class LessThan(val variable: String, @Serializable(with = FlexibleStringSerializer::class) val value: String) : AutomationCondition()
     
     @Serializable
     data class Contains(val variable: String, val substring: String) : AutomationCondition()
@@ -67,27 +72,35 @@ sealed class AutomationAction {
     
     @Serializable
     @SerialName("MouseEvent")
-    data class MouseEvent(val x: String, val y: String, val actionType: String, val isAnimated: Boolean = false) : AutomationAction() // type: "MOVE", "CLICK"
+    data class MouseEvent(
+        @Serializable(with = FlexibleStringSerializer::class) val x: String, 
+        @Serializable(with = FlexibleStringSerializer::class) val y: String, 
+        val actionType: String, 
+        val isAnimated: Boolean = false
+    ) : AutomationAction() // type: "MOVE", "CLICK"
     
     @Serializable
     @SerialName("MouseButtonEvent")
-    data class MouseButtonEvent(val buttonNumber: String, val actionType: String) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
+    data class MouseButtonEvent(
+        @Serializable(with = FlexibleStringSerializer::class) val buttonNumber: String, 
+        val actionType: String
+    ) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
     
     @Serializable
     @SerialName("ScrollEvent")
-    data class ScrollEvent(val amount: String) : AutomationAction()
+    data class ScrollEvent(@Serializable(with = FlexibleStringSerializer::class) val amount: String) : AutomationAction()
     
     @Serializable
     @SerialName("DelayEvent")
-    data class DelayEvent(val durationMs: String) : AutomationAction()
+    data class DelayEvent(@Serializable(with = FlexibleStringSerializer::class) val durationMs: String) : AutomationAction()
 
     @Serializable
     @SerialName("SetAutoDelay")
-    data class SetAutoDelay(val delayMs: String) : AutomationAction()
+    data class SetAutoDelay(@Serializable(with = FlexibleStringSerializer::class) val delayMs: String) : AutomationAction()
     
     @Serializable
     @SerialName("SetVariable")
-    data class SetVariable(val name: String, val value: String) : AutomationAction()
+    data class SetVariable(val name: String, @Serializable(with = FlexibleStringSerializer::class) val value: String) : AutomationAction()
 
     @Serializable
     @SerialName("MouseKeyboard")
@@ -98,7 +111,11 @@ sealed class AutomationAction {
 
     @Serializable
     @SerialName("ControllerButton")
-    data class ControllerButton(val button: String, val controllerIndex: String = "0", val actionType: String = "PRESS") : AutomationAction()
+    data class ControllerButton(
+        val button: String, 
+        @Serializable(with = FlexibleStringSerializer::class) val controllerIndex: String = "0", 
+        val actionType: String = "PRESS"
+    ) : AutomationAction()
 }
 
 @Serializable

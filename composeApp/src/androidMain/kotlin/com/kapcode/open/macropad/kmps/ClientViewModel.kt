@@ -2,21 +2,29 @@ package com.kapcode.open.macropad.kmps
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import android.content.Context
-import android.widget.Toast
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.network.ClientRepository
 import com.kapcode.open.macropad.kmps.settings.AppTheme
-import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+
+sealed class ClientEvent {
+    data class ShowToast(val message: String) : ClientEvent()
+    data class ConnectionStatusChanged(val status: String, val serverName: String?, val reason: String?, val code: String?) : ClientEvent()
+    data class MacroExecutionFailed(val macro: String, val error: String) : ClientEvent()
+    data class CurrencySpent(val amount: Int) : ClientEvent()
+    data class CurrencyGracePeriod(val macro: String) : ClientEvent()
+    data class PremiumSync(val isPremium: Boolean, val remainingMs: Long) : ClientEvent()
+}
 
 data class ClientUiState(
     val connectionStatus: String = "Disconnected",
@@ -59,6 +67,9 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(ClientUiState())
     val uiState: StateFlow<ClientUiState> = _uiState.asStateFlow()
 
+    private val _events = Channel<ClientEvent>(Channel.BUFFERED)
+    val events = _events.receiveAsFlow()
+
     fun connect(
         ipAddress: String,
         port: Int,
@@ -67,9 +78,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         discoveryFingerprint: String?,
         serverName: String? = null,
         kapManager: KapManager,
-        settingsViewModel: SettingsViewModel,
-        context: Context,
-        onExecutionFailedToast: (String) -> Unit
+        isPro: Boolean
     ) {
         repository.connect(
             ipAddress = ipAddress,
@@ -80,22 +89,10 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             serverName = serverName,
             onUpdate = { status, name, reason, code ->
                 updateConnection(status, name, reason, code)
+                viewModelScope.launch {
+                    _events.send(ClientEvent.ConnectionStatusChanged(status, name, reason, code))
+                }
                 if (status == "Connected") {
-                    val server = TrustedServer(
-                        serverId = discoveryFingerprint ?: "$ipAddress:$port", // Use fingerprint as ID if available
-                        displayName = name ?: ipAddress,
-                        lastIpAddress = ipAddress,
-                        port = port,
-                        isSecure = isSecure,
-                        lastConnectedTimestamp = System.currentTimeMillis()
-                    )
-                    settingsViewModel.updateServerHistory(server)
-                    
-                    MacroApplication.analyticsManager.trackEvent("server_connected", mapOf(
-                        "server_name" to (name ?: "Unknown"),
-                        "is_secure" to isSecure.toString()
-                    ))
-
                     // Sync Pro status to server
                     if (uiState.value.isPro) {
                         repository.sendPremiumSync(true)
@@ -113,19 +110,19 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             },
             onExecutionStart = { macro ->
                 onMacroExecutionStart(macro)
-                val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
+                val isProActive = uiState.value.isPro || isPro
                 if (!isProActive) {
                     val result = kapManager.spendKapsWithResult(BillingConstants.KAPS_PER_MACRO_PRESS)
                     if (result > 0) {
                         onMacroDeductionTriggered(macro)
                         repository.sendData("currency_spent", result.toString())
-                        if (settingsViewModel.enableToasts.value) {
-                            Toast.makeText(context, "Spent $result Kap", Toast.LENGTH_SHORT).show()
+                        viewModelScope.launch {
+                            _events.send(ClientEvent.CurrencySpent(result))
                         }
                     } else if (result == 0) {
                         onMacroGraceTriggered(macro)
-                        if (settingsViewModel.enableToasts.value) {
-                            Toast.makeText(context, "Kap skipped (Grace Period) - macro ran!", Toast.LENGTH_SHORT).show()
+                        viewModelScope.launch {
+                            _events.send(ClientEvent.CurrencyGracePeriod(macro))
                         }
                     }
                     if (result >= 0) {
@@ -138,13 +135,15 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             },
             onExecutionFailed = { macro, error ->
                 onMacroExecutionFailed(macro)
-                val isProActive = uiState.value.isPro || settingsViewModel.isServerProActive.value
+                val isProActive = uiState.value.isPro || isPro
                 if (!isProActive) {
                     kapManager.awardKaps(BillingConstants.KAPS_PER_MACRO_PRESS)
                     repository.sendData("currency_spent", (-BillingConstants.KAPS_PER_MACRO_PRESS).toString())
                     repository.sendData("currency_update", kapManager.kapBalance.value.toString())
                 }
-                onExecutionFailedToast("Macro '$macro' failed: $error")
+                viewModelScope.launch {
+                    _events.send(ClientEvent.MacroExecutionFailed(macro, error))
+                }
             },
             onPacksReceived = { packs ->
                 setInstalledPacks(packs)
@@ -153,14 +152,15 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 setMarketplaceItems(items)
             },
             onSyncState = { _, expiration, isPremium ->
-                // This updates the global server pro status
                 val now = System.currentTimeMillis()
                 val remaining = if (expiration != null) (expiration - now).coerceAtLeast(0L) else 0L
-                settingsViewModel.setServerProStatus(isPremium, remaining)
+                viewModelScope.launch {
+                    _events.send(ClientEvent.PremiumSync(isPremium, remaining))
+                }
             },
             onNotificationReceived = { message ->
-                if (settingsViewModel.enableToasts.value) {
-                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                viewModelScope.launch {
+                    _events.send(ClientEvent.ShowToast(message))
                 }
             }
         )
@@ -337,9 +337,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
         server: TrustedServer,
         deviceName: String,
         kapManager: KapManager,
-        settingsViewModel: SettingsViewModel,
-        context: Context,
-        onExecutionFailedToast: (String) -> Unit
+        isPro: Boolean
     ) {
         connect(
             ipAddress = server.lastIpAddress,
@@ -349,9 +347,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
             discoveryFingerprint = if (server.serverId.contains(":")) null else server.serverId,
             serverName = server.displayName,
             kapManager = kapManager,
-            settingsViewModel = settingsViewModel,
-            context = context,
-            onExecutionFailedToast = onExecutionFailedToast
+            isPro = isPro
         )
     }
 

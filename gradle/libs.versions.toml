@@ -39,6 +39,7 @@ camera-camera2 = "1.4.1"
 jamepad = "2.30.0.0"
 graalvm = "25.0.3"
 billing = "7.1.1"
+detekt = "1.23.8"
 
 [libraries]
 jamepad = { module = "com.badlogicgames.jamepad:jamepad", version.ref = "jamepad" }
@@ -99,3 +100,4 @@ composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMul
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 googleServices = { id = "com.google.gms.google-services", version = "4.4.4" }
+detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }

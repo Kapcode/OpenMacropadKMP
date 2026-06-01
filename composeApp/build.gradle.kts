@@ -174,7 +174,7 @@ configurations.all {
 
 compose.desktop {
     application {
-        mainClass = "switchdektoptocompose.MainKt"
+        mainClass = "com.kapcode.open.macropad.kmps.desktop.MainKt"
         
         val localProps = Properties()
         val localPropsFile = project.rootProject.file("local.properties")
@@ -206,7 +206,7 @@ tasks.register<Jar>("stripSignaturesFromUberJar") {
     }
 
     manifest {
-        attributes["Main-Class"] = "switchdektoptocompose.MainKt"
+        attributes["Main-Class"] = "com.kapcode.open.macropad.kmps.desktop.MainKt"
     }
     
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE

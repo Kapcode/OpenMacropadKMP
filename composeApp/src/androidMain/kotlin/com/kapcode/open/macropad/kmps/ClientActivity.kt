@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import com.kapcode.open.macropad.kmps.network.ClientRepository
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.WidgetType
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
 import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
@@ -105,7 +106,7 @@ class ClientActivity : ComponentActivity() {
     private var onSlamTriggered: ((Boolean) -> Unit)? = null
     private var lastToast: Toast? = null
 
-    private fun showSlamToast(message: String) {
+    private fun showToast(message: String) {
         lastToast?.cancel()
         lastToast = Toast.makeText(this, message, Toast.LENGTH_SHORT)
         lastToast?.show()
@@ -115,7 +116,7 @@ class ClientActivity : ComponentActivity() {
         // If disconnected, any slam (single or double) returns to server list
         val uiState = clientViewModel.uiState.value
         if (uiState.disconnectReason != null) {
-            showSlamToast("Disconnected: Returning to list")
+            showToast("Disconnected: Returning to list")
             finish()
             return
         }
@@ -126,20 +127,20 @@ class ClientActivity : ComponentActivity() {
             val doubleMacro = settingsViewModel.slamFireDoubleSelectedMacro.value
             if (doubleMacro != null) {
                 sendMacro(doubleMacro)
-                showSlamToast("Double Slam: $doubleMacro")
+                showToast("Double Slam: $doubleMacro")
             } else {
                 // Default negative action: Cancel/Back
                 onCancelPressed?.invoke() ?: onBackPressedDispatcher.onBackPressed()
-                showSlamToast("Double Slam: Cancel")
+                showToast("Double Slam: Cancel")
             }
         } else {
             val singleMacro = settingsViewModel.slamFireSelectedMacro.value
             if (singleMacro != null) {
                 sendMacro(singleMacro)
-                showSlamToast("Slam Fire: $singleMacro")
+                showToast("Slam Fire: $singleMacro")
             } else {
                 onOkayPressed?.invoke()
-                showSlamToast("Slam Fire Triggered")
+                showToast("Slam Fire Triggered")
             }
         }
     }
@@ -150,7 +151,7 @@ class ClientActivity : ComponentActivity() {
         if (isGranted) {
             // Permission granted
         } else {
-            Toast.makeText(this, "Camera permission is required for QR scanning", Toast.LENGTH_SHORT).show()
+            showToast("Camera permission is required for QR scanning")
         }
     }
 
@@ -198,21 +199,63 @@ class ClientActivity : ComponentActivity() {
             AppTheme(useDarkTheme = theme == SettingsAppTheme.DarkBlue) {
                 CompositionLocalProvider(LocalClipboardManager provides ClipboardManager()) {
                     LaunchedEffect(Unit) {
-                    clientViewModel.connect(
-                        ipAddress = ipAddress,
-                        port = port,
-                        deviceName = deviceName,
-                        isSecure = isSecure,
-                        discoveryFingerprint = discoveryFingerprint,
-                        serverName = serverName,
-                        kapManager = kapManager,
-                        settingsViewModel = settingsViewModel,
-                        context = this@ClientActivity,
-                        onExecutionFailedToast = { message ->
-                            Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
+                        clientViewModel.events.collect { event ->
+                            when (event) {
+                                is ClientEvent.ShowToast -> {
+                                    if (settingsViewModel.enableToasts.value) {
+                                        showToast(event.message)
+                                    }
+                                }
+                                is ClientEvent.ConnectionStatusChanged -> {
+                                    if (event.status == "Connected") {
+                                        val server = TrustedServer(
+                                            serverId = discoveryFingerprint ?: "$ipAddress:$port",
+                                            displayName = event.serverName ?: ipAddress,
+                                            lastIpAddress = ipAddress,
+                                            port = port,
+                                            isSecure = isSecure,
+                                            lastConnectedTimestamp = System.currentTimeMillis()
+                                        )
+                                        settingsViewModel.updateServerHistory(server)
+                                        
+                                        MacroApplication.analyticsManager.trackEvent("server_connected", mapOf(
+                                            "server_name" to (event.serverName ?: "Unknown"),
+                                            "is_secure" to isSecure.toString()
+                                        ))
+                                    }
+                                }
+                                is ClientEvent.MacroExecutionFailed -> {
+                                    showToast("Macro '${event.macro}' failed: ${event.error}")
+                                }
+                                is ClientEvent.CurrencySpent -> {
+                                    if (settingsViewModel.enableToasts.value) {
+                                        showToast("Spent ${event.amount} Kap")
+                                    }
+                                }
+                                is ClientEvent.CurrencyGracePeriod -> {
+                                    if (settingsViewModel.enableToasts.value) {
+                                        showToast("Kap skipped (Grace Period) - macro ran!")
+                                    }
+                                }
+                                is ClientEvent.PremiumSync -> {
+                                    settingsViewModel.setServerProStatus(event.isPremium, event.remainingMs)
+                                }
+                            }
                         }
-                    )
-                }
+                    }
+
+                    LaunchedEffect(Unit) {
+                        clientViewModel.connect(
+                            ipAddress = ipAddress,
+                            port = port,
+                            deviceName = deviceName,
+                            isSecure = isSecure,
+                            discoveryFingerprint = discoveryFingerprint,
+                            serverName = serverName,
+                            kapManager = kapManager,
+                            isPro = settingsViewModel.isPro.value
+                        )
+                    }
 
                 LaunchedEffect(kapBalance) {
                     clientViewModel.syncCurrency(kapBalance.toLong())
@@ -256,10 +299,7 @@ class ClientActivity : ComponentActivity() {
                     onOkayTriggerSet = { trigger -> onOkayPressed = trigger },
                     onCancelTriggerSet = { trigger -> onCancelPressed = trigger },
                     onSlamTriggerSet = { trigger -> onSlamTriggered = trigger },
-                    kapManager = kapManager,
-                    onExecutionFailedToast = { message ->
-                        Toast.makeText(this@ClientActivity, message, Toast.LENGTH_SHORT).show()
-                    }
+                    kapManager = kapManager
                 )
                 }
             }

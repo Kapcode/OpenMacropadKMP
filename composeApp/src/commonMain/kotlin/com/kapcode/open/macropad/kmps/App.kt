@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import com.kapcode.open.macropad.kmps.ui.components.ThreeDotsLoading
 import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
+import com.kapcode.open.macropad.kmps.models.TrustedServer
 import androidx.compose.ui.tooling.preview.Preview
 
 import com.kapcode.`open`.macropad.kmps.Res
@@ -88,7 +89,7 @@ fun App(
                 isDefault = server.isDefault,
                 onSetDefault = { 
                     // This will be handled by the caller to update storage and state
-                    onConnectClick(server.copy(name = "SET_DEFAULT"), deviceName)
+                    onConnectClick(server.copy(name = TrustedServer.ACTION_SET_DEFAULT), deviceName)
                 },
                 onClick = {
                     onConnectClick(server, deviceName)
