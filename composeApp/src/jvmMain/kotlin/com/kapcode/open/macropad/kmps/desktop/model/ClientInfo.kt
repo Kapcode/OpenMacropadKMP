@@ -8,5 +8,6 @@ data class ClientInfo(
     val codeMatched: Boolean = false,
     val metadata: String? = null,
     val currency: Long = 0,
+    val lastSpentTime: Long = 0,
     val pairingAttempts: Int = 0
 )

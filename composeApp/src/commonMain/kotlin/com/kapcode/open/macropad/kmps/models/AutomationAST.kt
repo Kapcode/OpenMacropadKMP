@@ -17,7 +17,7 @@ sealed class AutomationTrigger {
     data class MultiTap(
         val keyName: String, 
         @Serializable(with = FlexibleStringSerializer::class) val tapCount: String, 
-        @Serializable(with = FlexibleStringSerializer::class) val windowMs: String
+        @Serializable(with = FlexibleStringSerializer::class) val windowMs: String,
     ) : AutomationTrigger()
     
     @Serializable
@@ -76,14 +76,14 @@ sealed class AutomationAction {
         @Serializable(with = FlexibleStringSerializer::class) val x: String, 
         @Serializable(with = FlexibleStringSerializer::class) val y: String, 
         val actionType: String, 
-        val isAnimated: Boolean = false
+        val isAnimated: Boolean = false,
     ) : AutomationAction() // type: "MOVE", "CLICK"
     
     @Serializable
     @SerialName("MouseButtonEvent")
     data class MouseButtonEvent(
         @Serializable(with = FlexibleStringSerializer::class) val buttonNumber: String, 
-        val actionType: String
+        val actionType: String,
     ) : AutomationAction() // type: "PRESS", "RELEASE", "CLICK"
     
     @Serializable
@@ -114,14 +114,14 @@ sealed class AutomationAction {
     data class ControllerButton(
         val button: String, 
         @Serializable(with = FlexibleStringSerializer::class) val controllerIndex: String = "0", 
-        val actionType: String = "PRESS"
+        val actionType: String = "PRESS",
     ) : AutomationAction()
 }
 
 @Serializable
 data class LogicBlock(
     val condition: AutomationCondition? = null,
-    val actions: List<AutomationAction> = emptyList()
+    val actions: List<AutomationAction> = emptyList(),
 )
 
 @Serializable
@@ -130,5 +130,5 @@ data class AutomationRoutine(
     val name: String,
     val triggers: List<AutomationTrigger> = emptyList(), // Support multiple triggers
     val logicBlocks: List<LogicBlock> = emptyList(),
-    val targetProcess: String? = null
+    val targetProcess: String? = null,
 )

@@ -2,7 +2,6 @@ package com.kapcode.open.macropad.kmps
 
 import com.kapcode.open.macropad.kmps.utils.ClipboardManager
 import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
-import com.kapcode.open.macropad.kmps.network.sockets.MacroKtorClient
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log

@@ -3,8 +3,10 @@ package com.kapcode.open.macropad.kmps.desktop.viewmodel
 import com.kapcode.open.macropad.kmps.network.sockets.model.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
@@ -45,6 +47,12 @@ class ClientCommunicationViewModel(
 
     private val _totalCurrencySpent = MutableStateFlow(AppSettings.totalCurrencySpent)
     val totalCurrencySpent = _totalCurrencySpent.asStateFlow()
+
+    private val _currencySpentEvents = MutableSharedFlow<String>() // emits clientId
+    val currencySpentEvents = _currencySpentEvents.asSharedFlow()
+
+    private val _graceSkipEvents = MutableSharedFlow<String>() // emits clientId
+    val graceSkipEvents = _graceSkipEvents.asSharedFlow()
 
     private val _isMacroExecutionEnabled = MutableStateFlow(true)
     val isMacroExecutionEnabled = _isMacroExecutionEnabled.asStateFlow()
@@ -323,9 +331,25 @@ class ClientCommunicationViewModel(
                         val amount = value.decodeToString().toLong()
                         AppSettings.totalCurrencySpent += amount
                         _totalCurrencySpent.value = AppSettings.totalCurrencySpent
+                        
+                        _connectedDevices.update { devices ->
+                            devices.map { 
+                                if (it.id == clientId) it.copy(lastSpentTime = System.currentTimeMillis()) 
+                                else it 
+                            }
+                        }
+                        
                         consoleViewModel.addLog(LogLevel.Info, "Currency spent by $clientId: $amount (Total: ${_totalCurrencySpent.value})")
+                        viewModelScope.launch {
+                            _currencySpentEvents.emit(clientId)
+                        }
                     } catch (e: Exception) {
                         consoleViewModel.addLog(LogLevel.Error, "Invalid currency spent from $clientId")
+                    }
+                } else if (key == "currency_grace_skip") {
+                    consoleViewModel.addLog(LogLevel.Info, "Grace skip triggered by $clientId")
+                    viewModelScope.launch {
+                        _graceSkipEvents.emit(clientId)
                     }
                 }
             },

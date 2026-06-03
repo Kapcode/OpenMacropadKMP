@@ -240,6 +240,7 @@ fun CommonAppBar(
                 }
             },
             actions = {
+                actions()
                 // Auto Focus Toggle (New)
                 IconButton(onClick = { onAutoFocusToggle(!isAutoFocusEnabled) }) {
                     Icon(
@@ -304,6 +305,7 @@ fun CommonAppBar(
             title = titleContent,
             navigationIcon = navigationIcon,
             actions = {
+                actions()
                 if (currency > 0) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -328,13 +330,6 @@ fun CommonAppBar(
                     currencyColor = currencyColor,
                     onRewardClick = { showRewardConfirmDialog = true }
                 )
-                IconButton(onClick = { onCoordinateCaptureToggle(!isCoordinateCaptureActive) }) {
-                    Icon(
-                        imageVector = if (isCoordinateCaptureActive) Icons.Default.Adjust else Icons.Default.Add,
-                        contentDescription = "Capture Coordinates",
-                        tint = if (isCoordinateCaptureActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,
@@ -391,12 +386,6 @@ fun KapBalanceWithTimer(
             Text(
                 text = kapBalance.toString(),
                 style = currencyTextStyle
-            )
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = "Earn Kaps",
-                tint = currencyColor,
-                modifier = Modifier.size(16.dp)
             )
         }
         if (remainingGraceFraction > 0) {

@@ -7,7 +7,6 @@ import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 import com.kapcode.open.macropad.kmps.models.TrustedServer
 import com.kapcode.open.macropad.kmps.network.ClientRepository
-import com.kapcode.open.macropad.kmps.settings.AppTheme
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -19,7 +18,12 @@ import kotlinx.coroutines.delay
 
 sealed class ClientEvent {
     data class ShowToast(val message: String) : ClientEvent()
-    data class ConnectionStatusChanged(val status: String, val serverName: String?, val reason: String?, val code: String?) : ClientEvent()
+    data class ConnectionStatusChanged(
+        val status: String,
+        val serverName: String?,
+        val reason: String?,
+        val code: String?,
+    ) : ClientEvent()
     data class MacroExecutionFailed(val macro: String, val error: String) : ClientEvent()
     data class CurrencySpent(val amount: Int) : ClientEvent()
     data class CurrencyGracePeriod(val macro: String) : ClientEvent()
@@ -60,7 +64,7 @@ data class ClientUiState(
     val graceTriggerCount: Int = 0,
     val lastGraceMacro: String? = null,
     val deductionTriggerCount: Int = 0,
-    val lastDeductionMacro: String? = null
+    val lastDeductionMacro: String? = null,
 )
 
 class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
@@ -95,7 +99,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                 if (status == "Connected") {
                     // Sync Pro status to server
                     if (uiState.value.isPro) {
-                        repository.sendPremiumSync(true)
+                        repository.sendPremiumSync(isPremium = true)
                     }
                 }
             },
@@ -121,6 +125,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
                         }
                     } else if (result == 0) {
                         onMacroGraceTriggered(macro)
+                        repository.sendData("currency_grace_skip", macro)
                         viewModelScope.launch {
                             _events.send(ClientEvent.CurrencyGracePeriod(macro))
                         }
@@ -187,7 +192,7 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     fun submitPairingCode(code: String) {
         val now = System.currentTimeMillis()
         // Debounce: Ignore identical codes within 2 seconds
-        if (code == lastPairingCodeAttemptValue && now - lastPairingCodeAttemptTime < 2000) {
+        if (code == lastPairingCodeAttemptValue && (now - lastPairingCodeAttemptTime < 2000)) {
             return
         }
         
@@ -245,14 +250,6 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
     fun setManualFocusDistance(distance: Float) {
         _uiState.update { it.copy(manualFocusDistance = distance) }
     }
-    
-    fun updateActualZoom(ratio: Float) {
-        _uiState.update { it.copy(currentActualZoom = ratio) }
-    }
-    
-    fun updateFocusState(state: String) {
-        _uiState.update { it.copy(currentFocusState = state) }
-    }
 
     fun updateCurrency(amount: Long) {
         _uiState.update { it.copy(currency = amount) }
@@ -260,10 +257,6 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun syncCurrency(balance: Long) {
         repository.sendData("currency_update", balance.toString())
-    }
-
-    fun setMacroExecutionEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(isMacroExecutionEnabled = enabled) }
     }
 
     fun setInstalledPacks(packs: List<MacroPack>) {

@@ -1,7 +1,6 @@
 package com.kapcode.open.macropad.kmps.desktop.viewmodel
 
 import com.kapcode.open.macropad.kmps.desktop.network.MacroKtorServer
-import androidx.compose.runtime.mutableStateOf
 import com.kapcode.open.macropad.kmps.network.sockets.model.DataModel
 import com.kapcode.open.macropad.kmps.network.sockets.model.activeProcessMessage
 import kotlinx.coroutines.CoroutineScope
@@ -88,10 +87,10 @@ class ServerViewModel(
                 .filterIsInstance<Inet4Address>()
                 .map { it.hostAddress }
                 .joinToString(", ")
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             "Not Found"
         }
-        _serverIpAddress.value = if (ips.isBlank()) "Not Found" else ips
+        _serverIpAddress.value = ips.ifBlank { "Not Found" }
         consoleViewModel.addLog(LogLevel.Verbose, "Found local IPs: $ips")
     }
 

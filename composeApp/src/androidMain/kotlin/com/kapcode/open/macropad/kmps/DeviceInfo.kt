@@ -63,6 +63,18 @@ actual object DeviceInfo {
             }
         }
 
+    actual val rawUniqueId: String
+        get() {
+            return try {
+                Settings.Secure.getString(
+                    MacroApplication.instance.contentResolver,
+                    Settings.Secure.ANDROID_ID
+                ) ?: "unknown_android_id"
+            } catch (e: Exception) {
+                "unknown_android_id"
+            }
+        }
+
     actual val hardwareMetadata: String
         get() {
             // FINGERPRINT is too volatile (changes on security updates). 

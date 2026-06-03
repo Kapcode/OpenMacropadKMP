@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
 import com.kapcode.open.macropad.kmps.desktop.logic.AppSettings
 import com.kapcode.open.macropad.kmps.desktop.logic.TrustedDeviceManager
-import java.io.File
 import java.security.MessageDigest
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -55,7 +54,7 @@ class MacroKtorServer(
         var lastSeen: Long,
         var pendingChallenge: String? = null,
         var pongsSinceLastPing: Int = 0,
-        var metadata: String? = null
+        var metadata: String? = null,
     )
 
     fun isRunning(): Boolean = server != null
@@ -288,7 +287,7 @@ class MacroKtorServer(
                 client.pongsSinceLastPing++
                 try {
                     client.session.send(Frame.Binary(true, heartbeatMessage().toBytes()))
-                } catch (e: Exception) {
+                } catch (_: Exception) {
                     logger.error("Failed to send heartbeat reply to {}", client.id)
                 }
                 return 

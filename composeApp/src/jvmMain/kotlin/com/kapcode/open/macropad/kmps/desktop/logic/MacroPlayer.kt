@@ -16,7 +16,7 @@ class MacroPlayer(
     private val onLog: (LogLevel, String) -> Unit = { _, _ -> },
     private val getActiveProcess: () -> String? = { null },
     private val onPlayMacroRequested: (String) -> Unit = { },
-    private val onNotify: (String) -> Unit = { }
+    private val onNotify: (String) -> Unit = { },
 ) {
     private val robot = Robot().apply {
         isAutoWaitForIdle = false
@@ -158,7 +158,7 @@ class MacroPlayer(
                                 KeyAction.RELEASE -> robot.mouseRelease(mask)
                             }
                             delay(currentAutoDelay)
-                        } catch (e: IllegalArgumentException) {
+                        } catch (_: IllegalArgumentException) {
                             System.err.println("Invalid mouse button number: ${event.buttonNumber}")
                         }
                     }

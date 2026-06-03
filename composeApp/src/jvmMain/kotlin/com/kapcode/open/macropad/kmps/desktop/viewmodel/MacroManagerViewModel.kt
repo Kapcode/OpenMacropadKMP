@@ -9,7 +9,6 @@ import com.kapcode.open.macropad.kmps.desktop.logic.*
 import com.kapcode.open.macropad.kmps.desktop.model.*
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.network.sockets.model.toastMessage
-import java.awt.SystemTray
 import java.awt.TrayIcon
 import java.awt.Toolkit
 import java.io.File
@@ -128,7 +127,7 @@ class MacroManagerViewModel(
     private val viewModelScope = CoroutineScope(Dispatchers.IO + playbackJob)
     private val executionMutex = Mutex()
 
-    private val robot = try { java.awt.Robot() } catch(e: Exception) { null }
+    private val robot = try { java.awt.Robot() } catch(_: Exception) { null }
 
     internal val macroPlayer = MacroPlayer(
         onLog = { level, msg -> consoleViewModel.addLog(level, msg) },
@@ -935,9 +934,9 @@ class MacroManagerViewModel(
         }
     }
 
-    fun showTriggerConfirmation(trigger: UnifiedTrigger) {
-        _uiState.update { it.copy(triggerPendingConfirmation = trigger) }
-    }
+//    fun showTriggerConfirmation(trigger: UnifiedTrigger) {
+//        _uiState.update { it.copy(triggerPendingConfirmation = trigger) }
+//    }
 
     fun confirmTrigger() {
         val trigger = _uiState.value.triggerPendingConfirmation ?: return

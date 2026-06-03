@@ -19,13 +19,13 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapcode.`open`.macropad.kmps.Res
-import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.Res
+import com.kapcode.open.macropad.kmps.*
+import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -82,6 +82,17 @@ class KapAnimationManager {
             }
         }
     }
+
+    fun triggerFlight(startPos: Offset, endPos: Offset) {
+        if (startPos != Offset.Zero && endPos != Offset.Zero) {
+            flyEvents.add(FlyEvent(
+                id = Random.nextLong(),
+                startPos = startPos,
+                endPos = endPos,
+                type = AnimationType.DEDUCTION
+            ))
+        }
+    }
 }
 
 enum class AnimationType {
@@ -101,7 +112,6 @@ val LocalKapAnimationManager = staticCompositionLocalOf { KapAnimationManager() 
 @Composable
 fun KapAnimationOverlay() {
     val manager = LocalKapAnimationManager.current
-    LocalDensity.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         manager.flyEvents.forEach { event ->
@@ -120,7 +130,6 @@ fun KapAnimationOverlay() {
 @Composable
 fun DeductionAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     val animProgress = remember { Animatable(0f) }
-    rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         animProgress.animateTo(
@@ -136,7 +145,7 @@ fun DeductionAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     val alpha = lerp(1f, 0f, animProgress.value)
 
     Icon(
-        painter = org.jetbrains.compose.resources.painterResource(Res.drawable.macropadIcon64),
+        painter = painterResource(Res.drawable.macropadIcon64),
         contentDescription = null,
         tint = Color.Unspecified,
         modifier = Modifier
@@ -168,12 +177,6 @@ fun GraceSkipAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     // Target is the pressed item
     val targetX = event.endPos.x
     val targetY = event.endPos.y
-
-    // We want the peak of the U-turn to be at 80% of the distance to the target.
-    // For a quadratic Bezier starting and ending at P0, the peak is at t=0.5 and is (P0 + P1) / 2.
-    // So P1 = 2 * Peak - P0.
-    // Peak = P0 + 0.8 * (Target - P0)
-    // P1 = 2 * (P0 + 0.8 * (Target - P0)) - P0 = P0 + 1.6 * (Target - P0)
     
     val midX = startX + 1.6f * (targetX - startX)
     val midY = startY + 1.6f * (targetY - startY)
@@ -192,7 +195,7 @@ fun GraceSkipAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     val scale = if (t < 0.5f) lerp(1f, 1.4f, t * 2) else lerp(1.4f, 1f, (t - 0.5f) * 2)
 
     Icon(
-        painter = org.jetbrains.compose.resources.painterResource(Res.drawable.macropadIcon64),
+        painter = painterResource(Res.drawable.macropadIcon64),
         contentDescription = null,
         tint = Color.Unspecified,
         modifier = Modifier
@@ -227,7 +230,7 @@ fun AwardKapAnimation(event: FlyEvent, onFinish: (FlyEvent) -> Unit) {
     val scale = if (t < 0.5f) lerp(0f, 1.5f, t * 2) else lerp(1.5f, 0.5f, (t - 0.5f) * 2)
 
     Icon(
-        painter = org.jetbrains.compose.resources.painterResource(Res.drawable.macropadIcon64),
+        painter = painterResource(Res.drawable.macropadIcon64),
         contentDescription = null,
         tint = Color.Unspecified,
         modifier = Modifier

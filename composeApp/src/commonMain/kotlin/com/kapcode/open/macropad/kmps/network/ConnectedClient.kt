@@ -18,5 +18,5 @@ data class ConnectedClient(
     val name: String,
     var authStatus: AuthStatus,
     var lastSeen: Long,
-    var metadata: String? = null
+    var metadata: String? = null,
 )

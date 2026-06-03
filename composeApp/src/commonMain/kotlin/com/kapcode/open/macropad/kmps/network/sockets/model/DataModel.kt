@@ -40,7 +40,7 @@ sealed class MessageType {
     data class SyncState(
         val activeRewardSessionId: String?,
         val expirationTimestamp: Long?,
-        val isPremium: Boolean = false
+        val isPremium: Boolean = false,
     ) : MessageType()
 
     @Serializable
@@ -51,7 +51,7 @@ sealed class MessageType {
     @SerialName("session_claimed")
     data class SessionClaimed(
         val sessionId: String,
-        val expirationTimestamp: Long
+        val expirationTimestamp: Long,
     ) : MessageType()
 
     @Serializable

@@ -98,6 +98,9 @@ class MainActivity : ComponentActivity() {
         clientRepository = ClientRepository(this)
         clientViewModel = ClientViewModel(clientRepository)
 
+        // Initialize AdMob Test Mode based on device ID hash
+        BillingConstants.initialize(DeviceInfo.rawUniqueId)
+
         settingsStorage = SettingsStorage(this)
         settingsStorage.bindViewModel(settingsViewModel, clientViewModel, lifecycleScope)
 

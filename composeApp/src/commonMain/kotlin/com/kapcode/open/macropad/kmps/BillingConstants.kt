@@ -1,7 +1,9 @@
 package com.kapcode.open.macropad.kmps
 
+import com.kapcode.open.macropad.kmps.utils.HashUtils
+
 enum class AdLocation {
-    MAIN, CLIENT, MARKETPLACE, PRO_DIALOG, SETTINGS
+    MAIN, CLIENT, MARKETPLACE, PRO_DIALOG, SETTINGS, REWARD_CONFIRM
 }
 
 object BillingConstants {
@@ -24,14 +26,31 @@ object BillingConstants {
     // Production Rewarded ID
     const val ADMOB_REWARDED_UNIT_ID = "ca-app-pub-2579373758747951/5909982002"
 
-    // Placeholders for production banner IDs - using test ID for now as per user instruction
-    const val ADMOB_BANNER_MAIN_UNIT_ID = ADMOB_TEST_BANNER_ID
-    const val ADMOB_BANNER_CLIENT_UNIT_ID = ADMOB_TEST_BANNER_ID
-    const val ADMOB_BANNER_MARKETPLACE_UNIT_ID = ADMOB_TEST_BANNER_ID
-    const val ADMOB_BANNER_PRO_DIALOG_UNIT_ID = ADMOB_TEST_BANNER_ID
-    const val ADMOB_BANNER_SETTINGS_UNIT_ID = ADMOB_TEST_BANNER_ID
+    // Production Banner IDs
+    const val ADMOB_BANNER_MAIN_UNIT_ID = "ca-app-pub-2579373758747951/2055186499"
+    const val ADMOB_BANNER_CLIENT_UNIT_ID = "ca-app-pub-2579373758747951/2297078589"
+    const val ADMOB_BANNER_MARKETPLACE_UNIT_ID = "ca-app-pub-2579373758747951/7996431745"
+    const val ADMOB_BANNER_PRO_DIALOG_UNIT_ID = "ca-app-pub-2579373758747951/1670392628"
+    const val ADMOB_BANNER_SETTINGS_UNIT_ID = "ca-app-pub-2579373758747951/6994185738"
+    const val ADMOB_BANNER_REWARD_CONFIRM_UNIT_ID = "ca-app-pub-2579373758747951/6994185738"
 
-    const val IS_TEST_MODE = false
+    var IS_TEST_MODE = false
+        private set
+
+    private val DEVELOPER_PARTIAL_IDS = setOf(
+        "c279...fd", // Original ANDROID_ID partial
+        "ce5d...55"  // Current device ANDROID_ID partial
+    )
+
+    fun initialize(rawUniqueId: String) {
+        if (rawUniqueId.length >= 6) {
+            val partial = "${rawUniqueId.take(4)}...${rawUniqueId.takeLast(2)}"
+            IS_TEST_MODE = DEVELOPER_PARTIAL_IDS.contains(partial)
+            println("BillingConstants: Initialized with partial ID: $partial (Test Mode: $IS_TEST_MODE)")
+        } else {
+            IS_TEST_MODE = false
+        }
+    }
 
     fun getBannerId(location: AdLocation): String {
         if (IS_TEST_MODE) return ADMOB_TEST_BANNER_ID
@@ -41,6 +60,7 @@ object BillingConstants {
             AdLocation.MARKETPLACE -> ADMOB_BANNER_MARKETPLACE_UNIT_ID
             AdLocation.PRO_DIALOG -> ADMOB_BANNER_PRO_DIALOG_UNIT_ID
             AdLocation.SETTINGS -> ADMOB_BANNER_SETTINGS_UNIT_ID
+            AdLocation.REWARD_CONFIRM -> ADMOB_BANNER_REWARD_CONFIRM_UNIT_ID
         }
     }
 

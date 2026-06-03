@@ -24,6 +24,9 @@ actual object DeviceInfo {
             }
         }
 
+    actual val rawUniqueId: String
+        get() = name + "_" + System.getProperty("user.name")
+
     actual val hardwareMetadata: String
         get() {
             return "JVM|${System.getProperty("os.name")}|${System.getProperty("os.version")}|${System.getProperty("os.arch")}"

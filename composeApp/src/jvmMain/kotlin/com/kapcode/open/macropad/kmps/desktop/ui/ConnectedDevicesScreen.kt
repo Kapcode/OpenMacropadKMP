@@ -11,9 +11,7 @@ import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
 import com.kapcode.open.macropad.kmps.desktop.ui.components.AppTooltipArea
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,9 +25,14 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
+import com.kapcode.open.macropad.kmps.Res
+import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.ui.components.*
 import com.kapcode.open.macropad.kmps.desktop.logic.ConnectionHistoryManager
 import com.kapcode.open.macropad.kmps.desktop.model.ClientInfo
+import org.jetbrains.compose.resources.painterResource
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
@@ -38,6 +41,8 @@ fun ConnectedDevicesScreen(
     history: List<ConnectionHistoryManager.ConnectionEvent>,
     trustedDevices: Map<String, String> = emptyMap(),
     totalCurrencySpent: Long = 0,
+    currencySpentEvents: SharedFlow<String>? = null,
+    graceSkipEvents: SharedFlow<String>? = null,
     onDisconnect: (String) -> Unit = {},
     onUnpair: (String) -> Unit = {},
     onBan: (ClientInfo) -> Unit = {},
@@ -47,6 +52,26 @@ fun ConnectedDevicesScreen(
 ) {
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val animationManager = LocalKapAnimationManager.current
+    val lastClickedPositions = remember { mutableMapOf<String, Offset>() }
+
+    LaunchedEffect(currencySpentEvents) {
+        currencySpentEvents?.collectLatest { clientId ->
+            val pos = lastClickedPositions[clientId]
+            if (pos != null) {
+                animationManager.triggerFlight(pos, animationManager.balancePosition)
+            }
+        }
+    }
+
+    LaunchedEffect(graceSkipEvents) {
+        graceSkipEvents?.collectLatest { clientId ->
+            val pos = lastClickedPositions[clientId]
+            if (pos != null) {
+                animationManager.triggerGraceSkip(pos)
+            }
+        }
+    }
     
     val connectedIds = remember(devices) { devices.map { it.id }.toSet() }
     val offlineTrustedDevices = remember(trustedDevices, connectedIds) {
@@ -69,10 +94,12 @@ fun ConnectedDevicesScreen(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.Default.CurrencyExchange, 
-                    null, 
-                    modifier = Modifier.size(16.dp), 
-                    tint = goldColor
+                    painter = painterResource(Res.drawable.macropadIcon64),
+                    null,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .trackBalancePosition(animationManager),
+                    tint = Color.Unspecified
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -160,23 +187,37 @@ fun ConnectedDevicesScreen(
 
                                     Spacer(Modifier.width(4.dp))
                                     
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        modifier = Modifier.padding(horizontal = 4.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.CurrencyExchange,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(14.dp),
-                                            tint = goldColor
-                                        )
-                                        Spacer(Modifier.width(2.dp))
-                                        Text(
-                                            "${device.currency}",
-                                            style = MaterialTheme.typography.labelLarge.copy(shadow = textShadow),
-                                            color = goldColor,
-                                            fontWeight = FontWeight.Bold
-                                        )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Column(
+                                            horizontalAlignment = Alignment.End,
+                                            verticalArrangement = Arrangement.Center,
+                                            modifier = Modifier.padding(horizontal = 4.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Icon(
+                                                    painter = painterResource(Res.drawable.macropadIcon64),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(14.dp).trackWidgetPosition {
+                                                        lastClickedPositions[device.id] = it
+                                                    },
+                                                    tint = Color.Unspecified
+                                                )
+                                                Spacer(Modifier.width(2.dp))
+                                                Text(
+                                                    "${device.currency}",
+                                                    style = MaterialTheme.typography.labelLarge.copy(shadow = textShadow),
+                                                    color = goldColor,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                            
+                                            if (device.lastSpentTime > 0) {
+                                                GraceTimerBar(
+                                                    lastSpentTime = device.lastSpentTime,
+                                                    modifier = Modifier.width(48.dp).padding(top = 1.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                     
                                     IconButton(onClick = { onDisconnect(device.id) }, modifier = Modifier.size(32.dp)) {
@@ -295,6 +336,39 @@ fun ConnectedDevicesScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun GraceTimerBar(
+    lastSpentTime: Long,
+    modifier: Modifier = Modifier
+) {
+    var remainingGraceFraction by remember(lastSpentTime) { mutableStateOf(0f) }
+
+    LaunchedEffect(lastSpentTime) {
+        if (lastSpentTime > 0) {
+            while (true) {
+                val now = System.currentTimeMillis()
+                val elapsed = now - lastSpentTime
+                val remaining = (BillingConstants.GRACE_PERIOD_MS - elapsed).coerceAtLeast(0L)
+                remainingGraceFraction = remaining.toFloat() / BillingConstants.GRACE_PERIOD_MS
+                if (remaining <= 0) break
+                kotlinx.coroutines.delay(50)
+            }
+        } else {
+            remainingGraceFraction = 0f
+        }
+    }
+
+    if (remainingGraceFraction > 0) {
+        LinearProgressIndicator(
+            progress = { remainingGraceFraction },
+            modifier = modifier.height(2.dp),
+            color = Color(0xFF2196F3), // Grace blue
+            trackColor = Color(0xFF2196F3).copy(alpha = 0.2f),
+            strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
+        )
     }
 }
 

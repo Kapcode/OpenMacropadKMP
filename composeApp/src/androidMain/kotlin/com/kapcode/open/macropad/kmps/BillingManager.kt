@@ -18,17 +18,14 @@ class BillingManager private constructor(context: Context) {
 
     private val billingClient = BillingClient.newBuilder(appContext)
         .setListener { billingResult: BillingResult, purchases: List<Purchase>? ->
-            if (billingResult.responseCode == BillingClient.BillingResponseCode.OK && (purchases != null)) {
+            if ((billingResult.responseCode == BillingClient.BillingResponseCode.OK) && (purchases != null)) {
                 for (purchase in purchases) {
                     handlePurchase(purchase)
                 }
             }
         }
-        .enablePendingPurchases()
+        .enablePendingPurchases(PendingPurchasesParams.newBuilder().enableOneTimeProducts().build())
         .build()
-
-    private val _isAdFree = MutableStateFlow(value = false)
-    val isAdFree: StateFlow<Boolean> = _isAdFree.asStateFlow()
 
     private val _formattedPrices = MutableStateFlow<Map<String, String>>(emptyMap())
     val formattedPrices: StateFlow<Map<String, String>> = _formattedPrices.asStateFlow()
@@ -236,7 +233,6 @@ class BillingManager private constructor(context: Context) {
             if (purchase.products.contains(BillingConstants.PRODUCT_ID_AD_FREE_ONE_TIME) ||
                 purchase.products.contains(BillingConstants.PRODUCT_ID_AD_FREE_SUB)) {
                 settingsViewModel?.setIsAdFree(adFree = true)
-                _isAdFree.value = true
             }
         }
     }

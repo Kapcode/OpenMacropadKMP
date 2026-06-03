@@ -24,7 +24,7 @@ data class GridWidget(
     // Config
     val minValue: Float = 0f,
     val maxValue: Float = 100f,
-    val sliderUpdateMode: SliderUpdateMode = SliderUpdateMode.ON_RELEASE
+    val sliderUpdateMode: SliderUpdateMode = SliderUpdateMode.ON_RELEASE,
 )
 
 @Serializable
@@ -37,7 +37,7 @@ data class MacroPack(
     val targetWindowTitle: String? = null, // e.g., "Google Chrome"
     val isActive: Boolean = true,
     val widgets: List<GridWidget> = emptyList(),
-    val routines: List<AutomationRoutine> = emptyList()
+    val routines: List<AutomationRoutine> = emptyList(),
 )
 
 @Serializable
@@ -48,5 +48,5 @@ data class MarketplaceItem(
     val author: String,
     val version: String,
     val downloadUrl: String,
-    val thumbnailUrl: String? = null
+    val thumbnailUrl: String? = null,
 )

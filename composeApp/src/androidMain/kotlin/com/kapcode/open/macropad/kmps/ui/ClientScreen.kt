@@ -257,6 +257,15 @@ fun ClientScreen(
                             }
                         },
                         actions = {
+                            if (settingsViewModel.isDeveloperMode.collectAsState().value) {
+                                IconButton(onClick = { clientViewModel.setCoordinateCaptureActive(!uiState.isCoordinateCaptureActive) }) {
+                                    Icon(
+                                        imageVector = if (uiState.isCoordinateCaptureActive) Icons.Default.Adjust else Icons.Default.Add,
+                                        contentDescription = "Capture Coordinates",
+                                        tint = if (uiState.isCoordinateCaptureActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                             if (!showSettings && macros.isNotEmpty() && slamFireEnabled) {
                                 var expandedSingle by remember { mutableStateOf(false) }
                                 var expandedDouble by remember { mutableStateOf(false) }

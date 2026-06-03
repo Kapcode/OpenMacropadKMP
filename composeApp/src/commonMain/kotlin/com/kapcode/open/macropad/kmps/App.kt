@@ -16,7 +16,6 @@ import com.kapcode.open.macropad.kmps.hardware.HardwareTriggerManager
 import com.kapcode.open.macropad.kmps.models.TrustedServer
 import androidx.compose.ui.tooling.preview.Preview
 
-import com.kapcode.`open`.macropad.kmps.Res
 import com.kapcode.`open`.macropad.kmps.*
 import org.jetbrains.compose.resources.stringResource
 

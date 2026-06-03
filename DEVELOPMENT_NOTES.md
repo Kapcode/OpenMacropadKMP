@@ -757,6 +757,7 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Shared Constants**: Moved `BillingConstants.kt` from `androidMain` to `commonMain` to serve as the project-wide "Source of Truth" for monetization.
     - **Location-Specific IDs**: Introduced the `AdLocation` enum. This allows the app to use distinct Ad Unit IDs for the Main UI, Client Screen, Marketplace, Pro Dialog, and Settings. This granularity enables precise performance tracking in the AdMob console.
     - **Global Test Toggle**: Added an `IS_TEST_MODE` flag in `BillingConstants`. When true, the app automatically swaps all production IDs for Google's official test IDs, preventing accidental policy violations during development.
+    - **Intelligent Switching**: Implemented a dynamic switcher that enables test mode based on a partial unique device identifier (first 4 and last 2 characters of `ANDROID_ID`). This avoids manual toggling and protects developer IDs from exposure while ensuring a seamless dev-to-prod transition.
     - **Unified Permission Set**: Added `com.google.android.gms.permission.AD_ID` (required for Android 13+) and `android.permission.WAKE_LOCK` to the manifest to ensure full ad SDK functionality and stability during video playback.
 
 ## 61. Best Practices Alignment & Refactoring

@@ -23,7 +23,7 @@ class SettingsViewModel {
     private val _macroDirectory = MutableStateFlow("") // Default to empty
     val macroDirectory = _macroDirectory.asStateFlow()
 
-    private val _analyticsEnabled = MutableStateFlow(false) // Default to Opt-in
+    private val _analyticsEnabled = MutableStateFlow(value = false) // Default to Opt-in
     val analyticsEnabled = _analyticsEnabled.asStateFlow()
 
     private val _isGlobalLoading = MutableStateFlow(false)
@@ -52,9 +52,6 @@ class SettingsViewModel {
 
     private val _enableBackgroundToasts = MutableStateFlow(true)
     val enableBackgroundToasts = _enableBackgroundToasts.asStateFlow()
-
-    private val _toastDurationMs = MutableStateFlow(3000L)
-    val toastDurationMs = _toastDurationMs.asStateFlow()
 
     private val _scannerTimeoutHours = MutableStateFlow(2) // Default 2 hours
     val scannerTimeoutHours = _scannerTimeoutHours.asStateFlow()
@@ -97,10 +94,6 @@ class SettingsViewModel {
         _analyticsEnabled.value = enabled
     }
 
-    fun setGlobalLoading(isLoading: Boolean) {
-        _isGlobalLoading.value = isLoading
-    }
-
     fun setMultiQrEnabled(enabled: Boolean) {
         _multiQrEnabled.value = enabled
     }
@@ -133,10 +126,6 @@ class SettingsViewModel {
         _enableBackgroundToasts.value = enabled
     }
 
-    fun setToastDurationMs(duration: Long) {
-        _toastDurationMs.value = duration
-    }
-
     fun setScannerTimeoutHours(hours: Int) {
         _scannerTimeoutHours.value = hours
     }
@@ -158,17 +147,13 @@ class SettingsViewModel {
         _isAdFree.value = adFree
     }
 
-    fun setDeveloperMode(enabled: Boolean) {
-        _isDeveloperMode.value = enabled
-    }
-
     fun setLegalAccepted(accepted: Boolean) {
         _legalAccepted.value = accepted
     }
 
     fun updateServerHistory(server: TrustedServer) {
         _serverHistory.update { history ->
-            val newList = history.filterNot { it.serverId == server.serverId }.toMutableList()
+            val newList = history.asSequence().filterNot { it.serverId == server.serverId }.toMutableList()
             newList.add(0, server)
             newList.sortedByDescending { it.lastConnectedTimestamp }.take(10)
         }

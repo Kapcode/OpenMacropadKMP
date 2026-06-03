@@ -3,6 +3,7 @@ package com.kapcode.open.macropad.kmps
 expect object DeviceInfo {
     val name: String
     val uniqueId: String
+    val rawUniqueId: String
     val hardwareMetadata: String
     val capabilities: List<String>
 }

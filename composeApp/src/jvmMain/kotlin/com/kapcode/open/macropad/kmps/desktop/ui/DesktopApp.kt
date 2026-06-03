@@ -1,6 +1,5 @@
 package com.kapcode.open.macropad.kmps.desktop.ui
 
-import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -41,6 +40,9 @@ import com.kapcode.open.macropad.kmps.desktop.ui.components.TooltipSettings
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.SettingsViewModel as DesktopSettingsViewModel
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel as SharedSettingsViewModel
 import com.kapcode.open.macropad.kmps.desktop.di.ViewModelFactory
+import com.kapcode.open.macropad.kmps.ui.components.KapAnimationManager
+import com.kapcode.open.macropad.kmps.ui.components.KapAnimationOverlay
+import com.kapcode.open.macropad.kmps.ui.components.LocalKapAnimationManager
 
 @Preview
 @Composable
@@ -114,19 +116,24 @@ fun DesktopApp(
     val tooltipYOffset by settingsViewModel.tooltipYOffset.collectAsState()
 
     val exitBehavior by settingsViewModel.exitBehavior.collectAsState()
+    
+    val animationManager = remember { KapAnimationManager() }
 
     AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
         CompositionLocalProvider(
-            LocalTooltipSettings provides TooltipSettings(xOffset = tooltipXOffset, yOffset = tooltipYOffset)
+            LocalTooltipSettings provides TooltipSettings(xOffset = tooltipXOffset, yOffset = tooltipYOffset),
+            LocalKapAnimationManager provides animationManager
         ) {
             Scaffold(
                 snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 modifier = Modifier.fillMaxSize()
             ) { paddingValues ->
-            Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
-                val rootVerticalSplitter = rememberSplitPaneState(
-                    initialPositionPercentage = layoutViewModel.getSplitterPosition("Root Layout", 0.0254f)
-                )
+            Box(modifier = Modifier.fillMaxSize()) {
+                Surface(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+                    val rootVerticalSplitter = rememberSplitPaneState(
+                        initialPositionPercentage = layoutViewModel.getSplitterPosition("Root Layout", 0.0254f)
+                    )
+                    // ... rest of surface content ...
                 val mainHorizontalSplitter = rememberSplitPaneState(
                     initialPositionPercentage = layoutViewModel.getSplitterPosition("Main Horizontal", 0.2965f)
                 )
@@ -233,6 +240,8 @@ fun DesktopApp(
                                                 history = connectionHistory,
                                                 trustedDevices = trustedDevices,
                                                 totalCurrencySpent = totalCurrencySpent,
+                                                currencySpentEvents = clientCommunicationViewModel.currencySpentEvents,
+                                                graceSkipEvents = clientCommunicationViewModel.graceSkipEvents,
                                                 onDisconnect = { desktopViewModel.disconnectClient(it) },
                                                 onUnpair = { desktopViewModel.unpairDevice(it) },
                                                 onBan = { desktopViewModel.banDevice(it.id, it.name) },
@@ -275,6 +284,8 @@ fun DesktopApp(
                         )
                     }
                 )
+            }
+            KapAnimationOverlay()
             }
         }
     }

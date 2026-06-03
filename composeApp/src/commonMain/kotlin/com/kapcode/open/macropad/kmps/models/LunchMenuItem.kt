@@ -6,5 +6,5 @@ import kotlinx.serialization.Serializable
 data class LunchMenuItem(
     val id: String,
     val name: String,
-    val price: Double
+    val price: Double,
 )
