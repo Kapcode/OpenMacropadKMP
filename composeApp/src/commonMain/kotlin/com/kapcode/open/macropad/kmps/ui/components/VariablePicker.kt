@@ -22,8 +22,8 @@ fun VariablePickerField(
     
     val systemVariables = mapOf(
         "Window" to listOf(
-            "current_window_name",
-            "last_window_name",
+            "current_app_name",
+            "last_app_name",
             "current_window_title",
             "last_window_title"
         ),

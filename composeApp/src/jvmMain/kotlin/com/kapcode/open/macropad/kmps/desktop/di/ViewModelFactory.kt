@@ -98,8 +98,8 @@ object ViewModelFactory {
                 }
             ).also { viewModel ->
                 macroManagerViewModelRef = viewModel
-                processWatcher.activeProcess.onEach { processName ->
-                    viewModel.onActiveProcessChanged(processName)
+                processWatcher.focusHistory.onEach { history ->
+                    viewModel.onActiveProcessChanged(history.firstOrNull())
                 }.launchIn(CoroutineScope(Dispatchers.Main))
             }
         }

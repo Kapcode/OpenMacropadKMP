@@ -46,8 +46,11 @@ fun MacroManagerScreen(
     val uiState by viewModel.uiState.collectAsState()
     
     val currentActiveProcess by viewModel.currentActiveProcess.collectAsState()
+    val currentActiveProcessName by viewModel.currentActiveProcessName.collectAsState()
     val macroBeingRenamed by viewModel.macroBeingRenamed.collectAsState()
     val packBeingEdited by viewModel.packBeingEdited.collectAsState()
+
+    val currentWindowTitle = viewModel.getSystemVariable("current_window_title") ?: ""
 
     val isDark = selectedTheme == "Dark Blue"
     val headerColor = if (isDark) Color.Black else Color.White
@@ -104,8 +107,32 @@ fun MacroManagerScreen(
             
             if (!isPacksCollapsed) {
                 items(macroPacks, key = { "pack_${it.pack.id}_${it.file?.absolutePath}" }) { packState ->
-                    val isLiveActive = packState.pack.targetProcess != null && 
-                                     packState.pack.targetProcess.equals(currentActiveProcess, ignoreCase = true)
+                    val isLiveActive = packState.pack.isActive && (
+                        if (packState.pack.autoSwitchGroups.isNotEmpty()) {
+                            packState.pack.autoSwitchGroups.any { group ->
+                                group.rules.isNotEmpty() && group.rules.all { rule ->
+                                    val targetValue = when (rule.target) {
+                                        com.kapcode.open.macropad.kmps.models.MatchTarget.PROCESS_NAME -> currentActiveProcessName ?: ""
+                                        com.kapcode.open.macropad.kmps.models.MatchTarget.APP_NAME -> currentActiveProcess ?: ""
+                                        com.kapcode.open.macropad.kmps.models.MatchTarget.WINDOW_TITLE -> currentWindowTitle
+                                    }
+                                    when (rule.operator) {
+                                        com.kapcode.open.macropad.kmps.models.MatchOperator.EQUALS -> targetValue.equals(rule.value, ignoreCase = true)
+                                        com.kapcode.open.macropad.kmps.models.MatchOperator.CONTAINS -> targetValue.contains(rule.value, ignoreCase = true)
+                                        com.kapcode.open.macropad.kmps.models.MatchOperator.STARTS_WITH -> targetValue.startsWith(rule.value, ignoreCase = true)
+                                        com.kapcode.open.macropad.kmps.models.MatchOperator.ENDS_WITH -> targetValue.endsWith(rule.value, ignoreCase = true)
+                                        com.kapcode.open.macropad.kmps.models.MatchOperator.REGEX -> try { Regex(rule.value, RegexOption.IGNORE_CASE).containsMatchIn(targetValue) } catch (e: Exception) { false }
+                                    }
+                                }
+                            }
+                        } else {
+                            (packState.pack.targetProcess != null && (
+                                packState.pack.targetProcess.equals(currentActiveProcessName, ignoreCase = true) || 
+                                packState.pack.targetProcess.equals(currentActiveProcess, ignoreCase = true)
+                            )) ||
+                            (packState.pack.targetWindowTitle != null && currentWindowTitle.contains(packState.pack.targetWindowTitle, ignoreCase = true))
+                        }
+                    )
                     
                     PackItem(
                         pack = packState.pack,
@@ -268,8 +295,15 @@ private fun PackItem(
         supportingContent = {
             Column {
                 Text("${pack.widgets.size} Widgets", maxLines = 1)
-                if (!pack.targetProcess.isNullOrBlank()) {
-                    Text("Auto-switching: ${pack.targetProcess}", style = MaterialTheme.typography.bodySmall)
+                if (pack.autoSwitchGroups.isNotEmpty()) {
+                    Text("Auto-switch (${pack.autoSwitchGroups.size} Scenarios)", style = MaterialTheme.typography.bodySmall)
+                } else {
+                    if (!pack.targetProcess.isNullOrBlank()) {
+                        Text("Auto-switch (Proc): ${pack.targetProcess}", style = MaterialTheme.typography.bodySmall)
+                    }
+                    if (!pack.targetWindowTitle.isNullOrBlank()) {
+                        Text("Auto-switch (Title): ${pack.targetWindowTitle}", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
                 AppTooltipArea(
                     tooltipText = if (isLiveActive) 

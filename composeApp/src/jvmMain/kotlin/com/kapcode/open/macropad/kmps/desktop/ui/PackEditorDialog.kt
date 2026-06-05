@@ -1,6 +1,5 @@
 package com.kapcode.open.macropad.kmps.desktop.ui
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +13,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
@@ -45,9 +45,29 @@ fun PackEditorDialog(
     var author by remember { mutableStateOf(pack.author) }
     var version by remember { mutableStateOf(pack.version) }
 
-    var targetProcess by remember { mutableStateOf(pack.targetProcess ?: "") }
-    var targetWindowTitle by remember { mutableStateOf(pack.targetWindowTitle ?: "") }
-    var switchMode by remember { mutableStateOf(if (pack.targetWindowTitle != null) "TITLE" else "PROCESS") }
+    var autoSwitchGroups by remember { mutableStateOf(
+        if (pack.autoSwitchGroups.isEmpty() && (pack.targetProcess != null || pack.targetWindowTitle != null)) {
+            // Migration
+            val rules = mutableListOf<com.kapcode.open.macropad.kmps.models.AutoSwitchRule>()
+            pack.targetProcess?.let {
+                rules.add(com.kapcode.open.macropad.kmps.models.AutoSwitchRule(
+                    com.kapcode.open.macropad.kmps.models.MatchTarget.PROCESS_NAME,
+                    com.kapcode.open.macropad.kmps.models.MatchOperator.EQUALS,
+                    it
+                ))
+            }
+            pack.targetWindowTitle?.let {
+                rules.add(com.kapcode.open.macropad.kmps.models.AutoSwitchRule(
+                    com.kapcode.open.macropad.kmps.models.MatchTarget.WINDOW_TITLE,
+                    com.kapcode.open.macropad.kmps.models.MatchOperator.CONTAINS,
+                    it
+                ))
+            }
+            listOf(com.kapcode.open.macropad.kmps.models.AutoSwitchGroup(rules))
+        } else {
+            pack.autoSwitchGroups
+        }
+    ) }
 
     var isActive by remember { mutableStateOf(pack.isActive) }
     var widgets by remember { mutableStateOf(pack.widgets) }
@@ -61,7 +81,7 @@ fun PackEditorDialog(
 
     DialogWindow(
         onCloseRequest = onDismissRequest,
-        state = rememberDialogState(width = 800.dp, height = 600.dp),
+        state = rememberDialogState(width = 1100.dp, height = 700.dp),
         title = "Edit Pack: $name"
     ) {
         Scaffold(
@@ -70,15 +90,14 @@ fun PackEditorDialog(
                     title = { Text("Pack Editor") },
                     actions = {
                         val currentPack = pack.copy(
-                            name = name,
-                            author = author,
-                            version = version,
-                            targetProcess = if (switchMode == "PROCESS" && targetProcess.isNotBlank()) targetProcess else null,
-                            targetWindowTitle = if (switchMode == "TITLE" && targetWindowTitle.isNotBlank()) targetWindowTitle else null,
-                            isActive = isActive,
-                            widgets = widgets,
-                            routines = routines
-                        )
+                        name = name,
+                        author = author,
+                        version = version,
+                        autoSwitchGroups = autoSwitchGroups,
+                        isActive = isActive,
+                        widgets = widgets,
+                        routines = routines
+                    )
                         TextButton(onClick = { onOpenInJsonEditor(currentPack) }) {
                             Text("Open in JSON Editor")
                         }
@@ -103,8 +122,7 @@ fun PackEditorDialog(
                                     name = name,
                                     author = author,
                                     version = version,
-                                    targetProcess = if (switchMode == "PROCESS" && targetProcess.isNotBlank()) targetProcess else null,
-                                    targetWindowTitle = if (switchMode == "TITLE" && targetWindowTitle.isNotBlank()) targetWindowTitle else null,
+                                    autoSwitchGroups = autoSwitchGroups,
                                     isActive = isActive,
                                     widgets = widgets,
                                     routines = routines
@@ -180,36 +198,122 @@ fun PackEditorDialog(
                     }
                     
                     if (isActive) {
-                        Text("Switch Trigger", style = MaterialTheme.typography.titleSmall)
+                        Text("Switch Triggers", style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            "The pack will activate if ANY scenario below matches. Within a scenario, ALL checked rules must match.",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.outline
+                        )
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = switchMode == "PROCESS", onClick = { switchMode = "PROCESS" })
-                            Text("By Process Name")
-                            Spacer(Modifier.width(16.dp))
-                            RadioButton(selected = switchMode == "TITLE", onClick = { switchMode = "TITLE" })
-                            Text("By Window Title")
+                        autoSwitchGroups.forEachIndexed { groupIndex, group ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Scenario ${groupIndex + 1}", style = MaterialTheme.typography.labelLarge)
+                                        Spacer(Modifier.weight(1f))
+                                        IconButton(onClick = {
+                                            autoSwitchGroups = autoSwitchGroups.filterIndexed { i, _ -> i != groupIndex }
+                                        }) {
+                                            Icon(Icons.Default.Delete, contentDescription = "Remove Scenario", modifier = Modifier.size(16.dp))
+                                        }
+                                    }
+
+                                    com.kapcode.open.macropad.kmps.models.MatchTarget.entries.forEach { target ->
+                                        val rule = group.rules.find { it.target == target }
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Checkbox(
+                                                checked = rule != null,
+                                                onCheckedChange = { checked ->
+                                                    val newRules = if (checked) {
+                                                        group.rules + com.kapcode.open.macropad.kmps.models.AutoSwitchRule(
+                                                            target,
+                                                            com.kapcode.open.macropad.kmps.models.MatchOperator.CONTAINS,
+                                                            ""
+                                                        )
+                                                    } else {
+                                                        group.rules.filter { it.target != target }
+                                                    }
+                                                    autoSwitchGroups = autoSwitchGroups.mapIndexed { i, g ->
+                                                        if (i == groupIndex) g.copy(rules = newRules) else g
+                                                    }
+                                                }
+                                            )
+                                            Text(target.name.replace("_", " "), style = MaterialTheme.typography.labelMedium, modifier = Modifier.width(100.dp))
+                                            
+                                            if (rule != null) {
+                                                var expanded by remember { mutableStateOf(false) }
+                                                Box {
+                                                    OutlinedButton(
+                                                        onClick = { expanded = true },
+                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                                        modifier = Modifier.width(120.dp)
+                                                    ) {
+                                                        Text(rule.operator.name, style = MaterialTheme.typography.labelSmall)
+                                                    }
+                                                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                                        com.kapcode.open.macropad.kmps.models.MatchOperator.entries.forEach { op ->
+                                                            DropdownMenuItem(
+                                                                text = { Text(op.name, style = MaterialTheme.typography.labelSmall) },
+                                                                onClick = {
+                                                                    val newRules = group.rules.map { if (it.target == target) it.copy(operator = op) else it }
+                                                                    autoSwitchGroups = autoSwitchGroups.mapIndexed { i, g ->
+                                                                        if (i == groupIndex) g.copy(rules = newRules) else g
+                                                                    }
+                                                                    expanded = false
+                                                                }
+                                                            )
+                                                        }
+                                                    }
+                                                }
+
+                                                OutlinedTextField(
+                                                    value = rule.value,
+                                                    onValueChange = { newValue ->
+                                                        val newRules = group.rules.map { if (it.target == target) it.copy(value = newValue) else it }
+                                                        autoSwitchGroups = autoSwitchGroups.mapIndexed { i, g ->
+                                                            if (i == groupIndex) g.copy(rules = newRules) else g
+                                                        }
+                                                    },
+                                                    modifier = Modifier.weight(1f),
+                                                    textStyle = MaterialTheme.typography.bodySmall,
+                                                    singleLine = true
+                                                )
+
+                                                AppTooltipArea(tooltipText = "Ignore Case") {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Text("Aa", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 4.dp))
+                                                        Switch(
+                                                            checked = rule.ignoreCase,
+                                                            onCheckedChange = { checked ->
+                                                                val newRules = group.rules.map { if (it.target == target) it.copy(ignoreCase = checked) else it }
+                                                                autoSwitchGroups = autoSwitchGroups.mapIndexed { i, g ->
+                                                                    if (i == groupIndex) g.copy(rules = newRules) else g
+                                                                }
+                                                            },
+                                                            modifier = Modifier.scale(0.7f)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
 
-                        if (switchMode == "PROCESS") {
-                            OutlinedTextField(
-                                value = targetProcess,
-                                onValueChange = { targetProcess = it },
-                                label = { Text("Process Name") },
-                                modifier = Modifier.fillMaxWidth().tabFocus(),
-                                placeholder = { Text("e.g. photoshop.exe") },
-                                keyboardOptions = commonKeyboardOptions,
-                                keyboardActions = commonKeyboardActions
-                            )
-                        } else {
-                            OutlinedTextField(
-                                value = targetWindowTitle,
-                                onValueChange = { targetWindowTitle = it },
-                                label = { Text("Window Title (Partial)") },
-                                modifier = Modifier.fillMaxWidth().tabFocus(),
-                                placeholder = { Text("e.g. Google Chrome") },
-                                keyboardOptions = commonKeyboardOptions,
-                                keyboardActions = commonKeyboardActions
-                            )
+                        Button(
+                            onClick = {
+                                autoSwitchGroups = autoSwitchGroups + com.kapcode.open.macropad.kmps.models.AutoSwitchGroup()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.filledTonalButtonColors()
+                        ) {
+                            Icon(Icons.Default.Add, contentDescription = null)
+                            Spacer(Modifier.width(8.dp))
+                            Text("Add Matching Scenario (OR)")
                         }
                     }
                 }

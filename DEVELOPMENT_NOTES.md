@@ -631,8 +631,19 @@ Automated macros could cause loss of system control if they ran too long or went
 
 ## 44. Window Context & State-Based Triggers
 
+### Challenge: Process Name vs App Name in Auto-Switching
+- **Problem**: Auto-switching was inconsistently identifying applications because it used a single "Name" field which varied by platform (sometimes process name, sometimes app title). Users also wanted to switch by window title, but the logic only checked process names.
+- **Solution**: 
+    - Added a dedicated `processName` field to `ActiveProcessInfo` to capture the executable name.
+    - Kept `name` for the friendly application name (e.g., Description on Windows, WM_CLASS on Linux).
+    - Updated `ProcessWatcher` to track both `current_process_name` and `last_process_name`.
+    - Enhanced `isActiveLive` logic in `MacroManagerViewModel` to match against both `targetProcess` (checked against both process name and app name) and `targetWindowTitle`.
+    - Added process name tracking to the Live Variable Inspector and Focus History UI.
+- **Impact**: More reliable auto-switching and better visibility for users when configuring packs.
+
 ### Challenge: Window Title Pattern Matching
 - **Problem**: Users needed to trigger actions based on specific window titles (e.g., a specific website) rather than just the application name.
+- **Solution**: Implemented partial string matching for `targetWindowTitle`. Updated `ViewModelFactory` to trigger pack switching on any focus change (including title changes), not just process changes.
 - **Solution**: 
     - **ActiveWindowTitleIs**: Added a new condition type to the AST that performs partial string matching (`contains`) on the current focused window's title.
     - **ProcessWatcher Extension**: Enhanced the JVM watcher to track `activeTitle` and `lastTitle` alongside process names.
@@ -793,3 +804,19 @@ Automated macros could cause loss of system control if they ran too long or went
 ### Cleanup and Standardization
 - **Unused Code Removal**: Deleted `ConnectionUIBridge.kt`, a legacy interface for network communication that was replaced by `MacroKtorServer`. This file also contained hardcoded placeholder credentials that were no longer needed.
 - **Version Bump**: Incremented version to `1.1.2` across `ProjectConfig.kt`, Android `build.gradle.kts`, and Desktop packaging configurations to reflect recent fixes and optimizations.
+
+## 63. Synchronized Window & Process Tracking
+
+### Challenge: Jumbled Live Variables and Race Conditions
+- **Problem**: When window focus changed, variables like `current_window_title`, `current_app_name`, and `current_process_name` would update at slightly different times. This led to "jumbled" states where a Macro Pack might see the new window title but the old process name, causing logic failures and UI flickering.
+- **Root Cause**: The `ProcessWatcher` was using multiple independent `MutableStateFlow`s. Each flow update triggered separate downstream collections, creating a race condition across the ViewModel and UI layers.
+
+### Solution: Unified Atomic State
+- **ProcessWatcherState**: Introduced a single `ProcessWatcherState` data class containing `active`, `last`, and `history`.
+- **Atomic Updates**: Refactored the polling loop to perform a single `_state.update { ... }` call per tick. This guarantees that all properties of the focused window are updated simultaneously.
+- **Derived StateFlows**: To maintain backward compatibility, individual flows (e.g., `activeTitle`) are now derived from the unified state using `.map { ... }.distinctUntilChanged().stateIn(...)`.
+- **Platform Optimizations**:
+    - **Linux**: Optimized `xprop` calls. Instead of multiple separate calls for PID, Class, and Name, the system now performs one call to get the active window ID and then a single batch call to retrieve all relevant properties.
+    - **Windows**: Refined the PowerShell script to be more robust, including null-checks for the foreground window handle and forced non-interactive execution to reduce overhead.
+- **ViewModel Sync**: Updated `MacroManagerViewModel.onActiveProcessChanged` to calculate both `oldActivePack` and `newActivePack` based on a consistent snapshot of the process info, preventing double-triggering or missed transitions during rapid window switching.
+

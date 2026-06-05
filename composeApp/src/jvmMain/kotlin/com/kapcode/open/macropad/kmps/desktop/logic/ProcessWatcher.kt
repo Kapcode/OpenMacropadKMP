@@ -1,30 +1,41 @@
 package com.kapcode.open.macropad.kmps.desktop.logic
 
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.*
 import com.kapcode.open.macropad.kmps.desktop.model.ActiveProcessInfo
 import java.io.BufferedReader
 import java.io.InputStreamReader
+
+data class ProcessWatcherState(
+    val active: ActiveProcessInfo? = null,
+    val last: ActiveProcessInfo? = null,
+    val history: List<ActiveProcessInfo> = emptyList()
+)
 
 open class ProcessWatcher(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
     private val getPollingRate: () -> Long = { 250L }
 ) {
-    private val _activeProcess = MutableStateFlow<String?>(null)
-    val activeProcess = _activeProcess.asStateFlow()
+    private val _state = MutableStateFlow(ProcessWatcherState())
+    val state = _state.asStateFlow()
 
-    private val _focusHistory = MutableStateFlow<List<ActiveProcessInfo>>(emptyList())
-    val focusHistory = _focusHistory.asStateFlow()
-
-    private val _lastProcess = MutableStateFlow<String?>(null)
-    val lastProcess = _lastProcess.asStateFlow()
-
-    private val _activeTitle = MutableStateFlow<String?>(null)
-    val activeTitle = _activeTitle.asStateFlow()
-
-    private val _lastTitle = MutableStateFlow<String?>(null)
-    val lastTitle = _lastTitle.asStateFlow()
+    // Public flows derived from unified state for backward compatibility
+    val activeProcess = _state.map { it.active?.name }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    val activeProcessName = _state.map { it.active?.processName }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    val activeTitle = _state.map { it.active?.windowTitle }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    
+    val lastProcess = _state.map { it.last?.name }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    val lastProcessName = _state.map { it.last?.processName }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    val lastTitle = _state.map { it.last?.windowTitle }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, null)
+    
+    val focusHistory = _state.map { it.history }.distinctUntilChanged()
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     private var watchJob: Job? = null
 
@@ -35,39 +46,36 @@ open class ProcessWatcher(
                 val startTime = System.currentTimeMillis()
                 val info = getActiveProcessInfo()
                 val elapsed = System.currentTimeMillis() - startTime
-                if (elapsed > 200) {
+                
+                if (elapsed > 300) {
                     println("ProcessWatcher: Warning! Polling took ${elapsed}ms (Shell overhead)")
                 }
 
-                if (info != null && (info.name != _activeProcess.value || info.windowTitle != _activeTitle.value)) {
-                    if (info.name != _activeProcess.value) {
-                        _lastProcess.value = _activeProcess.value
-                        _activeProcess.value = info.name
+                if (info != null) {
+                    val active = _state.value.active
+                    val isDifferent = info.id != active?.id || 
+                                     info.windowTitle != active.windowTitle ||
+                                     info.processName != active.processName
+
+                    if (isDifferent) {
+                        _state.update { prev ->
+                            val newHistory = prev.history.toMutableList()
+                            // Remove if already exists (to move to top)
+                            newHistory.removeAll { it.name == info.name && it.id == info.id && it.windowTitle == info.windowTitle }
+                            newHistory.add(0, info)
+                            if (newHistory.size > 20) newHistory.removeAt(newHistory.size - 1)
+
+                            prev.copy(
+                                active = info,
+                                last = if (info.id != prev.active?.id) prev.active else prev.last,
+                                history = newHistory
+                            )
+                        }
                     }
-                    
-                    if (info.windowTitle != _activeTitle.value) {
-                        _lastTitle.value = _activeTitle.value
-                        _activeTitle.value = info.windowTitle
-                    }
-                    
-                    updateHistory(info)
                 }
                 delay(getPollingRate())
             }
         }
-    }
-
-    private fun updateHistory(info: ActiveProcessInfo) {
-        val currentHistory = _focusHistory.value.toMutableList()
-        // Remove if already exists (to move to top)
-        currentHistory.removeAll { it.name == info.name && it.id == info.id }
-        // Add to top
-        currentHistory.add(0, info)
-        // Limit size
-        if (currentHistory.size > 20) {
-            currentHistory.removeAt(currentHistory.size - 1)
-        }
-        _focusHistory.value = currentHistory
     }
 
     open fun stopWatching() {
@@ -77,147 +85,134 @@ open class ProcessWatcher(
 
     open fun getActiveProcessInfo(): ActiveProcessInfo? {
         val os = System.getProperty("os.name").lowercase()
-        return when {
-            os.contains("win") -> getWindowsActiveProcessInfo()
-            os.contains("nix") || os.contains("nux") -> getLinuxActiveProcessInfo()
-            os.contains("mac") -> getMacActiveProcessInfo()
-            else -> null
+        val info = try {
+            when {
+                os.contains("win") -> getWindowsActiveProcessInfo()
+                os.contains("nix") || os.contains("nux") -> getLinuxActiveProcessInfo()
+                os.contains("mac") -> getMacActiveProcessInfo()
+                else -> null
+            }
+        } catch (e: Exception) {
+            println("ProcessWatcher: Error getting process info: ${e.message}")
+            null
         }
+        return info?.let { ProcessNormalizer.normalize(it) }
     }
 
     private fun getWindowsActiveProcessInfo(): ActiveProcessInfo? {
-        return try {
-            val script = """
-                Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name "Win32GetForegroundWindow" -Namespace Win32Functions -PassThru
-                ${'$'}hwnd = [Win32Functions.Win32GetForegroundWindow]::GetForegroundWindow()
+        val script = """
+            Add-Type -MemberDefinition '[DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();' -Name "Win32Functions" -Namespace Win32Functions -PassThru | Out-Null
+            ${'$'}hwnd = [Win32Functions.Win32Functions]::GetForegroundWindow()
+            if (${'$'}hwnd -ne 0) {
                 Get-Process | Where-Object { ${'$'}_.MainWindowHandle -eq ${'$'}hwnd } | ForEach-Object {
-                    "${'$'}(${'$'}_.ProcessName).exe[SEP]${'$'}(${'$'}_.Id)[SEP]${'$'}(${'$'}_.MainWindowHandle)[SEP]${'$'}(${'$'}_.CommandLine)[SEP]${'$'}(${'$'}_.MainWindowTitle)"
+                    "${'$'}(${'$'}_.Description)[SEP]${'$'}(${'$'}_.ProcessName).exe[SEP]${'$'}(${'$'}_.Id)[SEP]${'$'}(${'$'}_.MainWindowHandle)[SEP]${'$'}(${'$'}_.CommandLine)[SEP]${'$'}(${'$'}_.MainWindowTitle)"
                 }
-            """.trimIndent()
-            
-            val process = ProcessBuilder("powershell.exe", "-Command", script).start()
-            val reader = BufferedReader(InputStreamReader(process.inputStream))
-            val line = reader.readLine()?.trim()
-            if (line.isNullOrBlank()) null else {
-                val parts = line.split("[SEP]")
-                if (parts.size >= 5) {
-                    ActiveProcessInfo(
-                        name = parts[0],
-                        id = parts[2], // Window ID as primary ID
-                        pid = parts[1],
-                        windowId = parts[2],
-                        command = parts[3].ifBlank { "N/A" },
-                        windowTitle = parts[4].ifBlank { "N/A" }
-                    )
-                } else null
             }
-        } catch (e: Exception) {
-            null
+        """.trimIndent()
+        
+        val process = ProcessBuilder("powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script).start()
+        val reader = BufferedReader(InputStreamReader(process.inputStream))
+        val line = reader.readLine()?.trim()
+        
+        if (line.isNullOrBlank()) return null
+        
+        val parts = line.split("[SEP]")
+        if (parts.size >= 6) {
+            return ActiveProcessInfo(
+                name = parts[0].ifBlank { parts[1].removeSuffix(".exe") },
+                processName = parts[1],
+                id = parts[3], // Window Handle as ID
+                pid = parts[2],
+                windowId = parts[3],
+                command = parts[4].ifBlank { "N/A" },
+                windowTitle = parts[5].ifBlank { "N/A" }
+            )
         }
+        return null
     }
 
     private fun getLinuxActiveProcessInfo(): ActiveProcessInfo? {
-        return try {
-            // Use xprop for a more standard X11 approach to get the active window ID
-            val xpropProcess = ProcessBuilder("xprop", "-root", "_NET_ACTIVE_WINDOW").start()
-            val xpropOutput = BufferedReader(InputStreamReader(xpropProcess.inputStream)).readLine()?.trim()
-            val windowId = xpropOutput?.split(" ")?.lastOrNull()?.trim()
+        // Step 1: Get Active Window ID
+        val xpropActive = ProcessBuilder("xprop", "-root", "_NET_ACTIVE_WINDOW").start()
+        val activeLine = BufferedReader(InputStreamReader(xpropActive.inputStream)).readLine() ?: return null
+        val windowId = activeLine.split(" ").lastOrNull()?.trim() ?: return null
+        if (windowId == "0x0") return null
 
-            if (windowId != null && windowId != "0x0") {
-                val pidProcess = ProcessBuilder("xprop", "-id", windowId, "_NET_STARTUP_ID", "_NET_WM_PID").start()
-                val pidOutput = BufferedReader(InputStreamReader(pidProcess.inputStream)).readText()
-                val pid = pidOutput.lines().find { it.contains("_NET_WM_PID") }?.split("=")?.lastOrNull()?.trim() ?: ""
-                
-                val nameProcess = ProcessBuilder("ps", "-p", pid, "-o", "comm=").start()
-                val name = BufferedReader(InputStreamReader(nameProcess.inputStream)).readLine()?.trim() ?: "Unknown"
-                
-                val commandProcess = ProcessBuilder("ps", "-p", pid, "-o", "args=").start()
-                val command = BufferedReader(InputStreamReader(commandProcess.inputStream)).readLine()?.trim() ?: "N/A"
-                
-                val titleProcess = ProcessBuilder("xprop", "-id", windowId, "_NET_WM_NAME", "WM_NAME").start()
-                val titleOutput = BufferedReader(InputStreamReader(titleProcess.inputStream)).readText()
-                val title = titleOutput.lines().find { it.contains("_NET_WM_NAME") || it.contains("WM_NAME") }
-                    ?.split("=")?.lastOrNull()?.trim()?.removeSurrounding("\"") ?: "N/A"
-                
-                ActiveProcessInfo(
-                    name = name,
-                    id = windowId,
-                    pid = pid,
-                    windowId = windowId,
-                    command = command,
-                    windowTitle = title
-                )
-            } else null
-        } catch (e: Exception) {
-            // Fallback to xdotool if xprop fails or windowId is 0x0
+        // Step 2: Get all properties in one go
+        val xpropProps = ProcessBuilder("xprop", "-id", windowId, "_NET_WM_PID", "WM_CLASS", "_NET_WM_NAME", "WM_NAME").start()
+        val propsOutput = BufferedReader(InputStreamReader(xpropProps.inputStream)).readText()
+        
+        val lines = propsOutput.lines()
+        val pid = lines.find { it.contains("_NET_WM_PID") }?.split("=")?.lastOrNull()?.trim() ?: ""
+        
+        val wmClassLine = lines.find { it.contains("WM_CLASS") }
+        val name = wmClassLine?.split(",")?.lastOrNull()?.trim()?.removeSurrounding("\"") ?: "Unknown"
+        
+        val title = lines.find { it.contains("_NET_WM_NAME") || it.contains("WM_NAME") }
+            ?.split("=")?.lastOrNull()?.trim()?.removeSurrounding("\"") ?: "N/A"
+
+        // Step 3: Get process name from PID
+        var processName = "Unknown"
+        var command = "N/A"
+        if (pid.isNotEmpty()) {
             try {
-                val windowIdProcess = ProcessBuilder("xdotool", "getactivewindow").start()
-                val windowId = BufferedReader(InputStreamReader(windowIdProcess.inputStream)).readLine()?.trim()
-                if (windowId != null) {
-                    val pidProcess = ProcessBuilder("xdotool", "getwindowpid", windowId).start()
-                    val pid = BufferedReader(InputStreamReader(pidProcess.inputStream)).readLine()?.trim() ?: ""
-                    
-                    val nameProcess = ProcessBuilder("ps", "-p", pid, "-o", "comm=").start()
-                    val name = BufferedReader(InputStreamReader(nameProcess.inputStream)).readLine()?.trim() ?: "Unknown"
-                    
-                    val titleProcess = ProcessBuilder("xdotool", "getwindowname", windowId).start()
-                    val title = BufferedReader(InputStreamReader(titleProcess.inputStream)).readLine()?.trim() ?: "N/A"
-                    
-                    ActiveProcessInfo(
-                        name = name,
-                        id = windowId,
-                        pid = pid,
-                        windowId = windowId,
-                        command = "N/A",
-                        windowTitle = title
-                    )
-                } else null
-            } catch (e2: Exception) {
-                null
-            }
+                processName = BufferedReader(InputStreamReader(ProcessBuilder("ps", "-p", pid, "-o", "comm=").start().inputStream)).readLine()?.trim() ?: "Unknown"
+                command = BufferedReader(InputStreamReader(ProcessBuilder("ps", "-p", pid, "-o", "args=").start().inputStream)).readLine()?.trim() ?: "N/A"
+            } catch (e: Exception) {}
         }
+
+        return ActiveProcessInfo(
+            name = name,
+            processName = processName,
+            id = windowId,
+            pid = pid,
+            windowId = windowId,
+            command = command,
+            windowTitle = title
+        )
     }
 
     private fun getMacActiveProcessInfo(): ActiveProcessInfo? {
-        return try {
-            // Using AppleScript to get the name and id of the frontmost application
-            val script = """
-                tell application "System Events"
-                    set frontProcess to first application process whose frontmost is true
-                    set procName to name of frontProcess
-                    set procId to id of frontProcess
-                    try
-                        set winTitle to name of window 1 of frontProcess
-                    on error
-                        set winTitle to "N/A"
-                    end try
-                    return procName & "[SEP]" & procId & "[SEP]" & winTitle
-                end tell
-            """.trimIndent()
-            val process = ProcessBuilder("osascript", "-e", script).start()
-            val line = BufferedReader(InputStreamReader(process.inputStream)).readLine()?.trim()
-            if (line != null) {
-                val parts = line.split("[SEP]")
-                if (parts.size >= 3) {
-                    val name = parts[0]
-                    val pid = parts[1]
-                    val title = parts[2]
-                    
-                    val commandProcess = ProcessBuilder("ps", "-p", pid, "-o", "command=").start()
-                    val command = BufferedReader(InputStreamReader(commandProcess.inputStream)).readLine()?.trim() ?: "N/A"
-                    
-                    ActiveProcessInfo(
-                        name = name,
-                        id = pid, // On Mac, PID is often used as identifier
-                        pid = pid,
-                        windowId = "N/A", // Mac window IDs are trickier to get via AppleScript directly in one go
-                        command = command,
-                        windowTitle = title
-                    )
-                } else null
-            } else null
-        } catch (e: Exception) {
-            null
+        val script = """
+            tell application "System Events"
+                set frontProcess to first application process whose frontmost is true
+                set procName to name of frontProcess
+                set procId to id of frontProcess
+                try
+                    set winTitle to name of window 1 of frontProcess
+                on error
+                    set winTitle to "N/A"
+                end try
+                return procName & "[SEP]" & procId & "[SEP]" & winTitle
+            end tell
+        """.trimIndent()
+        
+        val process = ProcessBuilder("osascript", "-e", script).start()
+        val line = BufferedReader(InputStreamReader(process.inputStream)).readLine()?.trim() ?: return null
+        
+        val parts = line.split("[SEP]")
+        if (parts.size >= 3) {
+            val name = parts[0]
+            val pid = parts[1]
+            val title = parts[2]
+            
+            var command = "N/A"
+            var processName = name
+            try {
+                command = BufferedReader(InputStreamReader(ProcessBuilder("ps", "-p", pid, "-o", "command=").start().inputStream)).readLine()?.trim() ?: "N/A"
+                processName = command.split("/").lastOrNull()?.split(" ")?.firstOrNull() ?: name
+            } catch (e: Exception) {}
+
+            return ActiveProcessInfo(
+                name = name,
+                processName = processName,
+                id = pid,
+                pid = pid,
+                windowId = "N/A",
+                command = command,
+                windowTitle = title
+            )
         }
+        return null
     }
 }

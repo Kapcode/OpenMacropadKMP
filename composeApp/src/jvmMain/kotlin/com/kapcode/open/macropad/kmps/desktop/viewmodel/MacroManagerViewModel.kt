@@ -21,6 +21,7 @@ data class MacroManagerState(
     val macroFiles: List<MacroFileState> = emptyList(),
     val macroPacks: List<MacroPackState> = emptyList(),
     val currentActiveProcess: String? = null,
+    val currentActiveProcessName: String? = null,
     val isMacroSelectionMode: Boolean = false,
     val isPackSelectionMode: Boolean = false,
     val selectedPackIds: Set<String> = emptySet(),
@@ -103,6 +104,9 @@ class MacroManagerViewModel(
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, false)
 
     val currentActiveProcess: StateFlow<String?> = _uiState.map { it.currentActiveProcess }
+        .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
+
+    val currentActiveProcessName: StateFlow<String?> = _uiState.map { it.currentActiveProcessName }
         .stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.Eagerly, null)
 
     val filePendingDeletion: StateFlow<File?> = _uiState.map { it.filePendingDeletion }
@@ -354,6 +358,8 @@ class MacroManagerViewModel(
         val value = when (name) {
             "current_window_name" -> _uiState.value.currentActiveProcess ?: ""
             "last_window_name" -> serverViewModel?.processWatcher?.lastProcess?.value ?: ""
+            "current_process_name" -> _uiState.value.currentActiveProcessName ?: ""
+            "last_process_name" -> serverViewModel?.processWatcher?.lastProcessName?.value ?: ""
             "current_window_title" -> serverViewModel?.processWatcher?.activeTitle?.value ?: ""
             "last_window_title" -> serverViewModel?.processWatcher?.lastTitle?.value ?: ""
             "mouse_x" -> try { java.awt.MouseInfo.getPointerInfo().location.x.toString() } catch(e: Exception) { "0" }
@@ -788,21 +794,68 @@ class MacroManagerViewModel(
         onMacrosUpdated()
     }
 
-    fun onActiveProcessChanged(processName: String?) {
-        val currentState = _uiState.value
-        val oldActivePack = currentState.macroPacks.find { it.pack.isActiveLive(currentState.currentActiveProcess) }
-        _uiState.update { it.copy(currentActiveProcess = processName) }
-        val newActivePack = _uiState.value.macroPacks.find { it.pack.isActiveLive(processName) }
+    fun onActiveProcessChanged(info: ActiveProcessInfo?) {
+        val oldActivePackId = _uiState.value.macroPacks.find { it.pack.isActiveLive(lastActiveInfo) }?.pack?.id
         
-        if (oldActivePack?.pack?.id != newActivePack?.pack?.id) {
-            handlePackSwitch(oldActivePack?.pack, newActivePack?.pack)
+        lastActiveInfo = info
+        
+        _uiState.update { it.copy(
+            currentActiveProcess = info?.name,
+            currentActiveProcessName = info?.processName
+        ) }
+        
+        val newActivePack = _uiState.value.macroPacks.find { it.pack.isActiveLive(info) }
+        
+        if (oldActivePackId != newActivePack?.pack?.id) {
+            val oldPack = _uiState.value.macroPacks.find { it.pack.id == oldActivePackId }?.pack
+            handlePackSwitch(oldPack, newActivePack?.pack)
         }
         
         evaluateStateTriggers()
     }
 
-    private fun MacroPack.isActiveLive(activeProcess: String?): Boolean {
-        return targetProcess != null && targetProcess.equals(activeProcess, ignoreCase = true)
+    private var lastActiveInfo: ActiveProcessInfo? = null
+
+
+    private fun MacroPack.isActiveLive(info: ActiveProcessInfo?): Boolean {
+        if (!isActive) return false
+        
+        // If we have new-style groups, use those
+        if (autoSwitchGroups.isNotEmpty()) {
+            return autoSwitchGroups.any { group ->
+                group.rules.isNotEmpty() && group.rules.all { rule -> evaluateRule(rule, info) }
+            }
+        }
+
+        // Fallback to legacy matching
+        val isProcessMatch = targetProcess != null && (
+            targetProcess.equals(info?.processName, ignoreCase = true) || 
+            targetProcess.equals(info?.name, ignoreCase = true)
+        )
+        val isTitleMatch = targetWindowTitle != null && info?.windowTitle?.contains(targetWindowTitle, ignoreCase = true) == true
+        
+        return isProcessMatch || isTitleMatch
+    }
+
+    private fun evaluateRule(rule: com.kapcode.open.macropad.kmps.models.AutoSwitchRule, info: ActiveProcessInfo?): Boolean {
+        if (info == null) return false
+        
+        val targetValue = when (rule.target) {
+            com.kapcode.open.macropad.kmps.models.MatchTarget.PROCESS_NAME -> info.processName
+            com.kapcode.open.macropad.kmps.models.MatchTarget.APP_NAME -> info.name
+            com.kapcode.open.macropad.kmps.models.MatchTarget.WINDOW_TITLE -> info.windowTitle
+        }
+
+        return when (rule.operator) {
+            com.kapcode.open.macropad.kmps.models.MatchOperator.EQUALS -> targetValue.equals(rule.value, ignoreCase = rule.ignoreCase)
+            com.kapcode.open.macropad.kmps.models.MatchOperator.CONTAINS -> targetValue.contains(rule.value, ignoreCase = rule.ignoreCase)
+            com.kapcode.open.macropad.kmps.models.MatchOperator.STARTS_WITH -> targetValue.startsWith(rule.value, ignoreCase = rule.ignoreCase)
+            com.kapcode.open.macropad.kmps.models.MatchOperator.ENDS_WITH -> targetValue.endsWith(rule.value, ignoreCase = rule.ignoreCase)
+            com.kapcode.open.macropad.kmps.models.MatchOperator.REGEX -> try {
+                val options = if (rule.ignoreCase) setOf(RegexOption.IGNORE_CASE) else emptySet()
+                Regex(rule.value, options).containsMatchIn(targetValue)
+            } catch (e: Exception) { false }
+        }
     }
 
     private fun handlePackSwitch(oldPack: MacroPack?, newPack: MacroPack?) {
@@ -810,8 +863,28 @@ class MacroManagerViewModel(
 
         val includeWindow = AppSettings.includeWindowNamesInToasts
         val message = when {
-            newPack != null -> "Activated Pack: ${newPack.name}${if (includeWindow) " (${newPack.targetProcess})" else ""}"
-            oldPack != null -> "Deactivated Pack: ${oldPack.name}${if (includeWindow) " (${oldPack.targetProcess})" else ""}"
+            newPack != null -> {
+                val detail = if (includeWindow) {
+                    val target = if (newPack.autoSwitchGroups.isNotEmpty()) {
+                        newPack.autoSwitchGroups.firstOrNull()?.rules?.firstOrNull()?.value ?: ""
+                    } else {
+                        newPack.targetProcess ?: newPack.targetWindowTitle ?: ""
+                    }
+                    if (target.isNotEmpty()) " ($target)" else ""
+                } else ""
+                "Activated Pack: ${newPack.name}$detail"
+            }
+            oldPack != null -> {
+                val detail = if (includeWindow) {
+                    val target = if (oldPack.autoSwitchGroups.isNotEmpty()) {
+                        oldPack.autoSwitchGroups.firstOrNull()?.rules?.firstOrNull()?.value ?: ""
+                    } else {
+                        oldPack.targetProcess ?: oldPack.targetWindowTitle ?: ""
+                    }
+                    if (target.isNotEmpty()) " ($target)" else ""
+                } else ""
+                "Deactivated Pack: ${oldPack.name}$detail"
+            }
             else -> return
         }
 

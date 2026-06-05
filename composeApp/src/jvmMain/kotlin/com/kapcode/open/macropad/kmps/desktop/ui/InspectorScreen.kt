@@ -103,8 +103,8 @@ fun InspectorScreen(
 @Composable
 private fun LiveVariablesSection(macroManagerViewModel: MacroManagerViewModel) {
     val groups = listOf(
-        "Current Window" to listOf("current_window_title", "current_window_name"),
-        "Previous Window" to listOf("last_window_title", "last_window_name"),
+        "Current Window" to listOf("current_window_title", "current_app_name", "current_process_name"),
+        "Previous Window" to listOf("last_window_title", "last_app_name", "last_process_name"),
         "Mouse & Screen" to listOf("mouse_x", "mouse_y", "pixel_color_at_cursor"),
         "System" to listOf("clipboard_text", "current_time_ms")
     )
@@ -181,6 +181,12 @@ private fun FocusHistoryItem(info: ActiveProcessInfo, onCopy: (String) -> Unit) 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(info.name, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                 IconButton(onClick = { onCopy(info.name) }, modifier = Modifier.size(24.dp)) {
+                    Icon(Icons.Default.ContentCopy, contentDescription = "Copy App Name", modifier = Modifier.size(14.dp))
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Process: ${info.processName}", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                IconButton(onClick = { onCopy(info.processName) }, modifier = Modifier.size(24.dp)) {
                     Icon(Icons.Default.ContentCopy, contentDescription = "Copy Process Name", modifier = Modifier.size(14.dp))
                 }
             }

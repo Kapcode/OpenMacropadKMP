@@ -2,6 +2,7 @@ package com.kapcode.open.macropad.kmps.desktop.model
 
 data class ActiveProcessInfo(
     val name: String,
+    val processName: String,
     val id: String, // Typically Window ID or PID as string
     val pid: String,
     val windowId: String,

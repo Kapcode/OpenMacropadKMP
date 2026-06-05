@@ -28,13 +28,33 @@ data class GridWidget(
 )
 
 @Serializable
+enum class MatchTarget { PROCESS_NAME, APP_NAME, WINDOW_TITLE }
+
+@Serializable
+enum class MatchOperator { EQUALS, CONTAINS, STARTS_WITH, ENDS_WITH, REGEX }
+
+@Serializable
+data class AutoSwitchRule(
+    val target: MatchTarget,
+    val operator: MatchOperator,
+    val value: String,
+    val ignoreCase: Boolean = true
+)
+
+@Serializable
+data class AutoSwitchGroup(
+    val rules: List<AutoSwitchRule> = emptyList()
+)
+
+@Serializable
 data class MacroPack(
     val id: String,
     val name: String,
     val author: String,
     val version: String,
-    val targetProcess: String? = null, // e.g., "photoshop.exe"
-    val targetWindowTitle: String? = null, // e.g., "Google Chrome"
+    val targetProcess: String? = null, // Deprecated: use autoSwitchGroups
+    val targetWindowTitle: String? = null, // Deprecated: use autoSwitchGroups
+    val autoSwitchGroups: List<AutoSwitchGroup> = emptyList(),
     val isActive: Boolean = true,
     val widgets: List<GridWidget> = emptyList(),
     val routines: List<AutomationRoutine> = emptyList(),
