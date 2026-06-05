@@ -787,3 +787,9 @@ Automated macros could cause loss of system control if they ran too long or went
 - **Solution**: 
     - Refactored `PairingViewModel` to accept a `backgroundDispatcher` via its constructor (defaulting to `Dispatchers.Default`).
     - Updated tests to inject the `testDispatcher`, ensuring all background work runs on the controlled test environment.
+
+## 62. Release v1.1.2 Preparation
+
+### Cleanup and Standardization
+- **Unused Code Removal**: Deleted `ConnectionUIBridge.kt`, a legacy interface for network communication that was replaced by `MacroKtorServer`. This file also contained hardcoded placeholder credentials that were no longer needed.
+- **Version Bump**: Incremented version to `1.1.2` across `ProjectConfig.kt`, Android `build.gradle.kts`, and Desktop packaging configurations to reflect recent fixes and optimizations.

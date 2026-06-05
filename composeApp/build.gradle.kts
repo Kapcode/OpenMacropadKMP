@@ -117,8 +117,8 @@ android {
         applicationId = "com.kapcode.open.macropad.kmp"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 6
-        versionName = "1.1.1"
+        versionCode = 7
+        versionName = "1.1.2"
     }
     packaging {
         resources {
@@ -189,7 +189,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "MacroKapServer"
-            packageVersion = "1.1.1"
+            packageVersion = "1.1.2"
         }
     }
 }
@@ -197,9 +197,9 @@ compose.desktop {
 
 tasks.register<Jar>("stripSignaturesFromUberJar") {
     dependsOn("packageUberJarForCurrentOS")
-    val uberJarPath = layout.buildDirectory.file("compose/jars/MacroKapServer-linux-x64-1.1.1.jar")
+    val uberJarPath = layout.buildDirectory.file("compose/jars/MacroKapServer-linux-x64-1.1.2.jar")
     
-    archiveFileName.set("MacroKapServer-linux-x64-1.1.1-unsigned.jar")
+    archiveFileName.set("MacroKapServer-linux-x64-1.1.2-unsigned.jar")
     destinationDirectory.set(layout.buildDirectory.dir("compose/jars"))
 
     from(zipTree(uberJarPath)) {
