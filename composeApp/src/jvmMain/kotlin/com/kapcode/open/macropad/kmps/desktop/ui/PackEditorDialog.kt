@@ -19,13 +19,16 @@ import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
+import com.kapcode.open.macropad.kmps.desktop.ui.AppDialog
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.MacroPack
 import com.kapcode.open.macropad.kmps.desktop.model.MacroFileState
 import com.kapcode.open.macropad.kmps.desktop.ui.components.AppTooltipArea
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.MacroManagerViewModel
+import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,7 +38,10 @@ fun PackEditorDialog(
     availableMacros: List<MacroFileState>,
     onDismissRequest: () -> Unit,
     onSave: (MacroPack) -> Unit,
-    onOpenInJsonEditor: (MacroPack) -> Unit
+    onOpenInJsonEditor: (MacroPack) -> Unit,
+    selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
+    icon: androidx.compose.ui.graphics.painter.Painter? = null
 ) {
     LaunchedEffect(Unit) {
         println("[PackEditor] Dialog launched for pack: ${pack.name} (${pack.id})")
@@ -79,10 +85,14 @@ fun PackEditorDialog(
     var routineToEdit by remember { mutableStateOf<com.kapcode.open.macropad.kmps.models.AutomationRoutine?>(null) }
     var showRoutineEditor by remember { mutableStateOf(false) }
 
-    DialogWindow(
+    AppDialog(
         onCloseRequest = onDismissRequest,
-        state = rememberDialogState(width = 1100.dp, height = 700.dp),
-        title = "Edit Pack: $name"
+        state = rememberWindowState(width = 1100.dp, height = 700.dp),
+        title = "Edit Pack: $name",
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel,
+        icon = icon,
+        resizable = true
     ) {
         Scaffold(
             topBar = {
@@ -411,39 +421,45 @@ fun PackEditorDialog(
                 }
             }
         }
+    }
 
-        if (showWidgetEditor) {
-            println("[PackEditor] Launching WidgetEditorDialog.")
-            WidgetEditorDialog(
-                initialWidget = widgetToEdit,
-                availableMacros = availableMacros,
-                onDismissRequest = { showWidgetEditor = false },
-                onSave = { newWidget ->
-                    widgets = if (widgetToEdit == null) {
-                        widgets + newWidget
-                    } else {
-                        widgets.map { if (it.id == newWidget.id) newWidget else it }
-                    }
-                    showWidgetEditor = false
+    if (showWidgetEditor) {
+        println("[PackEditor] Launching WidgetEditorDialog.")
+        WidgetEditorDialog(
+            initialWidget = widgetToEdit,
+            availableMacros = availableMacros,
+            onDismissRequest = { showWidgetEditor = false },
+            onSave = { newWidget ->
+                widgets = if (widgetToEdit == null) {
+                    widgets + newWidget
+                } else {
+                    widgets.map { if (it.id == newWidget.id) newWidget else it }
                 }
-            )
-        }
+                showWidgetEditor = false
+            },
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon
+        )
+    }
 
-        if (showRoutineEditor) {
-            println("[PackEditor] Launching RoutineEditorDialog.")
-            RoutineEditorDialog(
-                initialRoutine = routineToEdit,
-                macroManagerViewModel = macroManagerViewModel,
-                onDismissRequest = { showRoutineEditor = false },
-                onSave = { updatedRoutine ->
-                    routines = if (routineToEdit == null) {
-                        routines + updatedRoutine
-                    } else {
-                        routines.map { if (it.id == updatedRoutine.id) updatedRoutine else it }
-                    }
-                    showRoutineEditor = false
+    if (showRoutineEditor) {
+        println("[PackEditor] Launching RoutineEditorDialog.")
+        RoutineEditorDialog(
+            initialRoutine = routineToEdit,
+            macroManagerViewModel = macroManagerViewModel,
+            onDismissRequest = { showRoutineEditor = false },
+            onSave = { updatedRoutine ->
+                routines = if (routineToEdit == null) {
+                    routines + updatedRoutine
+                } else {
+                    routines.map { if (it.id == updatedRoutine.id) updatedRoutine else it }
                 }
-            )
-        }
+                showRoutineEditor = false
+            },
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon
+        )
     }
 }

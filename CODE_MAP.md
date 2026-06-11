@@ -30,6 +30,7 @@ This document serves as a guide for AI assistants to navigate the project effect
             - `model/`: Desktop-specific state models (MacroModels, ClientInfo, ActiveProcessInfo, MacroFileState, EditorTabState, LogLevel).
             - `ui/`: Desktop-specific Compose screens, themes, and specialized components.
                 * `MacroManagerScreen.kt`: Collapsible `SectionHeader`s, independent search, and tiled item backgrounds.
+                * `components/RedrawFix.kt`: Aggressive GPU buffer refresh logic (1-pixel resize trick) to resolve window "smearing" and transparency glitches.
                 * `pairing/`: UI for physical consent pairing and QR code display.
                 * `settings/`: Desktop-specific settings dialogs.
             - `viewmodel/`: Desktop ViewModels for state management (MacroManagerViewModel, ServerViewModel, ConsoleViewModel, MacroEditorViewModel, PairingViewModel, etc.).

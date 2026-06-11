@@ -30,7 +30,7 @@ class ServerViewModel(
 ) {
     var triggerListener: com.kapcode.open.macropad.kmps.desktop.logic.TriggerListener? = null
     var controllerManager: com.kapcode.open.macropad.kmps.desktop.logic.ControllerManager? = null
-    private val viewModelScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope = CoroutineScope(Dispatchers.IO)
     
     private val _isServerRunning = MutableStateFlow(false)
     val isServerRunning = _isServerRunning.asStateFlow()

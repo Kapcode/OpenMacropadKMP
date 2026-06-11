@@ -11,9 +11,9 @@ import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowState
 import androidx.compose.ui.window.rememberWindowState
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
-import kotlinx.coroutines.delay
 import com.kapcode.open.macropad.kmps.desktop.model.LogLevel
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
+import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
 
 /**
  * A reusable wrapper for all JVM Windows/Dialogs in the application.
@@ -30,6 +30,7 @@ fun AppDialog(
     closeOnMinimize: Boolean = true,
     consoleViewModel: ConsoleViewModel? = null,
     icon: Painter? = null,
+    redrawTrigger: Any? = Unit,
     content: @Composable () -> Unit
 ) {
     Window(
@@ -42,25 +43,7 @@ fun AppDialog(
         icon = icon
     ) {
         // Force focus and repaint on init to avoid "glitched" non-responsive states.
-        // In VM environments, we perform an aggressive sequence to ensure the Skia surface renders.
-        LaunchedEffect(Unit) {
-            repeat(10) { stage ->
-                window.toFront()
-                window.requestFocus()
-                window.revalidate()
-                window.repaint()
-                
-                // On several stages, perform a tiny move to trigger window manager refresh
-                if (stage % 3 == 2) {
-                    val pos = window.location
-                    window.setLocation(pos.x + 1, pos.y)
-                    delay(5)
-                    window.setLocation(pos.x, pos.y)
-                }
-
-                delay(if (stage == 0) 20 else 100)
-            }
-        }
+        RedrawFix(trigger = redrawTrigger)
 
         LaunchedEffect(state.isMinimized) {
             if (state.isMinimized && closeOnMinimize) {

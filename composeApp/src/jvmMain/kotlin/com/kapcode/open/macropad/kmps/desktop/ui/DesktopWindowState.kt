@@ -16,19 +16,16 @@ import java.awt.MouseInfo
 
 class DesktopWindowState(
     val windowState: WindowState,
-    private val scope: CoroutineScope,
+    scope: CoroutineScope,
     private val settingsViewModel: SettingsViewModel,
     private val layoutViewModel: LayoutViewModel,
     private val onTrayMinimize: () -> Unit = {}
 ) {
     var isWindowVisible by mutableStateOf(true)
         private set
-    var isTransitioning by mutableStateOf(false)
-        private set
-    private var animationJob: Job? = null
 
     // Track the user's intended placement (Maximized or Floating) 
-    // to ensure we restore correctly after an animation or hide/show.
+    // to ensure we restore correctly after hide/show.
     private var preferredPlacement by mutableStateOf(WindowPlacement.Maximized)
 
     // Centralized dialog visibility states
@@ -56,8 +53,7 @@ class DesktopWindowState(
         scope.launch {
             snapshotFlow { windowState.placement }
                 .collect { placement ->
-                    // Only update preferred placement if we're not currently in an animation transition
-                    if (!isTransitioning && (placement == WindowPlacement.Maximized || placement == WindowPlacement.Floating)) {
+                    if (placement == WindowPlacement.Maximized || placement == WindowPlacement.Floating) {
                         preferredPlacement = placement
                     }
                 }
@@ -157,7 +153,7 @@ class DesktopWindowState(
 
         println("Target bounds for placement: $targetBounds")
 
-        windowState.placement = WindowPlacement.Floating
+        windowState.placement = WindowPlacement.Maximized
         windowState.position = WindowPosition(targetBounds.x.dp, targetBounds.y.dp)
         windowState.size = DpSize(1200.dp, 800.dp)
     }
@@ -217,14 +213,14 @@ class DesktopWindowState(
     }
 
     fun toggleWindow() {
-        // If the window is hidden, or minimized, or we're not currently the active application
-        // then show and bring to front.
+        // If the window is hidden, or minimized, then show and bring to front.
         if (!isWindowVisible || windowState.isMinimized) {
             showWindow()
         } else {
             // Check if our window is actually the active one in the OS
             val isActive = java.awt.Window.getWindows().any { 
-                (it as? java.awt.Frame)?.title == "MacroKap (Compose)" && (it.isFocused || it.isActive)
+                val title = (it as? java.awt.Frame)?.title ?: (it as? java.awt.Dialog)?.title ?: ""
+                title == "MacroKap (Server)" && (it.isFocused || it.isActive)
             }
             if (!isActive) {
                 showWindow() // Bring to front if not active
@@ -236,139 +232,14 @@ class DesktopWindowState(
 
     fun animateToTray() {
         if (!isWindowVisible) return
-        
         onTrayMinimize()
-        if (!settingsViewModel.animateToTray.value) {
-            isWindowVisible = false
-            return
-        }
-
-        if (isTransitioning) {
-            // If already transitioning, don't start a new animation unless it's a reversal (handled in showWindow)
-            return
-        }
-            
-        animationJob = scope.launch {
-            isTransitioning = true
-            val initialPlacement = preferredPlacement
-            val initialSize = windowState.size
-            val initialPosition = windowState.position
-            
-            try {
-                if (windowState.placement == WindowPlacement.Maximized) {
-                    windowState.placement = WindowPlacement.Floating
-                    delay(100)
-                }
-
-                val startSize = windowState.size
-                val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
-                
-                val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-                val targetSize = DpSize(200.dp, 100.dp)
-                val targetX = (screen.width - 250).dp
-                val targetY = (screen.height - 150).dp
-
-                val steps = 20
-                for (i in 1..steps) {
-                    val t = i.toFloat() / steps
-                    val eased = t * t 
-                    
-                    windowState.size = DpSize(
-                        startSize.width + (targetSize.width - startSize.width) * eased,
-                        startSize.height + (targetSize.height - startSize.height) * eased
-                    )
-                    
-                    windowState.position = WindowPosition(
-                        startPos.x + (targetX - startPos.x) * eased,
-                        startPos.y + (targetY - startPos.y) * eased
-                    )
-                    delay(16)
-                }
-                
-                isWindowVisible = false
-                delay(50)
-            } catch (e: CancellationException) {
-                // Animation interrupted, will be handled by the new animation job
-                throw e
-            } finally {
-                withContext(NonCancellable) {
-                    // Restore state so it's correct when we next "Show"
-                    windowState.placement = initialPlacement
-                    windowState.size = initialSize
-                    windowState.position = initialPosition
-                    isTransitioning = false
-                    animationJob = null
-                }
-            }
-        }
+        isWindowVisible = false
     }
 
     fun showWindow() {
-        val prevJob = animationJob
-        animationJob = scope.launch {
-            // Cancel and wait for previous animation to clean up its state
-            prevJob?.cancelAndJoin()
-            
-            if (!settingsViewModel.animateToTray.value) {
-                isWindowVisible = true
-                windowState.isMinimized = false
-                windowState.placement = preferredPlacement
-                isTransitioning = false
-                return@launch
-            }
-
-            try {
-                isTransitioning = true
-                val targetPlacement = preferredPlacement
-                val targetSize = windowState.size
-                val targetPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
-
-                val screen = GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds
-                val traySize = DpSize(200.dp, 100.dp)
-                val trayX = (screen.width - 250).dp
-                val trayY = (screen.height - 150).dp
-
-                if (!isWindowVisible) {
-                    windowState.placement = WindowPlacement.Floating
-                    windowState.size = traySize
-                    windowState.position = WindowPosition(trayX, trayY)
-                    isWindowVisible = true
-                }
-                
-                windowState.isMinimized = false
-
-                val startSize = windowState.size
-                val startPos = (windowState.position as? WindowPosition.Absolute) ?: WindowPosition(0.dp, 0.dp)
-
-                val steps = 20
-                for (i in 1..steps) {
-                    val t = i.toFloat() / steps
-                    val eased = 1f - (1f - t) * (1f - t)
-                    
-                    windowState.size = DpSize(
-                        startSize.width + (targetSize.width - startSize.width) * eased,
-                        startSize.height + (targetSize.height - startSize.height) * eased
-                    )
-                    
-                    windowState.position = WindowPosition(
-                        startPos.x + (targetPos.x - startPos.x) * eased,
-                        startPos.y + (targetPos.y - startPos.y) * eased
-                    )
-                    delay(16)
-                }
-                
-                windowState.placement = targetPlacement
-            } catch (e: CancellationException) {
-                throw e
-            } finally {
-                withContext(NonCancellable) {
-                    isWindowVisible = true
-                    windowState.isMinimized = false
-                    isTransitioning = false
-                    // If we were cancelled, we don't null animationJob because the new job just set it
-                }
-            }
-        }
+        isWindowVisible = true
+        windowState.isMinimized = false
+        windowState.placement = preferredPlacement
     }
 }
 

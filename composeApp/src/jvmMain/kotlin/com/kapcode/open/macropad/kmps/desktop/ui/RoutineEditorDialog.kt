@@ -7,20 +7,26 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.DialogWindow
-import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
+import com.kapcode.open.macropad.kmps.desktop.ui.AppDialog
 import com.kapcode.open.macropad.kmps.models.*
 import com.kapcode.open.macropad.kmps.ui.components.VisualRoutineBuilder
 import com.kapcode.open.macropad.kmps.desktop.logic.KeyParser
+import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
+import com.kapcode.open.macropad.kmps.desktop.viewmodel.MacroManagerViewModel
 import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RoutineEditorDialog(
     initialRoutine: AutomationRoutine?,
-    macroManagerViewModel: com.kapcode.open.macropad.kmps.desktop.viewmodel.MacroManagerViewModel,
+    macroManagerViewModel: MacroManagerViewModel,
     onDismissRequest: () -> Unit,
-    onSave: (AutomationRoutine) -> Unit
+    onSave: (AutomationRoutine) -> Unit,
+    selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
+    icon: androidx.compose.ui.graphics.painter.Painter? = null
 ) {
     var routine by remember { 
         mutableStateOf(initialRoutine ?: AutomationRoutine(
@@ -30,10 +36,14 @@ fun RoutineEditorDialog(
         )) 
     }
 
-    DialogWindow(
+    AppDialog(
         onCloseRequest = onDismissRequest,
-        state = rememberDialogState(width = 600.dp, height = 700.dp),
-        title = if (initialRoutine == null) "New Routine" else "Edit Routine: ${routine.name}"
+        state = rememberWindowState(width = 600.dp, height = 700.dp),
+        title = if (initialRoutine == null) "New Routine" else "Edit Routine: ${routine.name}",
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel,
+        icon = icon,
+        resizable = true
     ) {
         Scaffold(
             topBar = {

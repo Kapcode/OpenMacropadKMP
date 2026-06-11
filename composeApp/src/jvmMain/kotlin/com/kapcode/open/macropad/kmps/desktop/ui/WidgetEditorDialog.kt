@@ -15,6 +15,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindow
 import androidx.compose.ui.window.rememberDialogState
+import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
+import com.kapcode.open.macropad.kmps.desktop.ui.AppDialog
+import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
 import com.kapcode.open.macropad.kmps.models.GridWidget
 import com.kapcode.open.macropad.kmps.models.WidgetType
 import com.kapcode.open.macropad.kmps.desktop.model.MacroFileState
@@ -26,22 +30,28 @@ fun WidgetEditorDialog(
     initialWidget: GridWidget?,
     availableMacros: List<MacroFileState>,
     onDismissRequest: () -> Unit,
-    onSave: (GridWidget) -> Unit
+    onSave: (GridWidget) -> Unit,
+    selectedTheme: String,
+    consoleViewModel: ConsoleViewModel,
+    icon: androidx.compose.ui.graphics.painter.Painter? = null
 ) {
     var macroId by remember { mutableStateOf(initialWidget?.macroId ?: "") }
     var label by remember { mutableStateOf(initialWidget?.label ?: "") }
     var color by remember { mutableStateOf(initialWidget?.color ?: 0xFFBB86FC) }
-    var icon by remember { mutableStateOf(initialWidget?.icon ?: "") }
+    var iconName by remember { mutableStateOf(initialWidget?.icon ?: "") }
     var row by remember { mutableStateOf(initialWidget?.row ?: 0) }
     var col by remember { mutableStateOf(initialWidget?.col ?: 0) }
     var type by remember { mutableStateOf(initialWidget?.type ?: WidgetType.BUTTON) }
 
     var showMacroPicker by remember { mutableStateOf(false) }
 
-    DialogWindow(
+    AppDialog(
         onCloseRequest = onDismissRequest,
-        state = rememberDialogState(width = 500.dp, height = 700.dp),
-        title = if (initialWidget == null) "Add Widget" else "Edit Widget"
+        state = rememberWindowState(width = 500.dp, height = 700.dp),
+        title = if (initialWidget == null) "Add Widget" else "Edit Widget",
+        selectedTheme = selectedTheme,
+        consoleViewModel = consoleViewModel,
+        icon = icon
     ) {
         Scaffold(
             topBar = {
@@ -69,7 +79,7 @@ fun WidgetEditorDialog(
                                     macroId = macroId,
                                     label = label,
                                     color = color,
-                                    icon = if (icon.isBlank()) null else icon,
+                                    icon = if (iconName.isBlank()) null else iconName,
                                     row = row,
                                     col = col,
                                     type = type
@@ -155,26 +165,29 @@ fun WidgetEditorDialog(
                 }
             }
         }
+    }
 
-        if (showMacroPicker) {
-            DialogWindow(
-                onCloseRequest = { showMacroPicker = false },
-                title = "Select Macro",
-                state = rememberDialogState(width = 400.dp, height = 500.dp)
-            ) {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    LazyColumn {
-                        items(availableMacros) { macro ->
-                            ListItem(
-                                headlineContent = { Text(macro.name) },
-                                modifier = Modifier.clickable {
-                                    macroId = macro.id
-                                    if (label.isBlank()) label = macro.name
-                                    showMacroPicker = false
-                                }
-                            )
-                            HorizontalDivider()
-                        }
+    if (showMacroPicker) {
+        AppDialog(
+            onCloseRequest = { showMacroPicker = false },
+            title = "Select Macro",
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon,
+            state = rememberWindowState(width = 400.dp, height = 500.dp)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                LazyColumn {
+                    items(availableMacros) { macro ->
+                        ListItem(
+                            headlineContent = { Text(macro.name) },
+                            modifier = Modifier.clickable {
+                                macroId = macro.id
+                                if (label.isBlank()) label = macro.name
+                                showMacroPicker = false
+                            }
+                        )
+                        HorizontalDivider()
                     }
                 }
             }

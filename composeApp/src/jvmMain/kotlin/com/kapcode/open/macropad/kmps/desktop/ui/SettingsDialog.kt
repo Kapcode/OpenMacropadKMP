@@ -132,7 +132,14 @@ fun SettingsDialog(
                     serverViewModel
                 ) { securitySectionOffset = it }
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-                ResetSettingsSection(settingsViewModel, macroManagerViewModel, clientCommunicationViewModel)
+                ResetSettingsSection(
+                    settingsViewModel, 
+                    macroManagerViewModel, 
+                    clientCommunicationViewModel,
+                    selectedTheme = selectedTheme,
+                    consoleViewModel = consoleViewModel,
+                    icon = icon
+                )
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 DeviceManagement(trustedDevices, bannedDevices, clientCommunicationViewModel)
 

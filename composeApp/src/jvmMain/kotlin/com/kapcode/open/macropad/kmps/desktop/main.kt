@@ -26,6 +26,8 @@ import com.kapcode.open.macropad.kmps.desktop.ui.DesktopApp
 import com.kapcode.open.macropad.kmps.desktop.ui.DesktopWindowState
 import com.kapcode.open.macropad.kmps.desktop.ui.MarketplaceScreen
 import com.kapcode.open.macropad.kmps.desktop.ui.rememberDesktopWindowState
+import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
+import com.kapcode.open.macropad.kmps.desktop.ui.AppDialog
 import javax.swing.UIManager
 
 object AppConfig {
@@ -202,12 +204,8 @@ fun main(args: Array<String>) {
         icon = icon
     ) {
         // Force repaint for transparent windows in VM environments
-        LaunchedEffect(activeToast != null) {
-            if (activeToast != null) {
-                window.revalidate()
-                window.repaint()
-            }
-        }
+        // Re-run whenever a new toast appears
+        RedrawFix(trigger = activeToast, stages = 5, stageDelay = 200)
 
         AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
             Surface(
@@ -451,34 +449,53 @@ fun main(args: Array<String>) {
     }
 
     triggerPendingConfirmation?.let { trigger ->
-        AlertDialog(
-            onDismissRequest = { macroManagerViewModel.cancelTrigger() },
-            title = { Text("Confirm Trigger") },
-            text = {
+        AppDialog(
+            onCloseRequest = { macroManagerViewModel.cancelTrigger() },
+            title = "Confirm Trigger",
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel,
+            icon = icon,
+            alwaysOnTop = true,
+            state = rememberWindowState(width = 450.dp, height = 300.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("The following macro was triggered:", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                
                 Column {
-                    Text("The following macro was triggered:")
-                    Text(
-                        trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("Trigger Keys: ${trigger.keyCodes}")
-                    Text("Do you want to execute it?")
+                    Text("Trigger Keys: ${trigger.keyCodes}", style = MaterialTheme.typography.bodyMedium)
+                    Text("Do you want to execute it?", style = MaterialTheme.typography.bodyMedium)
                 }
-            },
-            confirmButton = {
-                Button(onClick = { macroManagerViewModel.confirmTrigger() }) {
-                    Text("Execute")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { macroManagerViewModel.cancelTrigger() }) {
-                    Text("Cancel")
+
+                Spacer(Modifier.weight(1f))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { macroManagerViewModel.cancelTrigger() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("CANCEL")
+                    }
+                    Button(
+                        onClick = { macroManagerViewModel.confirmTrigger() },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("EXECUTE")
+                    }
                 }
             }
-        )
+        }
     }
 
 
@@ -498,36 +515,32 @@ fun main(args: Array<String>) {
         icon = icon
     ) {
         // Force window to front and request focus when shown to avoid "glitched" non-responsive states.
-        // In VM environments, we perform an aggressive "Double-Poke" sequence to ensure the Skia surface renders.
+        // We pass isWindowVisible as a trigger so it re-runs the fix every time the window is shown.
+        RedrawFix(trigger = desktopWindowState.isWindowVisible)
+        
         LaunchedEffect(desktopWindowState.isWindowVisible) {
             if (desktopWindowState.isWindowVisible) {
-                repeat(4) { stage ->
-                    window.toFront()
-                    window.requestFocus()
-                    window.revalidate()
-                    window.repaint()
-                    
-                    // On the second stage, "poke" the placement to trigger a layout re-calc at the OS level
-                    if (stage == 1) {
-                         delay(50)
-                         window.isVisible = false
-                         window.isVisible = true
-                    }
-                    
-                    delay(if (stage == 0) 50 else 150)
-                }
-
                 // Final placement stabilization
-                delay(100)
-                desktopWindowState.windowState.placement = WindowPlacement.Maximized
             }
         }
 
-        DesktopApp(
-            viewModels = viewModels,
-            desktopWindowState = desktopWindowState,
-            onExit = ::exitApplication
-        )
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = if (selectedTheme == "Dark Blue") Color(0xFF121212) else Color.White
+        ) {
+            AppTheme(useDarkTheme = selectedTheme == "Dark Blue") {
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    DesktopApp(
+                        viewModels = viewModels,
+                        desktopWindowState = desktopWindowState,
+                        onExit = ::exitApplication
+                    )
+                }
+            }
+        }
     }
 }
 }

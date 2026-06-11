@@ -28,7 +28,7 @@ class ClientCommunicationViewModel(
     lateinit var layoutViewModel: LayoutViewModel
     lateinit var marketplaceViewModel: MarketplaceViewModel
 
-    private val viewModelScope = CoroutineScope(Dispatchers.Main)
+    private val viewModelScope = CoroutineScope(Dispatchers.IO)
 
     private val _connectedDevices = MutableStateFlow<List<ClientInfo>>(emptyList())
     val connectedDevices = _connectedDevices.asStateFlow()

@@ -54,3 +54,6 @@ This document tracks identified bugs, security risks, and pending tasks.
 
 ### 13. Documentation Consistency
 - **Fixed**: Comprehensive audit and update of all `.md` files for correctness and cross-referencing.
+
+### 14. "Smeared UI" and UI-Blocked Network Sync
+- **Fixed**: Implemented `RedrawFix` (resize trick) and decoupled server ViewModels to `Dispatchers.IO` to ensure responsiveness even during rendering glitches.

@@ -47,7 +47,8 @@ The application supports two primary themes: **Dark Blue** (default) and **Light
 - **Macro Manager**: Collapsible `SectionHeader`s for "Packs" and "Macros" with tiled item backgrounds.
 - **Split Pane Feedback**: "Ghost Image" during dragging and dynamic transparency for handles (5% idle, 20% hover, 40% dragging).
 - **Exit Behavior**: Three strategies (**Ask**, **Tray**, **Exit**).
-- **Minimize Animation**: Quadratic Ease-In scaling and translation toward the system tray.
+- **Minimize Animation**: Animation disabled for maximum responsiveness and to prevent "stuck" states during rapid toggling.
+- **Rendering Recovery**: Uses `RedrawFix` (1-pixel resize/move sequence) to forcefully recover from "smeared" or transparent window states in Linux environments.
 
 ## 3. Accessibility & Usability
 

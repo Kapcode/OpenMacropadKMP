@@ -253,9 +253,10 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Context-Aware Logic**: 
         - The **Window [X]** button respects the `exitBehavior` setting (e.g., will minimize to tray if "TRAY" is selected).
         - **Manual "Exit" Buttons** (Tray Menu and UI Header) are treated as explicit shutdown requests. If behavior is "ASK", the dialog is shown; otherwise, the app exits immediately, bypassing the "TRAY" setting to ensure users can always fully quit the app without changing settings.
+    - **Reliable Taskbar Toggling**: Fixed an issue where "Show / Hide" from the tray would only show the window but not hide it. The logic now correctly identifies the "MacroKap (Server)" window title and its focused state to determine whether to hide or show.
     - **Shared Window State**: Resolved state desync by sharing a single `DesktopWindowState` instance between `main.kt` and `DesktopApp`. This ensures that tray animations and visibility toggles affect the actual application window consistently.
     - **Cleanup**: Fully removed the deprecated `MinimizeToTrayDialog` and consolidated settings into the `exitBehavior` property.
-    - **Smooth Transitions**: Maintained the quadratic ease-in animation that scales and moves the window toward the system tray area during minimize.
+    - **Smooth Transitions**: Animation is disabled by default for maximum performance and reliability in VM/Remote environments, though the underlying logic supports quadratic ease-in scaling if enabled.
     - **High-Quality Assets**: Uses a 512px icon to eliminate white fringing artifacts on dark system taskbars.
 
 ## 19. Comprehensive UI Theming & Accessibility
@@ -819,4 +820,13 @@ Automated macros could cause loss of system control if they ran too long or went
     - **Linux**: Optimized `xprop` calls. Instead of multiple separate calls for PID, Class, and Name, the system now performs one call to get the active window ID and then a single batch call to retrieve all relevant properties.
     - **Windows**: Refined the PowerShell script to be more robust, including null-checks for the foreground window handle and forced non-interactive execution to reduce overhead.
 - **ViewModel Sync**: Updated `MacroManagerViewModel.onActiveProcessChanged` to calculate both `oldActivePack` and `newActivePack` based on a consistent snapshot of the process info, preventing double-triggering or missed transitions during rapid window switching.
+
+## 64. Rendering Stability & Network Decoupling
+
+### Challenge: The "Smeared UI" and UI-Blocked Sync
+- **Problem**: In certain Linux/VM environments, the Desktop window would occasionally appear as a transparent, smeared frame. Worse, this state blocked the main UI thread, preventing the Ktor server from sending macro lists to connecting clients until the user clicked the window.
+- **Solution**:
+    - **RedrawFix (Force Refresh)**: Implemented an aggressive 15-stage redraw sequence in `RedrawFix.kt`. It uses a 1-pixel resize/move trick (`window.setSize(w + 1, h + 1)` then `setSize(w, h)`) to force the OS window manager to invalidate and update its GPU buffers.
+    - **Decoupled ViewModels**: Refactored `ServerViewModel` and `ClientCommunicationViewModel` to use **`Dispatchers.IO`** for their `viewModelScope`. This ensures that network communications and authentication logic continue to run even if the Main (UI) thread is temporarily stalled or glitched.
+    - **Window Init Polish**: Removed redundant `WindowPlacement.Maximized` calls during visibility changes in `main.kt` to prevent layout loops, and added an initial delay to the redraw sequence to ensure the window is fully mapped by the OS first.
 

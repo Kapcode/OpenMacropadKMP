@@ -72,7 +72,9 @@ fun MacroManagerScreen(
             availableMacros = macroFiles,
             onDismissRequest = { viewModel.onCancelPackEdit() },
             onSave = { updatedPack -> viewModel.onSavePack(updatedPack) },
-            onOpenInJsonEditor = { packToOpen -> viewModel.onOpenPackInJsonEditor(packToOpen) }
+            onOpenInJsonEditor = { packToOpen -> viewModel.onOpenPackInJsonEditor(packToOpen) },
+            selectedTheme = selectedTheme,
+            consoleViewModel = consoleViewModel
         )
     }
 
