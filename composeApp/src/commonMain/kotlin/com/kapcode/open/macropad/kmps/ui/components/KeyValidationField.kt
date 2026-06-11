@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.unit.dp
 
 /**
@@ -34,12 +35,34 @@ fun KeyValidationField(
             value = value,
             onValueChange = { 
                 onValueChange(it)
-                expanded = it.isNotEmpty() && suggestions.isNotEmpty()
+                // Trigger dropdown on space or comma for matches
+                val lastChar = it.lastOrNull()
+                if (lastChar == ' ' || lastChar == ',') {
+                    expanded = suggestions.isNotEmpty()
+                }
             },
             label = { Text(label) },
             placeholder = { Text(placeholder) },
             isError = isError,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onPreviewKeyEvent { event ->
+                    if (expanded && event.type == KeyEventType.KeyDown) {
+                        when (event.key) {
+                            Key.DirectionUp, Key.DirectionDown, Key.Tab, Key.Enter -> {
+                                // Allow navigation and selection
+                                false
+                            }
+                            else -> {
+                                // Auto-hide for other keys
+                                expanded = false
+                                false
+                            }
+                        }
+                    } else {
+                        false
+                    }
+                },
             colors = if (isError) {
                 OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = MaterialTheme.colorScheme.error,
