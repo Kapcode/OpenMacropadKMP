@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps
+package com.kapcode.`open`.macropad.kmps
 
 import android.content.Intent
 import android.os.Bundle
@@ -46,24 +46,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.network.ClientRepository
+import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
 import androidx.lifecycle.lifecycleScope
 import java.util.concurrent.atomic.AtomicBoolean
 import com.google.android.gms.ads.MobileAds
 import com.google.firebase.FirebaseApp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
-import com.kapcode.open.macropad.kmps.settings.SettingsScreen
-import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
-import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
-import com.kapcode.open.macropad.kmps.ui.components.LoadingIndicator
-import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.kapcode.`open`.macropad.kmps.*
 import kotlinx.coroutines.delay
 import com.kapcode.`open`.macropad.kmps.Res
 import com.kapcode.`open`.macropad.kmps.macropadIcon512
 import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 
-import com.kapcode.open.macropad.kmps.IdentityManager
 import android.view.KeyEvent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -71,8 +70,6 @@ import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.content.Context
 import androidx.camera.core.ExperimentalGetImage
-import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
-import com.kapcode.open.macropad.kmps.network.ClientRepository
 
 const val TAG = "MainActivity"
 
@@ -251,7 +248,7 @@ class MainActivity : ComponentActivity() {
                 contentAlignment = Alignment.BottomCenter
             ) {
                 Text(
-                    text = "Kapcode - Software Made Simple",
+                    text = stringResource(Res.string.kapcode_slogan),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color.White.copy(alpha = 0.5f)
                 )

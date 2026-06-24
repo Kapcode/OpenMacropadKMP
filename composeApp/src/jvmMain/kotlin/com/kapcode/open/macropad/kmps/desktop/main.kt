@@ -11,8 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import org.jetbrains.compose.resources.painterResource
-import com.kapcode.`open`.macropad.kmps.Res
-import com.kapcode.`open`.macropad.kmps.macropadIcon64
+import com.kapcode.`open`.macropad.kmps.*
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.*
@@ -28,6 +27,7 @@ import com.kapcode.open.macropad.kmps.desktop.ui.MarketplaceScreen
 import com.kapcode.open.macropad.kmps.desktop.ui.rememberDesktopWindowState
 import com.kapcode.open.macropad.kmps.desktop.ui.components.RedrawFix
 import com.kapcode.open.macropad.kmps.desktop.ui.AppDialog
+import org.jetbrains.compose.resources.stringResource
 import javax.swing.UIManager
 
 object AppConfig {
@@ -195,7 +195,7 @@ fun main(args: Array<String>) {
         visible = activeToast != null,
         onCloseRequest = {},
         state = toastWindowState,
-        title = "Notification",
+        title = stringResource(Res.string.notification),
         transparent = true,
         undecorated = true,
         alwaysOnTop = true,
@@ -238,7 +238,7 @@ fun main(args: Array<String>) {
         com.kapcode.open.macropad.kmps.desktop.ui.AppDialog(
             onCloseRequest = { desktopWindowState.toggleMarketplace(false) },
             state = desktopWindowState.marketplaceWindowState,
-            title = "Marketplace",
+            title = stringResource(Res.string.marketplace),
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
             icon = icon,
@@ -253,7 +253,7 @@ fun main(args: Array<String>) {
     
     Tray(
         icon = icon,
-        tooltip = "MacroKap Server (Right-click for menu)",
+        tooltip = stringResource(Res.string.macrokap_server) + " (Right-click for menu)",
         onAction = { 
             desktopWindowState.toggleWindow()
         },
@@ -264,10 +264,10 @@ fun main(args: Array<String>) {
                 Item("Cancel All Sync Requests (${pendingPairingRequests.size})", onClick = { desktopViewModel.rejectAllPendingDevices() })
             }
             Separator()
-            Item("Shortcuts & Keymap", onClick = { desktopWindowState.toggleShortcuts(true) })
-            Item("Settings", onClick = { desktopWindowState.toggleSettings(true) })
+            Item(stringResource(Res.string.shortcuts_keymap), onClick = { desktopWindowState.toggleShortcuts(true) })
+            Item(stringResource(Res.string.settings), onClick = { desktopWindowState.toggleSettings(true) })
             Separator()
-            Item("Exit", onClick = {
+            Item(stringResource(Res.string.exit).lowercase().replaceFirstChar { it.uppercase() }, onClick = {
                 if (exitBehavior == "ASK") {
                     desktopWindowState.toggleExitDialog(true)
                     desktopWindowState.showWindow()
@@ -451,7 +451,7 @@ fun main(args: Array<String>) {
     triggerPendingConfirmation?.let { trigger ->
         AppDialog(
             onCloseRequest = { macroManagerViewModel.cancelTrigger() },
-            title = "Confirm Trigger",
+            title = stringResource(Res.string.confirm_trigger),
             selectedTheme = selectedTheme,
             consoleViewModel = consoleViewModel,
             icon = icon,
@@ -462,7 +462,7 @@ fun main(args: Array<String>) {
                 modifier = Modifier.fillMaxSize().padding(24.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Text("The following macro was triggered:", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(Res.string.macro_triggered_confirm), style = MaterialTheme.typography.bodyLarge)
                 Text(
                     trigger.macro?.name ?: trigger.routine?.name ?: "Unknown",
                     style = MaterialTheme.typography.headlineSmall,
@@ -471,8 +471,8 @@ fun main(args: Array<String>) {
                 )
                 
                 Column {
-                    Text("Trigger Keys: ${trigger.keyCodes}", style = MaterialTheme.typography.bodyMedium)
-                    Text("Do you want to execute it?", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(Res.string.trigger_keys_format, trigger.keyCodes), style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(Res.string.confirm_execute_question), style = MaterialTheme.typography.bodyMedium)
                 }
 
                 Spacer(Modifier.weight(1f))
@@ -485,13 +485,13 @@ fun main(args: Array<String>) {
                         onClick = { macroManagerViewModel.cancelTrigger() },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("CANCEL")
+                        Text(stringResource(Res.string.cancel).uppercase())
                     }
                     Button(
                         onClick = { macroManagerViewModel.confirmTrigger() },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("EXECUTE")
+                        Text(stringResource(Res.string.execute))
                     }
                 }
             }
@@ -511,7 +511,7 @@ fun main(args: Array<String>) {
             }
         },
         state = desktopWindowState.windowState,
-        title = "MacroKap (Server)", // Updated title for clarity
+        title = stringResource(Res.string.macrokap_server), // Updated title for clarity
         icon = icon
     ) {
         // Force window to front and request focus when shown to avoid "glitched" non-responsive states.

@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.settings
+package com.kapcode.`open`.macropad.kmps.settings
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,12 +30,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
-import com.kapcode.open.macropad.kmps.isDesktop
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -50,14 +51,14 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
 
     Column {
         if (isDesktop) {
-            Text("Directory Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+            Text(stringResource(Res.string.directory_settings), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
             Column(Modifier.padding(horizontal = 16.dp)) {
                 OutlinedTextField(
-                    value = macroDirectory.ifEmpty { "No directory selected" },
+                    value = macroDirectory.ifEmpty { stringResource(Res.string.no_directory_selected) },
                     onValueChange = {},
                     modifier = Modifier.fillMaxWidth(),
                     readOnly = true,
-                    label = { Text("Macro Storage Path") },
+                    label = { Text(stringResource(Res.string.macro_storage_path)) },
                     trailingIcon = {
                         Row {
                             IconButton(onClick = {
@@ -67,10 +68,10 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                                     }
                                 }
                             }) {
-                                Icon(Icons.Default.ContentCopy, contentDescription = "Copy")
+                                Icon(Icons.Default.ContentCopy, contentDescription = stringResource(Res.string.action_copy))
                             }
                             IconButton(onClick = { viewModel.onOpenFolder() }) {
-                                Icon(Icons.Default.FolderOpen, contentDescription = "Open Folder")
+                                Icon(Icons.Default.FolderOpen, contentDescription = stringResource(Res.string.open_folder))
                             }
                         }
                     },
@@ -81,7 +82,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
         }
 
-        Text("Theme", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.theme), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Column(Modifier.selectableGroup()) {
             AppTheme.entries.forEach { theme ->
                 Row(
@@ -110,7 +111,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        Text("Privacy", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.privacy), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -118,8 +119,8 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Send Analytics (Opt in)", style = MaterialTheme.typography.bodyLarge)
-                Text("Allow the app to collect anonymous performance telemetry and startup metrics.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(Res.string.send_analytics), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(Res.string.send_analytics_desc), style = MaterialTheme.typography.bodySmall)
             }
             Switch(
                 checked = analyticsEnabled,
@@ -130,7 +131,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         val multiQrEnabled by viewModel.multiQrEnabled.collectAsState()
-        Text("Advanced Pairing", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.advanced_pairing), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -138,8 +139,8 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Multi-QR Mode", style = MaterialTheme.typography.bodyLarge)
-                Text("Displays multiple QR codes for easier scanning on desk-mounted devices.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(Res.string.multi_qr_mode), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(Res.string.multi_qr_mode_desc), style = MaterialTheme.typography.bodySmall)
             }
             Switch(
                 checked = multiQrEnabled,
@@ -153,14 +154,14 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
         val slamFireTrigger by viewModel.slamFireTrigger.collectAsState()
         val scannerTimeoutHours by viewModel.scannerTimeoutHours.collectAsState()
         
-        Text("Scanner Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.scanner_settings), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Column(Modifier.padding(horizontal = 16.dp)) {
             Text(
-                "Scanner Timeout: ${if (scannerTimeoutHours >= 48) "Never" else "$scannerTimeoutHours Hours"}",
+                stringResource(Res.string.scanner_timeout_format, if (scannerTimeoutHours >= 48) stringResource(Res.string.never) else "$scannerTimeoutHours " + stringResource(Res.string.hours)),
                 style = MaterialTheme.typography.bodyLarge
             )
             Text(
-                "Stops scanning after a period of time to save battery.",
+                stringResource(Res.string.scanner_timeout_desc),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
@@ -174,7 +175,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        Text("Slam Fire", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.slam_fire), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -182,8 +183,8 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Slam Fire Mode", style = MaterialTheme.typography.bodyLarge)
-                Text("Trigger an 'Okay' action via hardware interaction.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(Res.string.slam_fire_mode), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(Res.string.slam_fire_desc), style = MaterialTheme.typography.bodySmall)
             }
             Switch(
                 checked = slamFireEnabled,
@@ -212,13 +213,13 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                         )
                         Text(
                             text = when(trigger) {
-                                SlamFireTrigger.VolumeDown -> "Volume Down"
-                                SlamFireTrigger.VolumeUp -> "Volume Up"
-                                SlamFireTrigger.Power -> "Power Button (Limited Support)"
-                                SlamFireTrigger.Bixby -> "Bixby / Side Button"
-                                SlamFireTrigger.Assistant -> "Assistant Button"
-                                SlamFireTrigger.ProximityCovered -> "Proximity Sensor (Covered)"
-                                SlamFireTrigger.ProximityUncovered -> "Proximity Sensor (Uncovered)"
+                                SlamFireTrigger.VolumeDown -> stringResource(Res.string.volume_down)
+                                SlamFireTrigger.VolumeUp -> stringResource(Res.string.volume_up)
+                                SlamFireTrigger.Power -> stringResource(Res.string.power_button_limited)
+                                SlamFireTrigger.Bixby -> stringResource(Res.string.bixby_side_button)
+                                SlamFireTrigger.Assistant -> stringResource(Res.string.assistant_button)
+                                SlamFireTrigger.ProximityCovered -> stringResource(Res.string.proximity_covered)
+                                SlamFireTrigger.ProximityUncovered -> stringResource(Res.string.proximity_uncovered)
                             },
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(start = 16.dp)
@@ -230,14 +231,14 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-        Text("Notifications (Toasts)", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.notifications_toasts), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         Row(
             Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Enable Notifications", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.enable_notifications), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Switch(
                 checked = enableToasts,
                 onCheckedChange = { viewModel.setEnableToasts(it) }
@@ -250,7 +251,7 @@ fun GeneralSettingsSection(viewModel: SettingsViewModel) {
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Notifications in Background", modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(Res.string.notifications_in_background), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             Switch(
                 checked = enableBackgroundToasts,
                 onCheckedChange = { viewModel.setEnableBackgroundToasts(it) }

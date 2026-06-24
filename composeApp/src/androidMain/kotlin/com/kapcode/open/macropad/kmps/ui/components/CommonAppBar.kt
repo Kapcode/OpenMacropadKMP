@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui.components
+package com.kapcode.`open`.macropad.kmps.ui.components
 
 import android.app.Activity
 import android.widget.Toast
@@ -42,11 +42,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.kapcode.`open`.macropad.kmps.Res
 import com.kapcode.`open`.macropad.kmps.*
-import com.kapcode.open.macropad.kmps.BillingConstants
-import com.kapcode.open.macropad.kmps.BillingManager
-import com.kapcode.open.macropad.kmps.KapManager
-import com.kapcode.open.macropad.kmps.loadRewardedAd
-import com.kapcode.open.macropad.kmps.showRewardedAd
 import com.kapcode.open.macropad.kmps.ui.theme.DarkGoldCurrencyColor
 import com.kapcode.open.macropad.kmps.ui.theme.GoldCurrencyColor
 import org.jetbrains.compose.resources.stringResource
@@ -86,6 +81,8 @@ fun CommonAppBar(
     var showProPurchaseDialog by remember { mutableStateOf(false) }
     var showRewardConfirmDialog by remember { mutableStateOf(false) }
 
+    val adFailedLoadMessage = stringResource(Res.string.ad_failed_load)
+
     val isLight = MaterialTheme.colorScheme.surface.luminance() > 0.5f
     val currencyColor = if (isLight) DarkGoldCurrencyColor else GoldCurrencyColor
     val textShadow = if (isLight) Shadow(
@@ -123,7 +120,7 @@ fun CommonAppBar(
                         }
                     }
                 ) {
-                    Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, adFailedLoadMessage, Toast.LENGTH_SHORT).show()
                 }
             }
         )
@@ -147,7 +144,7 @@ fun CommonAppBar(
                         }
                     }
                 ) {
-                    Toast.makeText(context, "Ad failed to load. Please try again later.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, adFailedLoadMessage, Toast.LENGTH_SHORT).show()
                 }
                 showProPurchaseDialog = false
             },
@@ -236,7 +233,7 @@ fun CommonAppBar(
             title = titleContent,
             navigationIcon = {
                 IconButton(onClick = onCloseScanner) {
-                    Icon(imageVector = Icons.Default.Close, contentDescription = "Close Scanner")
+                    Icon(imageVector = Icons.Default.Close, contentDescription = stringResource(Res.string.close_scanner))
                 }
             },
             actions = {
@@ -245,7 +242,7 @@ fun CommonAppBar(
                 IconButton(onClick = { onAutoFocusToggle(!isAutoFocusEnabled) }) {
                     Icon(
                         imageVector = if (isAutoFocusEnabled) Icons.Default.AutoMode else Icons.Default.TimerOff,
-                        contentDescription = "Toggle Auto Focus",
+                        contentDescription = stringResource(Res.string.toggle_auto_focus),
                         tint = if (isAutoFocusEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -254,7 +251,7 @@ fun CommonAppBar(
                 IconButton(onClick = { onAutoZoomToggle(!isAutoZoomEnabled) }) {
                     Icon(
                         imageVector = if (isAutoZoomEnabled) Icons.Default.Timer else Icons.Default.TimerOff,
-                        contentDescription = "Toggle Auto Zoom",
+                        contentDescription = stringResource(Res.string.toggle_auto_zoom),
                         tint = if (isAutoZoomEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -272,7 +269,7 @@ fun CommonAppBar(
                     }
                 }
                 IconButton(onClick = {}, interactionSource = zoomOutInteractionSource) {
-                    Icon(imageVector = Icons.Default.Remove, contentDescription = "Zoom Out")
+                    Icon(imageVector = Icons.Default.Remove, contentDescription = stringResource(Res.string.zoom_out))
                 }
 
                 val zoomInInteractionSource = remember { MutableInteractionSource() }
@@ -288,7 +285,7 @@ fun CommonAppBar(
                     }
                 }
                 IconButton(onClick = {}, interactionSource = zoomInInteractionSource) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = "Zoom In")
+                    Icon(imageVector = Icons.Default.Add, contentDescription = stringResource(Res.string.zoom_in))
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 // Optionally show Kaps even in QR mode if there's space
@@ -313,7 +310,7 @@ fun CommonAppBar(
                     ) {
                         Icon(
                             painter = painterResource(Res.drawable.macropadIcon64),
-                            contentDescription = "Currency",
+                            contentDescription = stringResource(Res.string.currency),
                             tint = Color.Unspecified,
                             modifier = Modifier.size(20.dp)
                         )
@@ -333,7 +330,7 @@ fun CommonAppBar(
                 IconButton(onClick = onSettingsClick) {
                     Icon(
                         imageVector = Icons.Default.Settings,
-                        contentDescription = "Settings"
+                        contentDescription = stringResource(Res.string.settings)
                     )
                 }
             }
@@ -376,7 +373,7 @@ fun KapBalanceWithTimer(
         ) {
             Icon(
                 painter = painterResource(Res.drawable.macropadIcon64),
-                contentDescription = "Kaps",
+                contentDescription = stringResource(Res.string.kaps),
                 tint = Color.Unspecified,
                 modifier = Modifier
                     .size(20.dp)

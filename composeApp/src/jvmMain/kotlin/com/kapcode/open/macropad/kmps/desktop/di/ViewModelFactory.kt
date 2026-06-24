@@ -54,8 +54,6 @@ object ViewModelFactory {
 
         val newEventViewModel = remember { NewEventViewModel(clientCommunicationViewModel) }
 
-        var macroManagerViewModelRef: MacroManagerViewModel? = null
-
         val serverViewModel = remember {
             ServerViewModel(
                 settingsViewModel = settingsViewModel,
@@ -86,18 +84,9 @@ object ViewModelFactory {
                 serverViewModel = serverViewModel,
                 onEditMacroRequested = { }, // Wired below
                 onMacrosUpdated = {
-                    val macroNames = macroManagerViewModelRef?.macroFiles?.value?.map { it.name } ?: emptyList()
-                    serverViewModel.sendToAll(macroListMessage(macroNames))
-                    
-                    val packs = macroManagerViewModelRef?.macroPacks?.value ?: emptyList()
-                    if (packs.isNotEmpty()) {
-                        val json = Json { ignoreUnknownKeys = true }
-                        val packsToSerialize = packs.map { it.pack }
-                        serverViewModel.sendToAll(dataMessage("installed_packs", json.encodeToString(packsToSerialize).encodeToByteArray()))
-                    }
+                    clientCommunicationViewModel.broadcastMacroList()
                 }
             ).also { viewModel ->
-                macroManagerViewModelRef = viewModel
                 processWatcher.focusHistory.onEach { history ->
                     viewModel.onActiveProcessChanged(history.firstOrNull())
                 }.launchIn(CoroutineScope(Dispatchers.Main))
@@ -148,6 +137,11 @@ object ViewModelFactory {
         macroManagerViewModel.onEditMacroRequested = { macroState ->
             macroEditorViewModel.openOrSwitchToTab(macroState)
             layoutViewModel.setMainTab(1) // Switch to Editor tab
+        }
+
+        // Post-wiring sync to catch any early connections
+        remember {
+            clientCommunicationViewModel.broadcastMacroList()
         }
 
         return DesktopViewModels(

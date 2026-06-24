@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui.components
+package com.kapcode.`open`.macropad.kmps.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.layout.Box
@@ -23,8 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapcode.open.macropad.kmps.Res
-import com.kapcode.open.macropad.kmps.*
+import com.kapcode.`open`.macropad.kmps.*
 import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch

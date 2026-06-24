@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.desktop.ui
+package com.kapcode.`open`.macropad.kmps.desktop.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.rememberWindowState
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun UpdateConfirmDialog(
@@ -27,7 +29,7 @@ fun UpdateConfirmDialog(
 ) {
     AppDialog(
         onCloseRequest = onReject,
-        title = if (isSimulation) "Test Update Received" else "Server Update Available",
+        title = if (isSimulation) stringResource(Res.string.test_update_received) else stringResource(Res.string.server_update_available),
         state = rememberWindowState(width = 500.dp, height = 400.dp),
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel,
@@ -57,20 +59,20 @@ fun UpdateConfirmDialog(
             }
 
             Text(
-                if (isSimulation) "SIMULATION MODE" else "ATTENTION REQUIRED",
+                if (isSimulation) stringResource(Res.string.simulation_mode) else stringResource(Res.string.attention_required),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (isSimulation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                "Remote Update Request",
+                stringResource(Res.string.remote_update_request),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
 
             Text(
-                "Device '$clientName' is pushing a new server version. Updates are essential for maintaining compatibility between your mobile device and the desktop server.",
+                stringResource(Res.string.remote_update_desc, clientName),
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
@@ -93,7 +95,7 @@ fun UpdateConfirmDialog(
                             tint = MaterialTheme.colorScheme.error
                         )
                         Text(
-                            "Skipping updates may lead to connection failures or missing features in future releases.",
+                            stringResource(Res.string.skip_update_warning),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onErrorContainer
                         )
@@ -111,7 +113,7 @@ fun UpdateConfirmDialog(
                     onClick = onReject,
                     modifier = Modifier.weight(1f)
                 ) {
-                    Text("REJECT")
+                    Text(stringResource(Res.string.action_reject))
                 }
                 
                 Button(
@@ -121,7 +123,7 @@ fun UpdateConfirmDialog(
                         containerColor = if (isSimulation) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text(if (isSimulation) "RUN TEST UPGRADE" else "ACCEPT & RESTART")
+                    Text(if (isSimulation) stringResource(Res.string.run_test_upgrade) else stringResource(Res.string.accept_restart))
                 }
             }
         }

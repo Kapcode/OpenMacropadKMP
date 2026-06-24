@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui
+package com.kapcode.`open`.macropad.kmps.ui
 
 import android.hardware.camera2.CaptureRequest
 import android.util.Log
@@ -34,8 +34,11 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.kapcode.`open`.macropad.kmps.*
+import org.jetbrains.compose.resources.stringResource
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import org.jetbrains.compose.resources.stringResource
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -71,6 +74,7 @@ fun QrCodeScanner(
     // Toast hint for manual focus optimization
     val scannerStartTime = remember { System.currentTimeMillis() }
     var hasShownFocusToast by rememberSaveable { mutableStateOf(false) }
+    val focusHint = stringResource(Res.string.qr_focus_hint)
     
     LaunchedEffect(isAutoFocusEnabled) {
         if (!isAutoFocusEnabled && !hasShownFocusToast) {
@@ -80,7 +84,7 @@ fun QrCodeScanner(
             }
             // Check again after delay
             if (!isAutoFocusEnabled && !hasShownFocusToast) {
-                Toast.makeText(context, "Focus not adequate? Device on a mount? Just wave hand in front of camera.", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, focusHint, Toast.LENGTH_LONG).show()
                 hasShownFocusToast = true
             }
         }
@@ -296,7 +300,7 @@ fun QrCodeScanner(
         ) {
             if (isLowPowerMode) {
                 Text(
-                    "Low Power Mode",
+                    stringResource(Res.string.low_power_mode),
                     color = Color.White.copy(alpha = 0.5f),
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp)
@@ -330,7 +334,7 @@ fun QrCodeScanner(
         ) {
             if (!isAutoFocusEnabled) {
                 Text(
-                    "Manual Focus",
+                    stringResource(Res.string.manual_focus),
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.padding(bottom = 4.dp)
@@ -367,7 +371,7 @@ fun QrCodeScanner(
                 ) {
                     Icon(
                         if (!isAutoFocusEnabled) Icons.Default.FilterCenterFocus else Icons.Default.CenterFocusWeak,
-                        contentDescription = "Manual Focus",
+                        contentDescription = stringResource(Res.string.manual_focus),
                         tint = Color.White
                     )
                 }
@@ -384,7 +388,7 @@ fun QrCodeScanner(
                 ) {
                     Icon(
                         Icons.Default.ZoomIn,
-                        contentDescription = "Auto Zoom",
+                        contentDescription = stringResource(Res.string.auto_zoom),
                         tint = Color.White
                     )
                 }
@@ -404,7 +408,7 @@ fun QrCodeScanner(
         ) {
             Icon(
                 Icons.Default.Refresh,
-                contentDescription = "Switch Camera",
+                contentDescription = stringResource(Res.string.switch_camera),
                 tint = Color.White
             )
         }

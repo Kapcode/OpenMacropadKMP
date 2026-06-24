@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.desktop.ui
+package com.kapcode.`open`.macropad.kmps.desktop.ui
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -7,13 +7,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import com.kapcode.open.macropad.kmps.desktop.model.*
+import com.kapcode.`open`.macropad.kmps.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.stringResource
+import com.kapcode.open.macropad.kmps.desktop.model.MacroEventState
+import com.kapcode.open.macropad.kmps.desktop.model.MouseAction
 
 @Composable
 fun MacroTimelineItem(
@@ -53,12 +56,12 @@ fun MacroTimelineItem(
                 ) {
                     onEdit?.let {
                         IconButton(onClick = it, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit", modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.action_edit), modifier = Modifier.size(16.dp))
                         }
                     }
                     onDelete?.let {
                         IconButton(onClick = it, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.action_delete), tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
@@ -73,7 +76,7 @@ private fun KeyItem(event: MacroEventState.KeyEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("KEY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
+        Text(stringResource(Res.string.key_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Box(
             modifier = Modifier
@@ -93,9 +96,9 @@ private fun MouseItem(event: MacroEventState.MouseEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("MOUSE", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
+        Text(stringResource(Res.string.mouse_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
-        Text("Action: ${event.action.name}", style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(Res.string.action_format, event.action.name), style = MaterialTheme.typography.labelMedium)
         if (event.action == MouseAction.MOVE) {
             Spacer(Modifier.width(8.dp))
             Text("(${event.x}, ${event.y})")
@@ -109,14 +112,14 @@ private fun MouseButtonItem(event: MacroEventState.MouseButtonEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("MOUSE BTN", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
+        Text(stringResource(Res.string.mouse_btn_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Box(
             modifier = Modifier
                 .border(1.dp, MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.small)
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
-            Text("Button ${event.buttonNumber}")
+            Text(stringResource(Res.string.button_format, event.buttonNumber))
         }
         Spacer(Modifier.width(8.dp))
         Text(event.action.name, style = MaterialTheme.typography.labelMedium)
@@ -129,10 +132,10 @@ private fun ScrollItem(event: MacroEventState.ScrollEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("SCROLL", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        Text(stringResource(Res.string.scroll_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         val amount = if (event.scrollAmount > 0) "+${event.scrollAmount}" else "${event.scrollAmount}"
-        Text("Amount: $amount", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(Res.string.amount_format, amount), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -142,7 +145,7 @@ private fun DelayItem(event: MacroEventState.DelayEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("DELAY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+        Text(stringResource(Res.string.delay_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text("${event.durationMs} ms", style = MaterialTheme.typography.bodyMedium)
     }
@@ -154,9 +157,9 @@ private fun SetAutoWaitItem(event: MacroEventState.SetAutoWaitEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("AUTO DELAY", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
+        Text(stringResource(Res.string.auto_delay_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.outline, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
-        Text("Set automatic delay to ${event.delayMs} ms", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(Res.string.set_auto_delay_format, event.delayMs), style = MaterialTheme.typography.bodyMedium)
     }
 }
 
@@ -166,7 +169,7 @@ private fun ScriptItem(event: MacroEventState.ScriptEvent) {
         modifier = Modifier.padding(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("SCRIPT", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
+        Text(stringResource(Res.string.script_label), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
         Spacer(Modifier.width(16.dp))
         Text(
             text = event.script.take(50).replace("\n", " ") + (if (event.script.length > 50) "..." else ""),

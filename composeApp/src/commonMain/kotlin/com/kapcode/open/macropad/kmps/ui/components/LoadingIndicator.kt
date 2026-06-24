@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui.components
+package com.kapcode.`open`.macropad.kmps.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -15,7 +15,9 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kapcode.`open`.macropad.kmps.*
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LoadingIndicator(
@@ -32,7 +34,7 @@ fun LoadingIndicator(
         if (showText) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "INITIALIZING",
+                text = stringResource(Res.string.initializing),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 letterSpacing = 4.sp,

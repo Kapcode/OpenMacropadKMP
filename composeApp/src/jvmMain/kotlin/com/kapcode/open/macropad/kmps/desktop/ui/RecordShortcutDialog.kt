@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.desktop.ui
+package com.kapcode.`open`.macropad.kmps.desktop.ui
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -16,7 +16,9 @@ import androidx.compose.ui.window.rememberWindowState
 import com.github.kwhat.jnativehook.GlobalScreen
 import com.github.kwhat.jnativehook.keyboard.NativeKeyEvent
 import com.github.kwhat.jnativehook.keyboard.NativeKeyListener
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun RecordShortcutDialog(
@@ -28,7 +30,8 @@ fun RecordShortcutDialog(
     onShortcutRecorded: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var recordedKey by remember { mutableStateOf("Press any key...") }
+    val pressAnyKeyLabel = stringResource(Res.string.press_any_key)
+    var recordedKey by remember { mutableStateOf(pressAnyKeyLabel) }
     var lastKeyCode by remember { mutableStateOf(-1) }
 
     // Use a DisposableEffect to manage the native key listener
@@ -79,12 +82,12 @@ fun RecordShortcutDialog(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                if (isFullShortcut) "Recording Shortcut..." else "Recording Single Key...",
+                if (isFullShortcut) stringResource(Res.string.recording_shortcut) else stringResource(Res.string.recording_single_key),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
             )
             Text(
-                if (isFullShortcut) "Press a combination (e.g. Ctrl+C)" else "Press a single key (e.g. F12)",
+                if (isFullShortcut) stringResource(Res.string.press_combination_desc) else stringResource(Res.string.press_single_key_desc),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -115,7 +118,7 @@ fun RecordShortcutDialog(
                     modifier = Modifier.height(48.dp).weight(1f),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Cancel")
+                    Text(stringResource(Res.string.cancel))
                 }
                 Button(
                     onClick = { 
@@ -127,7 +130,7 @@ fun RecordShortcutDialog(
                     modifier = Modifier.height(48.dp).weight(1f),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    Text("Save Shortcut")
+                    Text(stringResource(Res.string.save_shortcut))
                 }
             }
         }

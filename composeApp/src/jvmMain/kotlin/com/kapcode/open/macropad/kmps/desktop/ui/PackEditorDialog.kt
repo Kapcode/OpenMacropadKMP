@@ -29,6 +29,8 @@ import com.kapcode.open.macropad.kmps.desktop.ui.components.AppTooltipArea
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.MacroManagerViewModel
 import com.kapcode.open.macropad.kmps.desktop.viewmodel.ConsoleViewModel
 import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.kapcode.`open`.macropad.kmps.*
+import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +90,7 @@ fun PackEditorDialog(
     AppDialog(
         onCloseRequest = onDismissRequest,
         state = rememberWindowState(width = 1100.dp, height = 700.dp),
-        title = "Edit Pack: $name",
+        title = stringResource(Res.string.edit_pack_format, name),
         selectedTheme = selectedTheme,
         consoleViewModel = consoleViewModel,
         icon = icon,
@@ -97,7 +99,7 @@ fun PackEditorDialog(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Pack Editor") },
+                    title = { Text(stringResource(Res.string.pack_editor)) },
                     actions = {
                         val currentPack = pack.copy(
                         name = name,
@@ -109,10 +111,10 @@ fun PackEditorDialog(
                         routines = routines
                     )
                         TextButton(onClick = { onOpenInJsonEditor(currentPack) }) {
-                            Text("Open in JSON Editor")
+                            Text(stringResource(Res.string.open_json_editor))
                         }
                         IconButton(onClick = onDismissRequest) {
-                            Icon(Icons.Default.Close, contentDescription = "Close")
+                            Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.close))
                         }
                     }
                 )
@@ -123,7 +125,7 @@ fun PackEditorDialog(
                         modifier = Modifier.fillMaxWidth().padding(8.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(onClick = onDismissRequest) { Text("Cancel") }
+                        TextButton(onClick = onDismissRequest) { Text(stringResource(Res.string.cancel)) }
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
@@ -140,7 +142,7 @@ fun PackEditorDialog(
                             },
                             enabled = name.isNotBlank()
                         ) {
-                            Text("Save Pack")
+                            Text(stringResource(Res.string.save_pack))
                         }
                     }
                 }
@@ -169,11 +171,11 @@ fun PackEditorDialog(
                         }
                     }
                     
-                    Text("Metadata", style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(Res.string.metadata), style = MaterialTheme.typography.titleMedium)
                     OutlinedTextField(
                         value = name, 
                         onValueChange = { name = it }, 
-                        label = { Text("Pack Name") }, 
+                        label = { Text(stringResource(Res.string.pack_name)) }, 
                         modifier = Modifier.fillMaxWidth().tabFocus(), 
                         keyboardOptions = commonKeyboardOptions,
                         keyboardActions = commonKeyboardActions
@@ -181,7 +183,7 @@ fun PackEditorDialog(
                     OutlinedTextField(
                         value = author, 
                         onValueChange = { author = it }, 
-                        label = { Text("Author") }, 
+                        label = { Text(stringResource(Res.string.author)) }, 
                         modifier = Modifier.fillMaxWidth().tabFocus(), 
                         keyboardOptions = commonKeyboardOptions,
                         keyboardActions = commonKeyboardActions
@@ -189,7 +191,7 @@ fun PackEditorDialog(
                     OutlinedTextField(
                         value = version, 
                         onValueChange = { version = it }, 
-                        label = { Text("Version") }, 
+                        label = { Text(stringResource(Res.string.version)) }, 
                         modifier = Modifier.fillMaxWidth().tabFocus(), 
                         keyboardOptions = commonKeyboardOptions,
                         keyboardActions = commonKeyboardActions
@@ -201,14 +203,14 @@ fun PackEditorDialog(
                             else "DISABLED: This pack will never auto-switch, even if its target window is open."
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Active Pack (Auto-switch)")
+                            Text(stringResource(Res.string.active_pack_autoswitch))
                             Spacer(Modifier.weight(1f))
                             Switch(checked = isActive, onCheckedChange = { isActive = it })
                         }
                     }
                     
                     if (isActive) {
-                        Text("Switch Triggers", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(Res.string.switch_triggers), style = MaterialTheme.typography.titleSmall)
                         Text(
                             "The pack will activate if ANY scenario below matches. Within a scenario, ALL checked rules must match.",
                             style = MaterialTheme.typography.labelSmall,
@@ -222,12 +224,12 @@ fun PackEditorDialog(
                             ) {
                                 Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Scenario ${groupIndex + 1}", style = MaterialTheme.typography.labelLarge)
+                                        Text(stringResource(Res.string.scenario_format, groupIndex + 1), style = MaterialTheme.typography.labelLarge)
                                         Spacer(Modifier.weight(1f))
                                         IconButton(onClick = {
                                             autoSwitchGroups = autoSwitchGroups.filterIndexed { i, _ -> i != groupIndex }
                                         }) {
-                                            Icon(Icons.Default.Delete, contentDescription = "Remove Scenario", modifier = Modifier.size(16.dp))
+                                            Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.remove_scenario), modifier = Modifier.size(16.dp))
                                         }
                                     }
 
@@ -292,7 +294,7 @@ fun PackEditorDialog(
                                                     singleLine = true
                                                 )
 
-                                                AppTooltipArea(tooltipText = "Ignore Case") {
+                                                AppTooltipArea(tooltipText = stringResource(Res.string.ignore_case)) {
                                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                                         Text("Aa", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 4.dp))
                                                         Switch(
@@ -323,7 +325,7 @@ fun PackEditorDialog(
                         ) {
                             Icon(Icons.Default.Add, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Add Matching Scenario (OR)")
+                            Text(stringResource(Res.string.add_matching_scenario))
                         }
                     }
                 }
@@ -338,14 +340,14 @@ fun PackEditorDialog(
                     // Widgets Section
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Widgets", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(Res.string.widgets), style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.weight(1f))
                             IconButton(onClick = {
                                 println("[PackEditor] Add Widget clicked.")
                                 widgetToEdit = null
                                 showWidgetEditor = true
                             }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Widget")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.add_widget))
                             }
                         }
 
@@ -353,7 +355,7 @@ fun PackEditorDialog(
                             items(widgets) { widget ->
                                 ListItem(
                                     headlineContent = { Text(widget.label) },
-                                    supportingContent = { Text("Macro: ${availableMacros.find { it.id == widget.macroId }?.name ?: "Unknown"}") },
+                                    supportingContent = { Text(stringResource(Res.string.macro_label_format, availableMacros.find { it.id == widget.macroId }?.name ?: "Unknown")) },
                                     trailingContent = {
                                         Row {
                                             IconButton(onClick = {
@@ -361,12 +363,12 @@ fun PackEditorDialog(
                                                 widgetToEdit = widget
                                                 showWidgetEditor = true
                                             }) {
-                                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                                                Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.action_edit))
                                             }
                                             IconButton(onClick = {
                                                 widgets = widgets.filter { it.id != widget.id }
                                             }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                                Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.action_delete))
                                             }
                                         }
                                     }
@@ -381,14 +383,14 @@ fun PackEditorDialog(
                     // Routines Section
                     Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("Advanced Routines", style = MaterialTheme.typography.titleMedium)
+                            Text(stringResource(Res.string.advanced_routines), style = MaterialTheme.typography.titleMedium)
                             Spacer(Modifier.weight(1f))
                             IconButton(onClick = {
                                 println("[PackEditor] Add Routine clicked.")
                                 routineToEdit = null
                                 showRoutineEditor = true
                             }) {
-                                Icon(Icons.Default.Add, contentDescription = "Add Routine")
+                                Icon(Icons.Default.Add, contentDescription = stringResource(Res.string.add_routine))
                             }
                         }
 
@@ -396,7 +398,7 @@ fun PackEditorDialog(
                             items(routines) { routine ->
                                 ListItem(
                                     headlineContent = { Text(routine.name) },
-                                    supportingContent = { Text("${routine.triggers.size} Trigger(s)") },
+                                    supportingContent = { Text(stringResource(Res.string.triggers_count_format, routine.triggers.size)) },
                                     trailingContent = {
                                         Row {
                                             IconButton(onClick = {
@@ -404,12 +406,12 @@ fun PackEditorDialog(
                                                 routineToEdit = routine
                                                 showRoutineEditor = true
                                             }) {
-                                                Icon(Icons.Default.Edit, contentDescription = "Edit")
+                                                Icon(Icons.Default.Edit, contentDescription = stringResource(Res.string.action_edit))
                                             }
                                             IconButton(onClick = {
                                                 routines = routines.filter { it.id != routine.id }
                                             }) {
-                                                Icon(Icons.Default.Delete, contentDescription = "Delete")
+                                                Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.action_delete))
                                             }
                                         }
                                     }

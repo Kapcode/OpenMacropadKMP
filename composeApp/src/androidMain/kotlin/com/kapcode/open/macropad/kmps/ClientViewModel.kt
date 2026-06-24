@@ -222,6 +222,11 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setMacros(macros: List<String>) {
         _uiState.update { it.copy(macros = macros.toList()) }
+        if (macros.isEmpty() && uiState.value.connectionStatus == "Connected" && uiState.value.installedPacks.isEmpty()) {
+            viewModelScope.launch {
+                _events.send(ClientEvent.ShowToast("Connected, but no active macros found. Check desktop settings."))
+            }
+        }
     }
 
     fun setQrScannerVisible(visible: Boolean) {
@@ -261,10 +266,18 @@ class ClientViewModel(private val repository: ClientRepository) : ViewModel() {
 
     fun setInstalledPacks(packs: List<MacroPack>) {
         _uiState.update { state ->
+            val newMacros = packs.flatMap { pack -> pack.widgets.map { it.macroId } }
+            val mergedMacros = (state.macros + newMacros).distinct()
             state.copy(
                 installedPacks = packs,
-                filteredPacks = filterPacks(packs, state.searchQuery)
+                filteredPacks = filterPacks(packs, state.searchQuery),
+                macros = mergedMacros
             )
+        }
+        if (packs.isEmpty() && uiState.value.macros.isEmpty() && uiState.value.connectionStatus == "Connected") {
+            viewModelScope.launch {
+                _events.send(ClientEvent.ShowToast("Connected, but no active macros or packs found. Check desktop settings."))
+            }
         }
     }
 

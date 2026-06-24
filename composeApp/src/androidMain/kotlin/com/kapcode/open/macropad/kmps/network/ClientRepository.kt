@@ -193,20 +193,31 @@ class ClientRepository(private val context: Context) {
                                                 val version = params["version"] ?: "Unknown"
                                                 val platform = params["platform"] ?: "Unknown"
                                                 Log.i("ClientRepository", "Connected to Server $version on $platform")
+                                                
+                                                // If we get server info, we are effectively connected even if PAIRING_APPROVED wasn't sent (reconnection)
+                                                if (!isFullyConnected) {
+                                                    Log.i("ClientRepository", "SERVER_INFO received, marking as Connected and requesting macros.")
+                                                    isFullyConnected = true
+                                                    onUpdate("Connected", initialServerName ?: ipAddress, null, null)
+                                                    scope.launch {
+                                                        delay(100)
+                                                        this@ClientRepository.client?.send(textMessage("getMacros").toBytes())
+                                                    }
+                                                }
                                             }
                                             else -> {}
                                         }
                                     },
                                     onText = { text ->
-                                        Log.d("ClientRepository", "Text message received: ${text.take(50)}")
+                                        Log.d("ClientRepository", "Text message received (first 100 chars): ${text.take(100)}")
                                         if (dataModel.metadata["type"] == "toast") {
                                             onNotificationReceived(text)
                                         } else if (text.startsWith("macros:")) {
                                             val macroNames = text.substringAfter("macros:").split(",").filter { it.isNotBlank() }
-                                            Log.i("ClientRepository", "Received ${macroNames.size} macros. Marking as Connected.")
+                                            Log.i("ClientRepository", "Received ${macroNames.size} macros: $macroNames")
                                             
                                             isFullyConnected = true
-                                            // 1. Reset disconnect state if macros are found
+                                            // 1. Reset disconnect state if macros are found (or list is received)
                                             // 2. Set connected status
                                             // 3. Notify UI
                                             onUpdate("Connected", initialServerName ?: ipAddress, null, null)
@@ -221,6 +232,10 @@ class ClientRepository(private val context: Context) {
                                     onCommand = { command, params ->
                                         Log.d("ClientRepository", "Command received: $command")
                                         if (command == "active_process") {
+                                            if (!isFullyConnected) {
+                                                isFullyConnected = true
+                                                onUpdate("Connected", initialServerName ?: ipAddress, null, null)
+                                            }
                                             onActiveProcessChanged(params["name"])
                                         }
                                     },
@@ -246,6 +261,10 @@ class ClientRepository(private val context: Context) {
                                             }
                                             "installed_packs" -> {
                                                 try {
+                                                    if (!isFullyConnected) {
+                                                        isFullyConnected = true
+                                                        onUpdate("Connected", initialServerName ?: ipAddress, null, null)
+                                                    }
                                                     val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
                                                     val packs = json.decodeFromString<List<MacroPack>>(value.decodeToString())
                                                     onPacksReceived(packs)

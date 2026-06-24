@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.lunch
+package com.kapcode.`open`.macropad.kmps.lunch
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,7 +10,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.models.LunchMenuItem
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun LunchMenuScreen(viewModel: LunchMenuViewModel) {
@@ -24,7 +26,7 @@ fun LunchMenuScreen(viewModel: LunchMenuViewModel) {
             .padding(16.dp)
     ) {
         Text(
-            text = "Lunch Menu Management",
+            text = stringResource(Res.string.lunch_menu_management),
             style = MaterialTheme.typography.headlineMedium,
             modifier = Modifier.padding(bottom = 16.dp)
         )
@@ -41,13 +43,13 @@ fun LunchMenuScreen(viewModel: LunchMenuViewModel) {
                 TextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Item Name") },
+                    label = { Text(stringResource(Res.string.item_name)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 TextField(
                     value = price,
                     onValueChange = { price = it },
-                    label = { Text("Price") },
+                    label = { Text(stringResource(Res.string.price)) },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Button(
@@ -61,7 +63,7 @@ fun LunchMenuScreen(viewModel: LunchMenuViewModel) {
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Add Item")
+                    Text(stringResource(Res.string.add_item))
                 }
             }
         }
@@ -105,7 +107,7 @@ fun LunchMenuItemRow(item: LunchMenuItem, onDelete: () -> Unit) {
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete Item",
+                    contentDescription = stringResource(Res.string.delete_item),
                     tint = MaterialTheme.colorScheme.error
                 )
             }

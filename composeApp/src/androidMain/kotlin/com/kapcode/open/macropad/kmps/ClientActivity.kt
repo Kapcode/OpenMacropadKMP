@@ -1,7 +1,9 @@
-package com.kapcode.open.macropad.kmps
+package com.kapcode.`open`.macropad.kmps
 
-import com.kapcode.open.macropad.kmps.utils.ClipboardManager
-import com.kapcode.open.macropad.kmps.utils.LocalClipboardManager
+import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.`open`.macropad.kmps.utils.ClipboardManager
+import com.kapcode.`open`.macropad.kmps.utils.LocalClipboardManager
+import com.kapcode.open.macropad.kmps.models.*
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.util.Log
@@ -67,25 +69,25 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapcode.open.macropad.kmps.network.ClientRepository
-import com.kapcode.open.macropad.kmps.models.GridWidget
-import com.kapcode.open.macropad.kmps.models.WidgetType
-import com.kapcode.open.macropad.kmps.models.TrustedServer
-import com.kapcode.open.macropad.kmps.network.sockets.model.*
-import com.kapcode.open.macropad.kmps.settings.AppTheme as SettingsAppTheme
-import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
-import com.kapcode.open.macropad.kmps.settings.SettingsScreen
-import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
-import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
-import com.kapcode.open.macropad.kmps.ui.ClientScreen
-import com.kapcode.open.macropad.kmps.ui.theme.AppTheme
+import com.kapcode.`open`.macropad.kmps.network.ClientRepository
+import com.kapcode.`open`.macropad.kmps.models.GridWidget
+import com.kapcode.`open`.macropad.kmps.models.WidgetType
+import com.kapcode.`open`.macropad.kmps.models.TrustedServer
+import com.kapcode.`open`.macropad.kmps.network.sockets.model.*
+import com.kapcode.`open`.macropad.kmps.settings.AppTheme as SettingsAppTheme
+import com.kapcode.`open`.macropad.kmps.settings.ClientSettingsSection
+import com.kapcode.`open`.macropad.kmps.settings.SettingsScreen
+import com.kapcode.`open`.macropad.kmps.settings.SettingsViewModel
+import com.kapcode.`open`.macropad.kmps.ui.components.CommonAppBar
+import com.kapcode.`open`.macropad.kmps.ui.ClientScreen
+import com.kapcode.`open`.macropad.kmps.ui.theme.AppTheme
 import android.view.KeyEvent
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.content.Context
-import com.kapcode.open.macropad.kmps.settings.SlamFireTrigger
+import com.kapcode.`open`.macropad.kmps.settings.SlamFireTrigger
 import kotlinx.coroutines.*
 
 @ExperimentalGetImage

@@ -255,13 +255,22 @@ class MacroManagerViewModel(
 
     fun getActiveMacrosForClient(clientName: String, isTrusted: Boolean = true): List<MacroFileState> {
         return _uiState.value.macroFiles.filter { macro ->
-            macro.isActive && (
-                macro.allowedClients.isBlank() ||
+            val isActive = macro.isActive
+            val isAllowed = macro.allowedClients.isBlank() ||
                 (isTrusted && macro.allowedClients == "ALL_TRUSTED") ||
                 macro.allowedClients.split(',')
                     .map { it.trim() }
                     .any { it.equals(clientName, ignoreCase = true) }
-            )
+            
+            if (isActive && isAllowed) {
+                consoleViewModel.addLog(LogLevel.Verbose, "Macro '${macro.name}' is ACTIVE and ALLOWED for $clientName.")
+            } else if (!isActive) {
+                consoleViewModel.addLog(LogLevel.Verbose, "Macro '${macro.name}' is INACTIVE. Filtering out for $clientName.")
+            } else {
+                consoleViewModel.addLog(LogLevel.Verbose, "Macro '${macro.name}' is RESTRICTED (Allowed: ${macro.allowedClients}) for $clientName.")
+            }
+
+            isActive && isAllowed
         }
     }
 
@@ -764,14 +773,18 @@ class MacroManagerViewModel(
     }
 
     fun onToggleMacroActive(id: String, isActive: Boolean) {
+        _uiState.update { state ->
+            state.copy(
+                macroFiles = state.macroFiles.map {
+                    if (it.id == id) it.copy(isActive = isActive) else it
+                }
+            )
+        }
+
         if (id.startsWith("/")) {
-            _uiState.update { state ->
-                state.copy(
-                    macroFiles = state.macroFiles.map {
-                        if (it.id == id) it.copy(isActive = isActive) else it
-                    }
-                )
-            }
+            activeMacrosProps.setProperty(id, isActive.toString())
+            saveActiveMacros()
+        } else if (id == "__SAMPLE_MACRO__") {
             activeMacrosProps.setProperty(id, isActive.toString())
             saveActiveMacros()
         } else {

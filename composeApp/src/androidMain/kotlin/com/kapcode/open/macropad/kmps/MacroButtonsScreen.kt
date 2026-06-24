@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps
+package com.kapcode.`open`.macropad.kmps
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
@@ -36,10 +36,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.kapcode.open.macropad.kmps.models.GridWidget
-import com.kapcode.open.macropad.kmps.models.MacroPack
-import com.kapcode.open.macropad.kmps.models.SliderUpdateMode
-import com.kapcode.open.macropad.kmps.models.WidgetType
+import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.models.*
 import com.kapcode.open.macropad.kmps.ui.components.trackWidgetPosition
 import com.kapcode.open.macropad.kmps.ui.theme.GoldCurrencyColor
 import org.jetbrains.compose.resources.painterResource
@@ -101,14 +99,14 @@ fun EmptyPacksPlaceholder(onNavigateToMarket: () -> Unit) {
         )
         Spacer(Modifier.height(24.dp))
         Text(
-            "No Macro Packs Installed",
+            stringResource(Res.string.no_macro_packs_installed),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "Macro Packs are collections of specialized buttons for specific apps (like Photoshop, VS Code, or Games). They automatically activate when you switch apps!",
+            stringResource(Res.string.macro_packs_desc),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -120,7 +118,7 @@ fun EmptyPacksPlaceholder(onNavigateToMarket: () -> Unit) {
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("Browse Marketplace")
+            Text(stringResource(Res.string.browse_marketplace))
         }
     }
 }
@@ -167,7 +165,7 @@ fun SearchBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        placeholder = { Text("Search Macro Packs...") },
+        placeholder = { Text(stringResource(Res.string.search_macro_packs)) },
         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         singleLine = true,
         shape = MaterialTheme.shapes.extraLarge,
@@ -189,7 +187,7 @@ fun MacroPicker(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(if (selectedMacro == null) "Select Macro" else "Select Widget Type") },
+        title = { Text(if (selectedMacro == null) stringResource(Res.string.select_macro) else stringResource(Res.string.select_widget_type)) },
         text = {
             if (selectedMacro == null) {
                 LazyColumn(
@@ -217,10 +215,10 @@ fun MacroPicker(
                         ListItem(
                             headlineContent = { 
                                 Text(when(type) {
-                                    WidgetType.BUTTON -> "Button"
-                                    WidgetType.TOGGLE -> "Toggle"
-                                    WidgetType.SLIDER_HORIZONTAL -> "Slider (Horizontal)"
-                                    WidgetType.SLIDER_VERTICAL -> "Slider (Vertical)"
+                                    WidgetType.BUTTON -> stringResource(Res.string.widget_type_button)
+                                    WidgetType.TOGGLE -> stringResource(Res.string.widget_type_toggle)
+                                    WidgetType.SLIDER_HORIZONTAL -> stringResource(Res.string.widget_type_slider_horizontal)
+                                    WidgetType.SLIDER_VERTICAL -> stringResource(Res.string.widget_type_slider_vertical)
                                 })
                             },
                             modifier = Modifier.clickable {
@@ -251,7 +249,7 @@ fun MacroPicker(
                     onDismiss()
                 }
             }) {
-                Text(if (selectedMacro != null) "Back" else "Cancel")
+                Text(if (selectedMacro != null) stringResource(Res.string.back) else stringResource(Res.string.cancel))
             }
         }
     )

@@ -79,6 +79,7 @@ class ClientCommunicationViewModel(
     }
 
     private fun broadcastProStatus() {
+        if (!::serverViewModel.isInitialized) return
         val expiry = AppSettings.globalProExpiry
         val isActive = ProAccessManager.isProAccessActive.value
         viewModelScope.launch {
@@ -110,6 +111,49 @@ class ClientCommunicationViewModel(
         
         // Broadcast Pro status to the new client
         broadcastProStatus()
+        
+        // Send initial macro list and packs to the new client
+        syncMacrosWithClient(clientId, clientName)
+    }
+
+    fun broadcastMacroList() {
+        if (!::serverViewModel.isInitialized) return
+        val currentDevices = _connectedDevices.value
+        consoleViewModel.addLog(LogLevel.Debug, "Broadcasting macro list to ${currentDevices.size} connected devices.")
+        currentDevices.forEach { device ->
+            syncMacrosWithClient(device.id, device.name)
+        }
+    }
+
+    private fun syncMacrosWithClient(clientId: String, clientName: String) {
+        if (!::macroManagerViewModel.isInitialized || !::serverViewModel.isInitialized) {
+            consoleViewModel.addLog(LogLevel.Warn, "Cannot sync macros with $clientName: ViewModels not fully initialized.")
+            return
+        }
+
+        viewModelScope.launch {
+            val isTrusted = TrustedDeviceManager.isTrusted(clientId)
+            val allMacros = macroManagerViewModel.macroFiles.value
+            val activeMacros = macroManagerViewModel.getActiveMacrosForClient(clientName, isTrusted)
+            val macroNames = activeMacros.map { it.name }
+            
+            consoleViewModel.addLog(LogLevel.Info, "Syncing macros with $clientName: ${allMacros.size} total, ${activeMacros.size} active/allowed.")
+            
+            if (macroNames.isEmpty() && allMacros.isNotEmpty()) {
+                val inactiveCount = allMacros.count { !it.isActive }
+                val forbiddenCount = allMacros.size - inactiveCount - activeMacros.size
+                consoleViewModel.addLog(LogLevel.Warn, "No macros sent to $clientName. ($inactiveCount inactive, $forbiddenCount restricted by 'Allowed Clients')")
+            }
+
+            serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
+            
+            val packs = macroManagerViewModel.macroPacks.value
+            if (packs.isNotEmpty()) {
+                val json = Json { ignoreUnknownKeys = true }
+                val packsToSerialize = packs.map { it.pack }
+                serverViewModel.server.sendToClient(clientId, dataMessage("installed_packs", json.encodeToString(packsToSerialize).encodeToByteArray()))
+            }
+        }
     }
 
     fun onClientDisconnected(clientId: String) {
@@ -185,15 +229,8 @@ class ClientCommunicationViewModel(
         
         viewModelScope.launch {
             serverViewModel.server.sendToClient(clientId, pairingApprovedMessage())
-            val macroNames = macroManagerViewModel.macroFiles.value.map { it.name }
-            serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
+            syncMacrosWithClient(clientId, clientName)
             serverViewModel.server.sendToClient(clientId, getCurrencyRequest())
-            
-            val packs = macroManagerViewModel.macroPacks.value
-            if (packs.isNotEmpty()) {
-                val json = Json { ignoreUnknownKeys = true }
-                serverViewModel.server.sendToClient(clientId, dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
-            }
         }
         consoleViewModel.addLog(LogLevel.Info, "Approved device: $clientName ($clientId)")
     }
@@ -421,17 +458,8 @@ class ClientCommunicationViewModel(
                     val isTrusted = serverViewModel.server.isDeviceTrusted(clientId)
                     if (isTrusted) {
                         val client = _connectedDevices.value.find { it.id == clientId }
-                        val macroNames = macroManagerViewModel.getActiveMacrosForClient(client?.name ?: clientId, isTrusted).map { it.name }
-                        viewModelScope.launch {
-                            serverViewModel.server.sendToClient(clientId, macroListMessage(macroNames))
-                            
-                            val packs = macroManagerViewModel.macroPacks.value
-                            if (packs.isNotEmpty()) {
-                                val json = Json { ignoreUnknownKeys = true }
-                                serverViewModel.server.sendToClient(clientId, dataMessage("installed_packs", json.encodeToString(packs).encodeToByteArray()))
-                            }
-                        }
-                        consoleViewModel.addLog(LogLevel.Debug, "Sent macro list to $clientId")
+                        syncMacrosWithClient(clientId, client?.name ?: clientId)
+                        consoleViewModel.addLog(LogLevel.Debug, "Responded to getMacros request from $clientId")
                     } else {
                         consoleViewModel.addLog(LogLevel.Warn, "Untrusted device $clientId requested macro list. Ignored.")
                     }

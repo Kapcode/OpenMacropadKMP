@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui
+package com.kapcode.`open`.macropad.kmps.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,11 +17,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.google.android.gms.ads.AdSize
-import com.kapcode.open.macropad.kmps.AdmobBanner
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.models.MarketplaceItem
 
 import com.kapcode.`open`.macropad.kmps.Res
-import com.kapcode.`open`.macropad.kmps.*
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -132,7 +131,7 @@ fun ProAccessSection(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = if (isPro) "12-hour global server access enabled." else "Unlock global server access for 12 hours.",
+                    text = if (isPro) stringResource(Res.string.pro_access_enabled_desc) else stringResource(Res.string.unlock_global_access_desc),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -165,7 +164,7 @@ fun MarketplaceItemCard(
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "by ${item.author}",
+                    text = stringResource(Res.string.by_author, item.author),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.secondary
                 )
@@ -181,7 +180,7 @@ fun MarketplaceItemCard(
             IconButton(onClick = onDownload) {
                 Icon(
                     Icons.Default.CloudDownload,
-                    contentDescription = "Download",
+                    contentDescription = stringResource(Res.string.download),
                     tint = MaterialTheme.colorScheme.primary
                 )
             }

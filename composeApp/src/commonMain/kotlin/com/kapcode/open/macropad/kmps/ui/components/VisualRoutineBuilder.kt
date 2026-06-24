@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui.components
+package com.kapcode.`open`.macropad.kmps.ui.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -15,7 +15,9 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.input.key.*
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import com.kapcode.`open`.macropad.kmps.*
 import com.kapcode.open.macropad.kmps.models.*
+import org.jetbrains.compose.resources.stringResource
 
 /**
  * Common modifier to fix Tab focus traversal in Compose for Desktop.
@@ -53,14 +55,14 @@ fun VisualRoutineBuilder(
         OutlinedTextField(
             value = routine.name,
             onValueChange = { onRoutineChange(routine.copy(name = it)) },
-            label = { Text("Routine Name") },
+            label = { Text(stringResource(Res.string.routine_name)) },
             modifier = Modifier.fillMaxWidth().tabFocus()
         )
         
         Spacer(modifier = Modifier.height(16.dp))
         
-        Text("Triggers", style = MaterialTheme.typography.titleMedium)
-        Text("Any of these triggers will execute the routine.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(Res.string.triggers), style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.triggers_desc), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         
         Spacer(modifier = Modifier.height(8.dp))
 
@@ -91,12 +93,12 @@ fun VisualRoutineBuilder(
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondaryContainer, contentColor = MaterialTheme.colorScheme.onSecondaryContainer)
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
-            Text("Add Trigger")
+            Text(stringResource(Res.string.add_trigger))
         }
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        Text("Logic Blocks", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(Res.string.logic_blocks), style = MaterialTheme.typography.titleMedium)
         
         // Logic Blocks (non-lazy list for unified scrolling)
         routine.logicBlocks.forEach { block ->
@@ -126,7 +128,7 @@ fun VisualRoutineBuilder(
             modifier = Modifier.fillMaxWidth()
         ) {
             Icon(Icons.Default.Add, contentDescription = null)
-            Text("Add Logic Block")
+            Text(stringResource(Res.string.add_logic_block))
         }
     }
 }
@@ -146,7 +148,7 @@ fun TriggerSection(
     ) {
         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Trigger Type", style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Text(stringResource(Res.string.trigger_type), style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 IconButton(onClick = onRemove) {
                     Icon(Icons.Default.Delete, contentDescription = "Remove Trigger", modifier = Modifier.size(18.dp))
                 }
@@ -156,20 +158,20 @@ fun TriggerSection(
             Box {
                 OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(when(trigger) {
-                        is AutomationTrigger.KeyHold -> "Key Hold"
-                        is AutomationTrigger.MultiTap -> "Multi-Tap"
-                        is AutomationTrigger.Sequence -> "Sequence"
-                        is AutomationTrigger.OnConditionMet -> "Condition Met"
-                        is AutomationTrigger.ControllerButton -> "Controller Button"
+                        is AutomationTrigger.KeyHold -> stringResource(Res.string.key_hold)
+                        is AutomationTrigger.MultiTap -> stringResource(Res.string.multi_tap)
+                        is AutomationTrigger.Sequence -> stringResource(Res.string.sequence)
+                        is AutomationTrigger.OnConditionMet -> stringResource(Res.string.condition_met)
+                        is AutomationTrigger.ControllerButton -> stringResource(Res.string.controller_button)
                     })
                     Icon(Icons.Default.KeyboardArrowDown, null)
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text("Key Hold") }, onClick = { onTriggerChange(AutomationTrigger.KeyHold("F13", "500")); expanded = false })
-                    DropdownMenuItem(text = { Text("Multi-Tap") }, onClick = { onTriggerChange(AutomationTrigger.MultiTap("F13", "2", "300")); expanded = false })
-                    DropdownMenuItem(text = { Text("Sequence") }, onClick = { onTriggerChange(AutomationTrigger.Sequence(listOf("A", "B"), "1000")); expanded = false })
-                    DropdownMenuItem(text = { Text("Condition Met") }, onClick = { onTriggerChange(AutomationTrigger.OnConditionMet(AutomationCondition.ActiveWindowIs(""))); expanded = false })
-                    DropdownMenuItem(text = { Text("Controller Button") }, onClick = { onTriggerChange(AutomationTrigger.ControllerButton("A", "0")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.key_hold)) }, onClick = { onTriggerChange(AutomationTrigger.KeyHold("F13", "500")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.multi_tap)) }, onClick = { onTriggerChange(AutomationTrigger.MultiTap("F13", "2", "300")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.sequence)) }, onClick = { onTriggerChange(AutomationTrigger.Sequence(listOf("A", "B"), "1000")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.condition_met)) }, onClick = { onTriggerChange(AutomationTrigger.OnConditionMet(AutomationCondition.ActiveWindowIs(""))); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.controller_button)) }, onClick = { onTriggerChange(AutomationTrigger.ControllerButton("A", "0")); expanded = false })
                 }
             }
 
@@ -179,7 +181,7 @@ fun TriggerSection(
                         var buttonExpanded by remember { mutableStateOf(false) }
                         Box(modifier = Modifier.weight(1f)) {
                             OutlinedButton(onClick = { buttonExpanded = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Btn: ${trigger.button}")
+                                Text(stringResource(Res.string.btn_label, trigger.button))
                             }
                             DropdownMenu(expanded = buttonExpanded, onDismissRequest = { buttonExpanded = false }) {
                                 listOf("A", "B", "X", "Y", "LB", "RB", "START", "BACK", "L3", "R3").forEach { btn ->
@@ -187,46 +189,46 @@ fun TriggerSection(
                                 }
                             }
                         }
-                        OutlinedTextField(value = trigger.controllerIndex, onValueChange = { onTriggerChange(trigger.copy(controllerIndex = it)) }, label = { Text("Ctrl # (0-3 or ANY)") }, modifier = Modifier.weight(1f).tabFocus())
+                        OutlinedTextField(value = trigger.controllerIndex, onValueChange = { onTriggerChange(trigger.copy(controllerIndex = it)) }, label = { Text(stringResource(Res.string.ctrl_index_label)) }, modifier = Modifier.weight(1f).tabFocus())
                     }
                 }
                 is AutomationTrigger.KeyHold -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         KeyValidationField(
-                            label = "Key", 
+                            label = stringResource(Res.string.keyboard_key), 
                             value = trigger.keyName, 
                             onValueChange = { onTriggerChange(trigger.copy(keyName = it)) }, 
                             isValidKey = isValidKey,
                             getSuggestions = getKeySuggestions,
                             modifier = Modifier.weight(1f).tabFocus()
                         )
-                        OutlinedTextField(value = trigger.durationMs, onValueChange = { onTriggerChange(trigger.copy(durationMs = it)) }, label = { Text("Duration (ms)") }, modifier = Modifier.weight(1f).tabFocus())
+                        OutlinedTextField(value = trigger.durationMs, onValueChange = { onTriggerChange(trigger.copy(durationMs = it)) }, label = { Text(stringResource(Res.string.hold_duration_ms)) }, modifier = Modifier.weight(1f).tabFocus())
                     }
                 }
                 is AutomationTrigger.MultiTap -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         KeyValidationField(
-                            label = "Key", 
+                            label = stringResource(Res.string.keyboard_key), 
                             value = trigger.keyName, 
                             onValueChange = { onTriggerChange(trigger.copy(keyName = it)) }, 
                             isValidKey = isValidKey,
                             getSuggestions = getKeySuggestions,
                             modifier = Modifier.weight(1f).tabFocus()
                         )
-                        OutlinedTextField(value = trigger.tapCount, onValueChange = { onTriggerChange(trigger.copy(tapCount = it)) }, label = { Text("Count") }, modifier = Modifier.weight(0.5f).tabFocus())
-                        OutlinedTextField(value = trigger.windowMs, onValueChange = { onTriggerChange(trigger.copy(windowMs = it)) }, label = { Text("Window (ms)") }, modifier = Modifier.weight(1f).tabFocus())
+                        OutlinedTextField(value = trigger.tapCount, onValueChange = { onTriggerChange(trigger.copy(tapCount = it)) }, label = { Text(stringResource(Res.string.tap_count)) }, modifier = Modifier.weight(0.5f).tabFocus())
+                        OutlinedTextField(value = trigger.windowMs, onValueChange = { onTriggerChange(trigger.copy(windowMs = it)) }, label = { Text(stringResource(Res.string.tap_window_ms)) }, modifier = Modifier.weight(1f).tabFocus())
                     }
                 }
                 is AutomationTrigger.Sequence -> {
                     KeyValidationField(
-                        label = "Keys (comma separated)", 
+                        label = stringResource(Res.string.keyboard_key), 
                         value = trigger.keys.joinToString(","), 
                         onValueChange = { onTriggerChange(trigger.copy(keys = it.split(",").map { k -> k.trim() })) }, 
                         isValidKey = isValidKey,
                         getSuggestions = getKeySuggestions,
                         modifier = Modifier.fillMaxWidth().tabFocus()
                     )
-                    OutlinedTextField(value = trigger.windowMs, onValueChange = { onTriggerChange(trigger.copy(windowMs = it)) }, label = { Text("Window (ms)") }, modifier = Modifier.fillMaxWidth().tabFocus())
+                    OutlinedTextField(value = trigger.windowMs, onValueChange = { onTriggerChange(trigger.copy(windowMs = it)) }, label = { Text(stringResource(Res.string.sequence_window_ms)) }, modifier = Modifier.fillMaxWidth().tabFocus())
                 }
                 is AutomationTrigger.OnConditionMet -> {
                     ConditionEditor(
@@ -259,10 +261,10 @@ fun LogicBlockItem(
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("If", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(Res.string.press).lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelLarge)
                 Spacer(modifier = Modifier.weight(1f))
                 IconButton(onClick = onRemove) {
-                    Icon(Icons.Default.Delete, contentDescription = "Remove")
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(Res.string.dismiss))
                 }
             }
             
@@ -270,7 +272,7 @@ fun LogicBlockItem(
             
             HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
             
-            Text("Then", style = MaterialTheme.typography.labelLarge)
+            Text(stringResource(Res.string.move).lowercase().replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.labelLarge)
             
             block.actions.forEachIndexed { index, action ->
                 ActionItem(action, 
@@ -288,7 +290,7 @@ fun LogicBlockItem(
             
             TextButton(onClick = { onChange(block.copy(actions = block.actions + AutomationAction.KeyEvent("A", "PRESS"))) }) {
                 Icon(Icons.Default.Add, null)
-                Text("Add Action")
+                Text(stringResource(Res.string.add_action))
             }
         }
     }
@@ -302,43 +304,43 @@ fun ConditionEditor(condition: AutomationCondition?, onConditionChange: (Automat
         Box(modifier = Modifier.fillMaxWidth()) {
             OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                 val label = when(condition) {
-                    is AutomationCondition.ActiveWindowIs -> "Active Window Is"
-                    is AutomationCondition.ActiveWindowTitleIs -> "Active Title Is"
-                    is AutomationCondition.Equals -> "Variable Equals"
-                    is AutomationCondition.GreaterThan -> "Variable >"
-                    is AutomationCondition.LessThan -> "Variable <"
-                    is AutomationCondition.Contains -> "Variable Contains"
-                    else -> "Always Run"
+                    is AutomationCondition.ActiveWindowIs -> stringResource(Res.string.active_window_is)
+                    is AutomationCondition.ActiveWindowTitleIs -> stringResource(Res.string.active_title_is)
+                    is AutomationCondition.Equals -> stringResource(Res.string.variable_equals)
+                    is AutomationCondition.GreaterThan -> stringResource(Res.string.variable_greater_than)
+                    is AutomationCondition.LessThan -> stringResource(Res.string.variable_less_than)
+                    is AutomationCondition.Contains -> stringResource(Res.string.variable_contains)
+                    else -> stringResource(Res.string.always_run)
                 }
                 Text(label)
                 Icon(Icons.Default.KeyboardArrowDown, null)
             }
             DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                DropdownMenuItem(text = { Text("Always Run") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.always_run)) }, onClick = { 
                     if (condition != null) onConditionChange(null)
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Active Window Is") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.active_window_is)) }, onClick = { 
                     if (condition !is AutomationCondition.ActiveWindowIs) onConditionChange(AutomationCondition.ActiveWindowIs(""))
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Active Title Is") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.active_title_is)) }, onClick = { 
                     if (condition !is AutomationCondition.ActiveWindowTitleIs) onConditionChange(AutomationCondition.ActiveWindowTitleIs(""))
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Variable Equals") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.variable_equals)) }, onClick = { 
                     if (condition !is AutomationCondition.Equals) onConditionChange(AutomationCondition.Equals("", ""))
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Variable >") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.variable_greater_than)) }, onClick = { 
                     if (condition !is AutomationCondition.GreaterThan) onConditionChange(AutomationCondition.GreaterThan("", "0"))
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Variable <") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.variable_less_than)) }, onClick = { 
                     if (condition !is AutomationCondition.LessThan) onConditionChange(AutomationCondition.LessThan("", "0"))
                     expanded = false 
                 })
-                DropdownMenuItem(text = { Text("Variable Contains") }, onClick = { 
+                DropdownMenuItem(text = { Text(stringResource(Res.string.variable_contains)) }, onClick = { 
                     if (condition !is AutomationCondition.Contains) onConditionChange(AutomationCondition.Contains("", ""))
                     expanded = false 
                 })
@@ -354,20 +356,20 @@ fun ConditionEditor(condition: AutomationCondition?, onConditionChange: (Automat
                     OutlinedTextField(value = condition.windowTitle, onValueChange = { onConditionChange(condition.copy(windowTitle = it)) }, label = { Text("Window Title") }, modifier = Modifier.weight(2f).tabFocus())
                 }
                 is AutomationCondition.Equals -> {
-                    VariablePickerField(label = "Var", value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
-                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text("Value") }, modifier = Modifier.weight(1f).tabFocus())
+                    VariablePickerField(label = stringResource(Res.string.variable_short), value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text(stringResource(Res.string.buy_pro).lowercase().replaceFirstChar { it.uppercase() }) }, modifier = Modifier.weight(1f).tabFocus())
                 }
                 is AutomationCondition.GreaterThan -> {
-                    VariablePickerField(label = "Var", value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
-                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text("Value") }, modifier = Modifier.weight(1f).tabFocus())
+                    VariablePickerField(label = stringResource(Res.string.variable_short), value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text(stringResource(Res.string.buy_pro).lowercase().replaceFirstChar { it.uppercase() }) }, modifier = Modifier.weight(1f).tabFocus())
                 }
                 is AutomationCondition.LessThan -> {
-                    VariablePickerField(label = "Var", value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
-                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text("Value") }, modifier = Modifier.weight(1f).tabFocus())
+                    VariablePickerField(label = stringResource(Res.string.variable_short), value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    OutlinedTextField(value = condition.value, onValueChange = { onConditionChange(condition.copy(value = it)) }, label = { Text(stringResource(Res.string.buy_pro).lowercase().replaceFirstChar { it.uppercase() }) }, modifier = Modifier.weight(1f).tabFocus())
                 }
                 is AutomationCondition.Contains -> {
-                    VariablePickerField(label = "Var", value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
-                    OutlinedTextField(value = condition.substring, onValueChange = { onConditionChange(condition.copy(substring = it)) }, label = { Text("Substring") }, modifier = Modifier.weight(1f).tabFocus())
+                    VariablePickerField(label = stringResource(Res.string.variable_short), value = condition.variable, onValueChange = { onConditionChange(condition.copy(variable = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    OutlinedTextField(value = condition.substring, onValueChange = { onConditionChange(condition.copy(substring = it)) }, label = { Text(stringResource(Res.string.substring_label)) }, modifier = Modifier.weight(1f).tabFocus())
                 }
                 else -> {}
             }
@@ -390,35 +392,35 @@ fun ActionItem(
             Box(modifier = Modifier.weight(1f)) {
                 OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
                     Text(when(action) {
-                        is AutomationAction.MacroAction -> "Macro"
-                        is AutomationAction.ScriptAction -> "JS Script"
-                        is AutomationAction.LayerShift -> "Layer Shift"
-                        is AutomationAction.KeyEvent -> "Keyboard"
-                        is AutomationAction.MouseEvent -> "Mouse Move"
-                        is AutomationAction.MouseButtonEvent -> "Mouse Button"
-                        is AutomationAction.ScrollEvent -> "Scroll"
-                        is AutomationAction.DelayEvent -> "Delay"
-                        is AutomationAction.SetAutoDelay -> "Auto-Delay"
-                        is AutomationAction.SetVariable -> "Variable"
-                        is AutomationAction.ControllerButton -> "Controller"
+                        is AutomationAction.MacroAction -> stringResource(Res.string.macro_execute)
+                        is AutomationAction.ScriptAction -> stringResource(Res.string.js_script)
+                        is AutomationAction.LayerShift -> stringResource(Res.string.layer_shift)
+                        is AutomationAction.KeyEvent -> stringResource(Res.string.keyboard_key)
+                        is AutomationAction.MouseEvent -> stringResource(Res.string.mouse_move)
+                        is AutomationAction.MouseButtonEvent -> stringResource(Res.string.mouse_button)
+                        is AutomationAction.ScrollEvent -> stringResource(Res.string.mouse_scroll)
+                        is AutomationAction.DelayEvent -> stringResource(Res.string.delay_wait)
+                        is AutomationAction.SetAutoDelay -> stringResource(Res.string.set_auto_delay)
+                        is AutomationAction.SetVariable -> stringResource(Res.string.set_variable)
+                        is AutomationAction.ControllerButton -> stringResource(Res.string.controller_button)
                         is AutomationAction.MouseKeyboard -> "Legacy"
                     })
                     Icon(Icons.Default.KeyboardArrowDown, null)
                 }
                 DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(text = { Text("Keyboard (Key)") }, onClick = { onChange(AutomationAction.KeyEvent("A", "PRESS")); expanded = false })
-                    DropdownMenuItem(text = { Text("Mouse (Move)") }, onClick = { onChange(AutomationAction.MouseEvent("0", "0", "MOVE")); expanded = false })
-                    DropdownMenuItem(text = { Text("Mouse (Button)") }, onClick = { onChange(AutomationAction.MouseButtonEvent("1", "CLICK")); expanded = false })
-                    DropdownMenuItem(text = { Text("Mouse (Scroll)") }, onClick = { onChange(AutomationAction.ScrollEvent("1")); expanded = false })
-                    DropdownMenuItem(text = { Text("Controller (Button)") }, onClick = { onChange(AutomationAction.ControllerButton("A", "0", "PRESS")); expanded = false })
-                    DropdownMenuItem(text = { Text("Delay (Wait)") }, onClick = { onChange(AutomationAction.DelayEvent("500")); expanded = false })
-                    DropdownMenuItem(text = { Text("Mouse (Scroll)") }, onClick = { onChange(AutomationAction.ScrollEvent("1")); expanded = false })
-                    DropdownMenuItem(text = { Text("Delay (Wait)") }, onClick = { onChange(AutomationAction.DelayEvent("500")); expanded = false })
-                    DropdownMenuItem(text = { Text("Set Auto-Delay") }, onClick = { onChange(AutomationAction.SetAutoDelay("50")); expanded = false })
-                    DropdownMenuItem(text = { Text("Set Variable") }, onClick = { onChange(AutomationAction.SetVariable("", "")); expanded = false })
-                    DropdownMenuItem(text = { Text("Macro (Execute)") }, onClick = { onChange(AutomationAction.MacroAction("")); expanded = false })
-                    DropdownMenuItem(text = { Text("JS Script") }, onClick = { onChange(AutomationAction.ScriptAction("")); expanded = false })
-                    DropdownMenuItem(text = { Text("Layer Shift") }, onClick = { onChange(AutomationAction.LayerShift("", false)); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.keyboard_key)) }, onClick = { onChange(AutomationAction.KeyEvent("A", "PRESS")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.mouse_move)) }, onClick = { onChange(AutomationAction.MouseEvent("0", "0", "MOVE")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.mouse_button)) }, onClick = { onChange(AutomationAction.MouseButtonEvent("1", "CLICK")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.mouse_scroll)) }, onClick = { onChange(AutomationAction.ScrollEvent("1")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.controller_button)) }, onClick = { onChange(AutomationAction.ControllerButton("A", "0", "PRESS")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.delay_wait)) }, onClick = { onChange(AutomationAction.DelayEvent("500")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.mouse_scroll)) }, onClick = { onChange(AutomationAction.ScrollEvent("1")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.delay_wait)) }, onClick = { onChange(AutomationAction.DelayEvent("500")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.set_auto_delay)) }, onClick = { onChange(AutomationAction.SetAutoDelay("50")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.set_variable)) }, onClick = { onChange(AutomationAction.SetVariable("", "")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.macro_execute)) }, onClick = { onChange(AutomationAction.MacroAction("")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.js_script)) }, onClick = { onChange(AutomationAction.ScriptAction("")); expanded = false })
+                    DropdownMenuItem(text = { Text(stringResource(Res.string.layer_shift)) }, onClick = { onChange(AutomationAction.LayerShift("", false)); expanded = false })
                 }
             }
 
@@ -445,9 +447,9 @@ fun ActionItem(
                             Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("TYPE (Sequence)") }, onClick = { onChange(action.copy(actionType = "TYPE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.press)) }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.release)) }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.type_sequence)) }, onClick = { onChange(action.copy(actionType = "TYPE")); typeExpanded = false })
                         }
                     }
                 }
@@ -460,44 +462,44 @@ fun ActionItem(
                             Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("MOVE") }, onClick = { onChange(action.copy(actionType = "MOVE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.move)) }, onClick = { onChange(action.copy(actionType = "MOVE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.click)) }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
                         }
                     }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = action.isAnimated, onCheckedChange = { onChange(action.copy(isAnimated = it)) })
-                        Text("Anim", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(Res.string.animate).take(4), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 is AutomationAction.MouseButtonEvent -> {
-                    VariablePickerField(label = "Btn #", value = action.buttonNumber, onValueChange = { onChange(action.copy(buttonNumber = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.btn_label, "").replace(": ", ""), value = action.buttonNumber, onValueChange = { onChange(action.copy(buttonNumber = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
                     var typeExpanded by remember { mutableStateOf(false) }
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = { typeExpanded = true }, modifier = Modifier.fillMaxWidth()) {
                             Text(action.actionType)
                         }
                         DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                            DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
-                            DropdownMenuItem(text = { Text("CLICK") }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.press)) }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.release)) }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
+                            DropdownMenuItem(text = { Text(stringResource(Res.string.click)) }, onClick = { onChange(action.copy(actionType = "CLICK")); typeExpanded = false })
                         }
                     }
                 }
                 is AutomationAction.ScrollEvent -> {
-                    VariablePickerField(label = "Amount (+ for Up, - for Down)", value = action.amount, onValueChange = { onChange(action.copy(amount = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.mouse_scroll), value = action.amount, onValueChange = { onChange(action.copy(amount = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
                 }
                 is AutomationAction.DelayEvent -> {
-                    VariablePickerField(label = "Duration (ms)", value = action.durationMs, onValueChange = { onChange(action.copy(durationMs = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.delay_wait), value = action.durationMs, onValueChange = { onChange(action.copy(durationMs = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
                 }
                 is AutomationAction.SetAutoDelay -> {
-                    VariablePickerField(label = "New Auto-Delay (ms)", value = action.delayMs, onValueChange = { onChange(action.copy(delayMs = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.set_auto_delay), value = action.delayMs, onValueChange = { onChange(action.copy(delayMs = it)) }, modifier = Modifier.fillMaxWidth().tabFocus(), getLiveValue = getLiveValue)
                 }
                 is AutomationAction.SetVariable -> {
-                    VariablePickerField(label = "Variable Name", value = action.name, onValueChange = { onChange(action.copy(name = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
-                    VariablePickerField(label = "New Value", value = action.value, onValueChange = { onChange(action.copy(value = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.routine_name).replace("Routine", "Variable"), value = action.name, onValueChange = { onChange(action.copy(name = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
+                    VariablePickerField(label = stringResource(Res.string.buy_pro).lowercase().replaceFirstChar { it.uppercase() }, value = action.value, onValueChange = { onChange(action.copy(value = it)) }, modifier = Modifier.weight(1f).tabFocus(), getLiveValue = getLiveValue)
                 }
                 is AutomationAction.MacroAction -> {
-                    OutlinedTextField(value = action.macroId, onValueChange = { onChange(action.copy(macroId = it)) }, label = { Text("Macro ID") }, modifier = Modifier.fillMaxWidth().tabFocus())
+                    OutlinedTextField(value = action.macroId, onValueChange = { onChange(action.copy(macroId = it)) }, label = { Text(stringResource(Res.string.macros).replace("s", " ID")) }, modifier = Modifier.fillMaxWidth().tabFocus())
                 }
                 is AutomationAction.ControllerButton -> {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -518,8 +520,8 @@ fun ActionItem(
                                 Text(action.actionType)
                             }
                             DropdownMenu(expanded = typeExpanded, onDismissRequest = { typeExpanded = false }) {
-                                DropdownMenuItem(text = { Text("PRESS") }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
-                                DropdownMenuItem(text = { Text("RELEASE") }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
+                                DropdownMenuItem(text = { Text(stringResource(Res.string.press)) }, onClick = { onChange(action.copy(actionType = "PRESS")); typeExpanded = false })
+                                DropdownMenuItem(text = { Text(stringResource(Res.string.release)) }, onClick = { onChange(action.copy(actionType = "RELEASE")); typeExpanded = false })
                             }
                         }
                     }
@@ -528,16 +530,16 @@ fun ActionItem(
                     OutlinedTextField(
                         value = action.script, 
                         onValueChange = { onChange(action.copy(script = it)) }, 
-                        label = { Text("JS Script Content") }, 
+                        label = { Text(stringResource(Res.string.js_script_content)) }, 
                         modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp).tabFocus(),
-                        placeholder = { Text("kap.log('Hello');") }
+                        placeholder = { Text(stringResource(Res.string.js_script_placeholder)) }
                     )
                 }
                 is AutomationAction.LayerShift -> {
-                    OutlinedTextField(value = action.layerId, onValueChange = { onChange(action.copy(layerId = it)) }, label = { Text("Layer ID") }, modifier = Modifier.weight(1.5f).tabFocus())
+                    OutlinedTextField(value = action.layerId, onValueChange = { onChange(action.copy(layerId = it)) }, label = { Text(stringResource(Res.string.layer_shift).replace("Shift", "ID")) }, modifier = Modifier.weight(1.5f).tabFocus())
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = action.isMomentary, onCheckedChange = { onChange(action.copy(isMomentary = it)) })
-                        Text("Hold", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(Res.string.key_hold).replace("Key ", ""), style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 else -> {}

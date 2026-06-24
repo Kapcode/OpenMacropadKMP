@@ -27,14 +27,14 @@ import com.kapcode.`open`.macropad.kmps.*
 @Composable
 fun ClientSettingsSection(clientViewModel: ClientViewModel) {
     Column {
-        Text("Developer Settings", style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+        Text(stringResource(Res.string.developer_settings), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
         
         Button(
             onClick = { clientViewModel.sendTestUpgrade() },
             modifier = Modifier.padding(top = 8.dp),
             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
         ) {
-            Text("TEST SERVER UPGRADE (SIMULATION)")
+            Text(stringResource(Res.string.test_server_upgrade))
         }
 
         Text(

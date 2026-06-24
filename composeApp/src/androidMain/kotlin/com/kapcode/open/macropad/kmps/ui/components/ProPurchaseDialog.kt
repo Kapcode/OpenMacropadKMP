@@ -78,16 +78,6 @@ fun ProPurchaseDialog(
                             .padding(vertical = 16.dp, horizontal = 16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // --- Ad at the top of Sticky Header ---
-                        val adsDisabled = isPro || isAdFree || isDeveloperMode
-                        if (!adsDisabled) {
-                            AdmobBanner(
-                                location = AdLocation.PRO_DIALOG,
-                                modifier = Modifier.fillMaxWidth().height(50.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                        }
-
                         Icon(
                             imageVector = Icons.Default.Star,
                             contentDescription = null,
@@ -215,28 +205,41 @@ fun ProPurchaseDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        // Watch Ad (Sticky Footer)
-                        PurchaseOptionCard(
-                            title = stringResource(Res.string.watch_ad),
-                            description = stringResource(Res.string.watch_ad_desc),
-                            price = "+$kapsPerAd Kaps",
-                            benefits = listOf("Earn Kaps for free", "Supports development"),
-                            icon = Icons.Default.PlayCircle,
-                            onClick = onWatchAd,
-                            badge = "FREE",
-                            compact = true
-                        )
+                        val adsDisabled = isPro || isAdFree || isDeveloperMode
+                        if (!adsDisabled) {
+                            AdmobBanner(
+                                location = AdLocation.PRO_DIALOG,
+                                modifier = Modifier.fillMaxWidth().height(50.dp)
+                            )
+                        }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            TextButton(onClick = onDismissRequest) {
-                                Text(stringResource(Res.string.close))
+                            // Watch Ad (Sticky Footer)
+                            PurchaseOptionCard(
+                                title = stringResource(Res.string.watch_ad),
+                                description = stringResource(Res.string.watch_ad_desc),
+                                price = "+$kapsPerAd Kaps",
+                                benefits = listOf("Earn Kaps for free", "Supports development"),
+                                icon = Icons.Default.PlayCircle,
+                                onClick = onWatchAd,
+                                badge = "FREE",
+                                compact = true
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                TextButton(onClick = onDismissRequest) {
+                                    Text(stringResource(Res.string.close))
+                                }
                             }
                         }
                     }

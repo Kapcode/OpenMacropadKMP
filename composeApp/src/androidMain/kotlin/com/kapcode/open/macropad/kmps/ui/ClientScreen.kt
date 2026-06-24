@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui
+package com.kapcode.`open`.macropad.kmps.ui
 
 import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
@@ -32,21 +32,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.kapcode.open.macropad.kmps.*
-import com.kapcode.`open`.macropad.kmps.Res
 import com.kapcode.`open`.macropad.kmps.*
-import com.kapcode.open.macropad.kmps.models.GridWidget
-import com.kapcode.open.macropad.kmps.models.WidgetType
-import com.kapcode.open.macropad.kmps.models.SliderUpdateMode
-import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
-import com.kapcode.open.macropad.kmps.settings.SettingsScreen
+import com.kapcode.`open`.macropad.kmps.Res
+import com.kapcode.open.macropad.kmps.models.*
 import com.kapcode.open.macropad.kmps.settings.SettingsViewModel
-import com.kapcode.open.macropad.kmps.models.TrustedServer
-import com.kapcode.open.macropad.kmps.ui.components.CommonAppBar
-import com.kapcode.open.macropad.kmps.ui.components.LocalKapAnimationManager
-import com.kapcode.open.macropad.kmps.ui.components.KapAnimationManager
-import com.kapcode.open.macropad.kmps.ui.components.KapAnimationOverlay
-import com.kapcode.open.macropad.kmps.ui.MarketplaceScreen
+import com.kapcode.open.macropad.kmps.settings.SettingsScreen
+import com.kapcode.open.macropad.kmps.settings.ClientSettingsSection
+import com.kapcode.open.macropad.kmps.ui.components.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
@@ -243,7 +235,7 @@ fun ClientScreen(
                         navigationIcon = {
                             if (showSettings) {
                                 IconButton(onClick = { showSettings = false }) {
-                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(Res.string.back))
                                 }
                             } else {
                                 IconButton(onClick = {
@@ -252,7 +244,7 @@ fun ClientScreen(
                                         drawerState.open()
                                     }
                                 }) {
-                                    Icon(Icons.Default.Menu, contentDescription = "Macros")
+                                    Icon(Icons.Default.Menu, contentDescription = stringResource(Res.string.macros))
                                 }
                             }
                         },
@@ -278,7 +270,7 @@ fun ClientScreen(
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Icon(Icons.Default.TouchApp, null)
                                                 Spacer(Modifier.width(8.dp))
-                                                Text(if (showSlamInfoDialog == "single") "Slam Fire: Single Tap" else "Slam Fire: Double Tap")
+                                                Text(if (showSlamInfoDialog == "single") stringResource(Res.string.slam_fire_mode) + ": Single Tap" else stringResource(Res.string.slam_fire_mode) + ": Double Tap")
                                             }
                                         },
                                         text = {
@@ -295,12 +287,12 @@ fun ClientScreen(
                                                 if (showSlamInfoDialog == "single") expandedSingle = true else expandedDouble = true
                                                 showSlamInfoDialog = null 
                                             }) {
-                                                Text("Select Macro")
+                                                Text(stringResource(Res.string.select_macro))
                                             }
                                         },
                                         dismissButton = {
                                             TextButton(onClick = { showSlamInfoDialog = null }) {
-                                                Text("Dismiss")
+                                                Text(stringResource(Res.string.dismiss))
                                             }
                                         }
                                     )
@@ -330,7 +322,7 @@ fun ClientScreen(
                                         }
                                         DropdownMenu(expanded = expandedSingle, onDismissRequest = { expandedSingle = false }) {
                                             DropdownMenuItem(
-                                                text = { Text("None (OK)") },
+                                                text = { Text(stringResource(Res.string.none_ok)) },
                                                 onClick = {
                                                     settingsViewModel.setSlamFireSelectedMacro(null)
                                                     expandedSingle = false
@@ -365,7 +357,7 @@ fun ClientScreen(
                                         }
                                         DropdownMenu(expanded = expandedDouble, onDismissRequest = { expandedDouble = false }) {
                                             DropdownMenuItem(
-                                                text = { Text("None (Cancel)") },
+                                                text = { Text(stringResource(Res.string.none_cancel)) },
                                                 onClick = {
                                                     settingsViewModel.setSlamFireDoubleSelectedMacro(null)
                                                     expandedDouble = false
@@ -639,11 +631,11 @@ fun ClientScreen(
                                                     )
                                                     Spacer(Modifier.height(16.dp))
                                                     Text(
-                                                        "Scanner Timed Out",
+                                                        stringResource(Res.string.scanner_timed_out),
                                                         style = MaterialTheme.typography.headlineSmall
                                                     )
                                                     Text(
-                                                        "Paused to save battery after $scannerTimeoutHours hours.",
+                                                        stringResource(Res.string.scanner_timed_out_desc, scannerTimeoutHours),
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                                         style = MaterialTheme.typography.bodyMedium
                                                     )
@@ -651,7 +643,7 @@ fun ClientScreen(
                                                     Button(onClick = { clientViewModel.setScannerTimedOut(false) }) {
                                                         Icon(Icons.Default.Refresh, contentDescription = null)
                                                         Spacer(Modifier.width(8.dp))
-                                                        Text("Resume Scanning")
+                                                        Text(stringResource(Res.string.resume_scanning))
                                                     }
                                                 }
                                             } else {
@@ -807,7 +799,7 @@ fun ClientScreen(
                                                             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
                                                         ) {
                                                             IconButton(onClick = onBackToMain) {
-                                                                Icon(Icons.Default.Close, contentDescription = "Cancel")
+                                                                Icon(Icons.Default.Close, contentDescription = stringResource(Res.string.cancel))
                                                             }
 
                                                             OutlinedTextField(
@@ -821,7 +813,7 @@ fun ClientScreen(
                                                                     }
                                                                 },
                                                                 label = { if (!isKeyboardOpen) Text(stringResource(Res.string.six_digit_code)) },
-                                                                placeholder = { if (isKeyboardOpen) Text("Code") },
+                                                                placeholder = { if (isKeyboardOpen) Text(stringResource(Res.string.six_digit_code).replace("6-Digit ", "")) },
                                                                 singleLine = true,
                                                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                                 modifier = Modifier
@@ -856,7 +848,7 @@ fun ClientScreen(
                                                                 contentPadding = PaddingValues(0.dp),
                                                                 modifier = Modifier.size(48.dp)
                                                             ) {
-                                                                Icon(Icons.Default.Done, contentDescription = "Submit")
+                                                                Icon(Icons.Default.Done, contentDescription = stringResource(Res.string.accept))
                                                             }
                                                         }
 
@@ -923,12 +915,12 @@ fun ClientScreen(
                                             } else {
                                                 CircularProgressIndicator()
                                                 Spacer(Modifier.height(16.dp))
-                                                Text("Connected to:")
+                                                Text(stringResource(Res.string.connected_to))
                                                 Text(
                                                     serverName ?: "N/A",
                                                     style = MaterialTheme.typography.headlineMedium
                                                 )
-                                                Text("Status: $connectionStatus")
+                                                Text(stringResource(Res.string.status_format, connectionStatus))
                                             }
                                         }
                                     }

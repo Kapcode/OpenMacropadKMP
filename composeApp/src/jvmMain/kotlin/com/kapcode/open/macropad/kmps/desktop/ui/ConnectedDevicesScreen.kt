@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.desktop.ui
+package com.kapcode.`open`.macropad.kmps.desktop.ui
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
@@ -10,7 +10,14 @@ import androidx.compose.material.icons.outlined.GppBad
 import androidx.compose.material.icons.outlined.LinkOff
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.*
+import com.kapcode.`open`.macropad.kmps.*
+import com.kapcode.open.macropad.kmps.desktop.model.ClientInfo
+import com.kapcode.open.macropad.kmps.desktop.logic.ConnectionHistoryManager
+import com.kapcode.open.macropad.kmps.ui.components.ConnectionItem
 import com.kapcode.open.macropad.kmps.desktop.ui.components.AppTooltipArea
+import com.kapcode.open.macropad.kmps.ui.components.trackBalancePosition
+import com.kapcode.open.macropad.kmps.ui.components.trackWidgetPosition
+import com.kapcode.open.macropad.kmps.ui.components.LocalKapAnimationManager
 import androidx.compose.runtime.*
 import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
@@ -25,11 +32,6 @@ import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.kapcode.open.macropad.kmps.Res
-import com.kapcode.`open`.macropad.kmps.*
-import com.kapcode.open.macropad.kmps.ui.components.*
-import com.kapcode.open.macropad.kmps.desktop.logic.ConnectionHistoryManager
-import com.kapcode.open.macropad.kmps.desktop.model.ClientInfo
 import org.jetbrains.compose.resources.painterResource
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.collectLatest

@@ -1,4 +1,4 @@
-package com.kapcode.open.macropad.kmps.ui.components
+package com.kapcode.`open`.macropad.kmps.ui.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,7 +8,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kapcode.`open`.macropad.kmps.*
 import kotlinx.coroutines.delay
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 fun VariablePickerField(
@@ -48,7 +50,7 @@ fun VariablePickerField(
             modifier = Modifier.fillMaxWidth(),
             trailingIcon = {
                 IconButton(onClick = { expanded = true }) {
-                    Icon(Icons.Default.Functions, contentDescription = "Pick Variable")
+                    Icon(Icons.Default.Functions, contentDescription = stringResource(Res.string.macro_manager).replace("Manager", "Variable"))
                 }
             }
         )
@@ -102,7 +104,7 @@ fun VariablePickerField(
             }
             
             Text(
-                text = "Type any custom name for user variables",
+                text = stringResource(Res.string.custom_variable_name_desc),
                 style = MaterialTheme.typography.labelSmall,
                 modifier = Modifier.padding(16.dp)
             )

@@ -74,7 +74,7 @@ fun App(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
-                        contentDescription = "Stop Scanning",
+                        contentDescription = stringResource(Res.string.stop_scanning),
                         tint = MaterialTheme.colorScheme.error
                     )
                 }
